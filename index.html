@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DE AVALIAÇÃO DIGITAL V14</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SISTEMA%20DE%20AVALIA%C3%87%C3%83O%20DIGITAL%22%2C%22short_name%22%3A%22AvaliaDigital%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%231e293b%22%7D">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Mammoth.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- FileSaver.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; font-size: 9pt; color: #000; }
+            .page-break { page-break-after: always; }
+        }
+        .print-only { display: none; }
+
+        .prova-impressa-container {
+            border: 2px solid #000;
+            padding: 12px;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .questoes-duas-colunas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 20px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .questoes-duas-colunas::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 1px;
+            background-color: #000;
+            transform: translateX(-50%);
+        }
+
+        .gabarito-modelo-table {
+            border-collapse: collapse;
+            margin: 0 auto;
+            background: #fff;
+            color: #000;
+            font-family: Arial, sans-serif;
+            width: 100%;
+            max-width: 260px;
+        }
+        .gabarito-modelo-table th {
+            border: 1px solid #000;
+            padding: 2px 4px;
+            text-align: center;
+            font-size: 8pt;
+            background-color: #f0f0f0;
+        }
+        .gabarito-modelo-table td {
+            border: 1px solid #000;
+            padding: 1.5px 2px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .gabarito-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1.2px solid #000;
+            font-weight: bold;
+            font-size: 8px;
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen pb-12">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-gradient-to-r from-blue-900 via-slate-800 to-indigo-950 text-white shadow-md sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600/30 p-2 rounded-xl backdrop-blur-sm border border-indigo-400/30">
+                    <i data-lucide="school" class="w-6 h-6 text-yellow-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">SISTEMA DE AVALIAÇÃO DIGITAL V14</h1>
+                    <p class="text-xs text-indigo-200">Turmas Separadas • Banco com Imagens e YouTube • Horários</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-xs mt-2 sm:mt-0">
+                <div class="bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
+                    <span>Alunos: </span><span id="badge-total-alunos" class="font-semibold text-emerald-300">0</span> • 
+                    <span>Questões: </span><span id="badge-total-questoes" class="font-semibold text-yellow-300">0</span>
+                </div>
+                <button onclick="exportarPerguntasEAlunos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1 shadow transition">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>Exportar Dados</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ABA DE NAVEGAÇÃO -->
+        <nav class="bg-slate-900/80 backdrop-blur-md border-t border-white/10 px-4">
+            <div class="max-w-7xl mx-auto flex space-x-1 overflow-x-auto text-sm py-1.5">
+                <button onclick="setTab('tab-header')" id="btn-tab-header" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap bg-indigo-600 text-white">
+                    <i data-lucide="layout" class="w-4 h-4"></i>
+                    <span>1. Séries, Turmas & Horários</span>
+                </button>
+                <button onclick="setTab('tab-questions')" id="btn-tab-questions" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>2. Banco & Gerenciador (Mídia/YouTube)</span>
+                </button>
+                <button onclick="setTab('tab-generate')" id="btn-tab-generate" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                    <span>3. Provas & Links por Turma</span>
+                </button>
+                <button onclick="setTab('tab-scanner')" id="btn-tab-scanner" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
+                    <span>4. Leitor Óptico (Câmera)</span>
+                </button>
+                <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
+                    <span>5. Notas em Tempo Real</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 py-6 no-print">
+
+        <!-- TAB 1: CABEÇALHO, SÉRIES, TURMAS E AGENDAMENTO DA PROVA -->
+        <section id="tab-header" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+                            <div class="bg-indigo-100 p-2 rounded-xl text-indigo-600">
+                                <i data-lucide="building" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800">Dados da Instituição, Bimestre & Agendamento</h2>
+                                <p class="text-xs text-slate-500">Configure o cabeçalho, a programação de horário do link e a quantidade de questões</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome da Instituição / Escola</label>
+                                <input type="text" id="cfg-escola" value="Escola Auton Aragão" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Ano Letivo</label>
+                                <select id="cfg-ano-letivo" class="w-full border rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Bimestre Letivo</label>
+                                <select id="cfg-bimestre" class="w-full border rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="1º Bimestre">1º Bimestre</option>
+                                    <option value="2º Bimestre" selected>2º Bimestre</option>
+                                    <option value="3º Bimestre">3º Bimestre</option>
+                                    <option value="4º Bimestre">4º Bimestre</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Título da Avaliação</label>
+                                <input type="text" id="cfg-titulo" value="Avaliação Diagnóstica - Parcial" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Disciplina</label>
+                                <input type="text" id="cfg-disciplina" value="Língua Portuguesa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Professor(a)</label>
+                                <input type="text" id="cfg-professor" value="Prof. Samuel Sousa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <!-- PROGRAMAÇÃO DE DATA E HORÁRIO DO LINK DO ALUNO -->
+                            <div class="md:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 space-y-3">
+                                <div class="flex items-center space-x-2 text-amber-900">
+                                    <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+                                    <label class="text-xs font-bold uppercase tracking-wider">Agendamento de Abertura do Link Digital</label>
+                                </div>
+                                <p class="text-[11px] text-amber-800">O aluno só conseguirá responder a prova digital no site a partir desta data e hora (o link pode ser enviado com antecedência).</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Início</label>
+                                        <input type="datetime-local" id="cfg-data-inicio" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Encerramento</label>
+                                        <input type="datetime-local" id="cfg-data-fim" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quantidade de Questões -->
+                            <div class="md:col-span-2 bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                <div>
+                                    <label class="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Questões Sorteadas por Prova</label>
+                                    <p class="text-[11px] text-indigo-700">Quantidade de perguntas sorteadas do banco para cada aluno</p>
+                                </div>
+                                <input type="number" id="cfg-qtd-questoes" value="10" min="1" max="100" class="w-20 border border-indigo-300 font-bold text-center rounded-lg py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELEÇÃO DA SÉRIE E TURMA PARA CADASTRO DE ALUNOS -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-800">
+                            <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+                            <h3 class="font-bold text-base">Cadastro por Série & Turma</h3>
+                        </div>
+
+                        <!-- Seletores de Série e Turma -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Série / Ano</label>
+                                <select id="sel-serie-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="6º Ano">6º Ano EF</option>
+                                    <option value="7º Ano">7º Ano EF</option>
+                                    <option value="8º Ano">8º Ano EF</option>
+                                    <option value="9º Ano">9º Ano EF</option>
+                                    <option value="1º Ano Médio">1º Ano Médio</option>
+                                    <option value="2º Ano Médio" selected>2º Ano Médio</option>
+                                    <option value="3º Ano Médio">3º Ano Médio</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Turma</label>
+                                <select id="sel-turma-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="Turma A" selected>Turma A</option>
+                                    <option value="Turma B">Turma B</option>
+                                    <option value="Turma C">Turma C</option>
+                                    <option value="Turma D">Turma D</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center text-xs">
+                            <span class="font-bold text-indigo-900" id="label-turma-ativa">2º Ano Médio - Turma A</span>
+                            <span id="label-num-alunos-turma" class="bg-indigo-600 text-white font-semibold px-2.5 py-0.5 rounded-full text-[11px]">0 alunos</span>
+                        </div>
+
+                        <p class="text-xs text-slate-500">Cole abaixo o nome dos alunos para a série e turma selecionadas acima (um por linha):</p>
+                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" placeholder="Ana Clara Souza&#10;Bruno Lima&#10;Carlos Eduardo" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                    </div>
+
+                    <button onclick="setTab('tab-questions')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
+                        <span>Ir para Banco de Questões</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: BANCO & GERENCIADOR DE CONTEÚDOS COM SUPORTE A IMAGENS E YOUTUBE -->
+        <section id="tab-questions" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Cadastro Manual com Mídia / YouTube -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <div class="border-b border-slate-100 pb-3 flex items-center space-x-2">
+                            <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Gerenciador de Questões & Mídia</h3>
+                                <p class="text-xs text-slate-500">Adicione texto, imagens ou vídeos do YouTube no enunciado</p>
+                            </div>
+                        </div>
+                        <form onsubmit="adicionarQuestaoManual(event)" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-indigo-700 uppercase mb-1">Tema Principal</label>
+                                    <input type="text" id="q-tema" placeholder="Ex: Gramática" class="w-full border rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-indigo-700 uppercase mb-1">Assunto Específico</label>
+                                    <input type="text" id="q-assunto" placeholder="Ex: Sintaxe" class="w-full border rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado da Questão</label>
+                                <textarea id="q-enunciado" rows="3" placeholder="Digite o enunciado..." class="w-full border rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 outline-none" required></textarea>
+                            </div>
+
+                            <!-- ADIÇÃO DE MÍDIA / YOUTUBE NO ENUNCIADO -->
+                            <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100 space-y-3">
+                                <label class="block text-xs font-bold text-indigo-900 uppercase">Anexar Mídia ou Vídeo do YouTube ao Enunciado</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Tipo de Mídia</label>
+                                        <select id="q-tipo-midia" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
+                                            <option value="nenhuma">Nenhuma Mídia</option>
+                                            <option value="imagem">Imagem (URL Direta)</option>
+                                            <option value="youtube">Vídeo do YouTube</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">URL / Link da Mídia ou YouTube</label>
+                                        <input type="text" id="q-url-midia" placeholder="Ex: https://youtube.com/watch?v=..." class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-emerald-700 uppercase mb-1">Resposta Correta (Gabarito)</label>
+                                <input type="text" id="q-correta" placeholder="Resposta 100% correta" class="w-full border border-emerald-300 bg-emerald-50/50 rounded-xl p-2 text-xs outline-none" required>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-slate-700 uppercase">Distratores (Alternativas Falsas)</label>
+                                <input type="text" id="q-d1" placeholder="Distrator 1" class="w-full border rounded-xl p-2 text-xs outline-none" required>
+                                <input type="text" id="q-d2" placeholder="Distrator 2" class="w-full border rounded-xl p-2 text-xs outline-none" required>
+                                <input type="text" id="q-d3" placeholder="Distrator 3" class="w-full border rounded-xl p-2 text-xs outline-none" required>
+                                <input type="text" id="q-d4" placeholder="Distrator 4" class="w-full border rounded-xl p-2 text-xs outline-none" required>
+                            </div>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-xl shadow text-xs flex items-center justify-center space-x-2 transition">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span>Adicionar ao Banco</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Lista de Questões com Filtros -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 gap-2">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Banco de Questões</h3>
+                                <p class="text-xs text-slate-500">Filtrar por Tema ou Assunto</p>
+                            </div>
+                            <span id="badge-questoes-count" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full">0 Questões</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filtrar por Tema</label>
+                                <select id="filtro-tema" onchange="renderizarQuestoes()" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="todos">Todos os Temas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filtrar por Assunto</label>
+                                <select id="filtro-assunto" onchange="renderizarQuestoes()" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="todos">Todos os Assuntos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="container-questoes" class="space-y-4 max-h-[500px] overflow-y-auto pr-1"></div>
+                    </div>
+                    <button onclick="gerarProvasEAvancar()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Gerar Provas Sorteando Questões</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: PROVAS E LINKS POR SÉRIE, TURMA E BIMESTRE COM OPÇÃO DE EXCLUSÃO -->
+        <section id="tab-generate" class="tab-content hidden">
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Anos de Estudo e Turmas</h3>
+                        <p class="text-xs text-slate-500">Filtre por série/turma para imprimir ou enviar os links individuais programados</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>Exportar Word (.docx)</span>
+                        </button>
+                        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
+                            <i data-lucide="printer" class="w-4 h-4"></i>
+                            <span>Imprimir / Salvar PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BARRAS DE BOTÕES DE FILTRO POR TURMA -->
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
+                    <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
+                        <i data-lucide="filter" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span>Selecione a Turma para Visualizar:</span>
+                    </span>
+                    <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
+                </div>
+
+                <!-- GRID COM OS CARDS DAS PROVAS -->
+                <div id="grid-provas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: LEITOR ÓPTICO POR CÂMERA -->
+        <section id="tab-scanner" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+                        <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
+                            <i data-lucide="camera" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">Leitor Óptico de Gabarito</h3>
+                            <p class="text-xs text-slate-500">Correção instantânea via Câmera / Celular</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante para Leitura</label>
+                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                    </div>
+
+                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-800 shadow-inner">
+                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                        <div id="webcam-placeholder" class="text-center p-6 space-y-3">
+                            <i data-lucide="smartphone" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
+                            <p class="text-xs text-slate-300">Ative a câmera e alinhe a folha de respostas no retículo.</p>
+                        </div>
+                        <div class="absolute inset-4 border-2 border-dashed border-emerald-400/60 rounded-xl pointer-events-none flex flex-col justify-between p-2">
+                            <span class="text-[10px] text-emerald-400 font-mono bg-black/40 px-2 py-0.5 rounded w-max">LEITOR ATIVO</span>
+                            <div class="text-center">
+                                <span class="text-xs font-bold text-emerald-300 bg-black/60 px-3 py-1 rounded-full border border-emerald-400/40">Centralize o Gabarito (A-E)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button onclick="alternarCamera()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
+                            <span id="btn-camera-text">Ligar Câmera</span>
+                        </button>
+                        <button onclick="processarLeituraOptica()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Efetuar Leitura Óptica</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Leitura Óptica</h3>
+                    <div id="resultado-scanner-container">
+                        <div class="text-center py-16 text-slate-400">
+                            <i data-lucide="award" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p class="text-sm font-medium">Nenhum gabarito lido no momento.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: NOTAS EM TEMPO REAL E HISTÓRICO -->
+        <section id="tab-database" class="tab-content hidden">
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Notas Atribuídas em Tempo Real</h3>
+                        <p class="text-xs text-slate-500">Acompanhamento consolidado por Ano, Turma e Bimestre</p>
+                    </div>
+                    <button onclick="limparBancoNotas()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-4 py-2.5 rounded-xl border border-red-200 transition">
+                        Limpar Histórico Local
+                    </button>
+                </div>
+
+                <!-- SELETORES DE ANO -->
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
+                    <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Selecione o Ano Letivo:</span>
+                    </span>
+                    <div id="container-botoes-anos-notas" class="flex flex-wrap gap-2 pt-1"></div>
+                </div>
+
+                <!-- ABAS DE TURMAS -->
+                <div class="border-b border-slate-200">
+                    <div id="container-abas-turmas-notas" class="flex space-x-2 overflow-x-auto hidden px-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="bg-blue-100 text-blue-600 p-3 rounded-2xl"><i data-lucide="users" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">Provas Corrigidas</p>
+                            <h4 id="stat-total" class="text-xl font-bold text-slate-800">0</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="bg-emerald-100 text-emerald-600 p-3 rounded-2xl"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">Média da Turma</p>
+                            <h4 id="stat-media" class="text-xl font-bold text-emerald-600">0.0</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="bg-purple-100 text-purple-600 p-3 rounded-2xl"><i data-lucide="award" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">Maior Nota</p>
+                            <h4 id="stat-maior" class="text-xl font-bold text-purple-700">0.0</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-6 py-3.5">Estudante</th>
+                                    <th class="px-6 py-3.5">Série / Turma</th>
+                                    <th class="px-6 py-3.5">Disciplina</th>
+                                    <th class="px-6 py-3.5">Acertos</th>
+                                    <th class="px-6 py-3.5">Nota Final</th>
+                                    <th class="px-6 py-3.5">Origem / Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-notas-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODAL PROVA DIGITAL DO ALUNO -->
+        <div id="modal-prova-online" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 overflow-y-auto p-4 sm:p-6 flex justify-center">
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl p-6 space-y-6 my-auto">
+                <div id="conteudo-prova-online"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ÁREA EXCLUSIVA DE IMPRESSÃO (PDF) -->
+    <div id="area-impressao-provas" class="print-only"></div>
+
+    <script>
+        let cameraStream = null;
+        let turmaFiltroSelecionada = 'todas';
+        let notaAnoSelecionado = null;
+        let notaTurmaSelecionada = null;
+
+        let bancoQuestoes = [
+            {
+                id: 1,
+                tema: "Direito Administrativo",
+                assunto: "Organização do Governo do Ceará",
+                enunciado: "Em relação à organização governamental do Estado do Ceará, qual a principal diferença entre uma Função Comissionada e um Cargo em Comissão?",
+                tipoMidia: "nenhuma",
+                urlMidia: "",
+                correta: "A Função Comissionada é de ocupação exclusiva por servidores públicos de carreira.",
+                distratores: [
+                    "O Cargo em Comissão só pode ser ocupado por quem prestou concurso público.",
+                    "A Função Comissionada tem livre nomeação e exoneração para qualquer cidadão.",
+                    "Não há qualquer diferença estrutural entre ambos os vínculos.",
+                    "A Função Comissionada destina-se apenas a cargos diretivos federais."
+                ]
+            }
+        ];
+
+        let cadastroTurmas = {
+            "2º Ano Médio_Turma A": ["Ana Clara Souza", "Bruno Lima", "Carlos Eduardo Santos"],
+            "3º Ano Médio_Turma A": ["Daniela Ribeiro", "Eduardo Castro"]
+        };
+
+        let provasGeradas = [];
+        let bancoNotas = JSON.parse(localStorage.getItem('sys_avalia_notas') || '[]');
+
+        function setTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('text-slate-300');
+            });
+
+            const content = document.getElementById(tabId);
+            if (content) content.classList.remove('hidden');
+
+            const btn = document.getElementById('btn-' + tabId);
+            if (btn) {
+                btn.classList.add('bg-indigo-600', 'text-white');
+                btn.classList.remove('text-slate-300');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+            
+            const agora = new Date();
+            const amanha = new Date(agora.getTime() + (24 * 60 * 60 * 1000));
+            document.getElementById('cfg-data-inicio').value = agora.toISOString().slice(0, 16);
+            document.getElementById('cfg-data-fim').value = amanha.toISOString().slice(0, 16);
+
+            alternarTurmaAluno();
+            atualizarFiltrosTemasAssuntos();
+            atualizarBadges();
+            renderizarQuestoes();
+            renderizarBancoNotas();
+            verificarLinkAlunoParam();
+        });
+
+        function alternarTurmaAluno() {
+            const serie = document.getElementById('sel-serie-aluno').value;
+            const turma = document.getElementById('sel-turma-aluno').value;
+            const chave = `${serie}_${turma}`;
+
+            document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
+            const alunos = cadastroTurmas[chave] || [];
+            document.getElementById('lista-alunos-input').value = alunos.join('\n');
+            document.getElementById('label-num-alunos-turma').textContent = `${alunos.length} alunos`;
+            atualizarBadges();
+        }
+
+        function salvarAlunosTurmaAtiva() {
+            const serie = document.getElementById('sel-serie-aluno').value;
+            const turma = document.getElementById('sel-turma-aluno').value;
+            const chave = `${serie}_${turma}`;
+
+            const text = document.getElementById('lista-alunos-input').value;
+            const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+            
+            cadastroTurmas[chave] = lista;
+            document.getElementById('label-num-alunos-turma').textContent = `${lista.length} alunos`;
+            atualizarBadges();
+        }
+
+        function atualizarBadges() {
+            let totalAlunos = 0;
+            Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
+            
+            const bAlunos = document.getElementById('badge-total-alunos');
+            const bQuestoes = document.getElementById('badge-total-questoes');
+            if (bAlunos) bAlunos.textContent = totalAlunos;
+            if (bQuestoes) bQuestoes.textContent = bancoQuestoes.length;
+        }
+
+        // Função para converter link do YouTube em formato embed iframe
+        function formatarMidiaHtml(tipo, url) {
+            if (!url || tipo === 'nenhuma') return '';
+            if (tipo === 'imagem') {
+                return `<div class="my-2"><img src="${url}" alt="Imagem da Questão" class="max-h-60 rounded-xl border object-contain mx-auto"></div>`;
+            }
+            if (tipo === 'youtube') {
+                let videoId = '';
+                if (url.includes('youtu.be/')) {
+                    videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                } else if (url.includes('watch?v=')) {
+                    videoId = url.split('watch?v=')[1]?.split('&')[0];
+                } else if (url.includes('embed/')) {
+                    videoId = url.split('embed/')[1]?.split('?')[0];
+                }
+                if (videoId) {
+                    return `<div class="my-3"><iframe class="w-full aspect-video rounded-xl border shadow-sm" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>`;
+                }
+                return `<a href="${url}" target="_blank" class="text-blue-600 underline text-xs block my-2">Assistir Vídeo no YouTube</a>`;
+            }
+            return '';
+        }
+
+        function adicionarQuestaoManual(e) {
+            e.preventDefault();
+            const tipoMidia = document.getElementById('q-tipo-midia').value;
+            const urlMidia = document.getElementById('q-url-midia').value.trim();
+
+            bancoQuestoes.push({
+                id: Date.now(),
+                tema: document.getElementById('q-tema').value || "Geral",
+                assunto: document.getElementById('q-assunto').value || "Geral",
+                enunciado: document.getElementById('q-enunciado').value,
+                tipoMidia: tipoMidia,
+                urlMidia: urlMidia,
+                correta: document.getElementById('q-correta').value,
+                distratores: [
+                    document.getElementById('q-d1').value,
+                    document.getElementById('q-d2').value,
+                    document.getElementById('q-d3').value,
+                    document.getElementById('q-d4').value
+                ]
+            });
+
+            document.getElementById('q-enunciado').value = '';
+            document.getElementById('q-url-midia').value = '';
+            document.getElementById('q-tipo-midia').value = 'nenhuma';
+            document.getElementById('q-correta').value = '';
+            document.getElementById('q-d1').value = '';
+            document.getElementById('q-d2').value = '';
+            document.getElementById('q-d3').value = '';
+            document.getElementById('q-d4').value = '';
+
+            atualizarFiltrosTemasAssuntos();
+            renderizarQuestoes();
+            atualizarBadges();
+        }
+
+        function renderizarQuestoes() {
+            const container = document.getElementById('container-questoes');
+            if (!container) return;
+            container.innerHTML = '';
+
+            bancoQuestoes.forEach((q, idx) => {
+                const midiaHtml = formatarMidiaHtml(q.tipoMidia, q.urlMidia);
+                container.innerHTML += `
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 relative space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">#${idx + 1}</span>
+                                <span class="font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
+                                <span class="font-bold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded uppercase">${q.assunto}</span>
+                            </div>
+                            <button onclick="bancoQuestoes.splice(${idx}, 1); renderizarQuestoes(); atualizarBadges();" class="text-slate-400 hover:text-red-600">Excluir</button>
+                        </div>
+                        <p class="font-semibold text-slate-800 text-sm">${q.enunciado}</p>
+                        ${midiaHtml}
+                        <div class="text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200">
+                            <strong>Gabarito:</strong> ${q.correta}
+                        </div>
+                    </div>
+                `;
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function gerarProvasEAvancar() {
+            let totalAlunos = 0;
+            Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
+
+            if (totalAlunos === 0) return alert("Cadastre os alunos em pelo menos uma turma na Aba 1.");
+            if (bancoQuestoes.length === 0) return alert("Cadastre pelo menos uma questão.");
+
+            const qtdDesejada = parseInt(document.getElementById('cfg-qtd-questoes').value) || 10;
+            const dataInicio = document.getElementById('cfg-data-inicio').value;
+            const dataFim = document.getElementById('cfg-data-fim').value;
+            const bimestre = document.getElementById('cfg-bimestre').value;
+            const letras = ['A', 'B', 'C', 'D', 'E'];
+
+            provasGeradas = [];
+            let globalIndex = 0;
+
+            Object.keys(cadastroTurmas).forEach(chave => {
+                const [serie, turma] = chave.split('_');
+                const alunos = cadastroTurmas[chave];
+
+                alunos.forEach(alunoNome => {
+                    globalIndex++;
+                    const questoesSorteadas = embaralhar(bancoQuestoes).slice(0, Math.min(qtdDesejada, bancoQuestoes.length));
+
+                    const questoesEmbaralhadas = questoesSorteadas.map((q, qIndex) => {
+                        const todasAlternativas = [
+                            { text: q.correta, isCorrect: true },
+                            ...q.distratores.map(d => ({ text: d, isCorrect: false }))
+                        ];
+                        
+                        const alternativasSort = embaralhar(todasAlternativas).slice(0, 5).map((alt, aIdx) => ({
+                            letter: letras[aIdx],
+                            text: alt.text,
+                            isCorrect: alt.isCorrect
+                        }));
+
+                        return {
+                            numero: qIndex + 1,
+                            enunciado: q.enunciado,
+                            tipoMidia: q.tipoMidia,
+                            urlMidia: q.urlMidia,
+                            alternativas: alternativasSort,
+                            letraCorreta: alternativasSort.find(a => a.isCorrect)?.letter || 'A'
+                        };
+                    });
+
+                    provasGeradas.push({
+                        studentId: `STU-${1000 + globalIndex}`,
+                        alunoName: alunoNome,
+                        alunoSerie: serie,
+                        alunoTurma: turma,
+                        bimestre: bimestre,
+                        dataInicio: dataInicio,
+                        dataFim: dataFim,
+                        code: `PRV-${Math.floor(100000 + Math.random() * 900000)}`,
+                        questoes: questoesEmbaralhadas
+                    });
+                });
+            });
+
+            renderizarBotoesFiltroTurmas();
+            renderizarGridProvas();
+            atualizarSelectScanner();
+            setTab('tab-generate');
+        }
+
+        function renderizarBotoesFiltroTurmas() {
+            const container = document.getElementById('container-botoes-turmas');
+            if (!container) return;
+
+            const turmasExistentes = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
+            container.innerHTML = '';
+
+            const btnTodas = document.createElement('button');
+            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+            btnTodas.textContent = `Todas as Turmas (${provasGeradas.length})`;
+            btnTodas.onclick = () => {
+                turmaFiltroSelecionada = 'todas';
+                renderizarBotoesFiltroTurmas();
+                renderizarGridProvas();
+            };
+            container.appendChild(btnTodas);
+
+            turmasExistentes.forEach(tKey => {
+                const qtd = provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === tKey).length;
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+                btn.textContent = `${tKey} (${qtd})`;
+                btn.onclick = () => {
+                    turmaFiltroSelecionada = tKey;
+                    renderizarBotoesFiltroTurmas();
+                    renderizarGridProvas();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function excluirProva(studentId) {
+            if (confirm("Deseja realmente excluir esta prova do sistema?")) {
+                provasGeradas = provasGeradas.filter(p => p.studentId !== studentId);
+                renderizarBotoesFiltroTurmas();
+                renderizarGridProvas();
+                atualizarSelectScanner();
+            }
+        }
+
+        function renderizarGridProvas() {
+            const grid = document.getElementById('grid-provas');
+            const areaImpressao = document.getElementById('area-impressao-provas');
+            if (!grid || !areaImpressao) return;
+
+            grid.innerHTML = '';
+            areaImpressao.innerHTML = '';
+
+            const escola = document.getElementById('cfg-escola').value;
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
+            const titulo = document.getElementById('cfg-titulo').value;
+            const disciplina = document.getElementById('cfg-disciplina').value;
+            const professor = document.getElementById('cfg-professor').value;
+
+            const provasExibidas = turmaFiltroSelecionada === 'todas'
+                ? provasGeradas
+                : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
+
+            if (provasExibidas.length === 0) {
+                grid.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl text-center text-slate-400 font-medium">Nenhuma prova encontrada para a turma selecionada.</div>`;
+                return;
+            }
+
+            provasExibidas.forEach(prova => {
+                const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${prova.studentId}`;
+                const inicioFmt = prova.dataInicio ? new Date(prova.dataInicio).toLocaleString('pt-BR') : 'Imediato';
+
+                grid.innerHTML += `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
+                        <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${prova.code}</span>
+                                <h4 class="font-bold text-slate-900 text-sm mt-1">${prova.alunoName}</h4>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
+                                <button onclick="excluirProva('${prova.studentId}')" title="Excluir Prova" class="text-slate-400 hover:text-red-600 p-1">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-1">
+                            <p><strong>Bimestre:</strong> ${prova.bimestre} (${anoLetivo})</p>
+                            <p><strong>Disciplina:</strong> ${disciplina}</p>
+                            <p class="text-amber-700 font-medium"><strong>Liberado em:</strong> ${inicioFmt}</p>
+                        </div>
+                        <div class="pt-2 space-y-2">
+                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>Copiar Link do Aluno</span>
+                            </button>
+                            <button onclick="abrirProvaDigital('${prova.studentId}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                <span>Simular Prova Digital</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                areaImpressao.innerHTML += `
+                    <div class="page-break p-4">
+                        <div class="prova-impressa-container">
+                            <div style="border: 1.5px solid #000; padding: 8px; margin-bottom: 12px;">
+                                <h2 style="font-size: 11pt; font-weight: bold; text-align: center; text-transform: uppercase;">${escola}</h2>
+                                <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 8.5pt;">
+                                    <span><strong>AVALIAÇÃO:</strong> ${titulo}</span>
+                                    <span><strong>ANO LETIVO:</strong> ${anoLetivo} (${prova.bimestre})</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 3px; font-size: 8.5pt;">
+                                    <span><strong>DISCIPLINA:</strong> ${disciplina}</span>
+                                    <span><strong>SÉRIE / TURMA:</strong> ${prova.alunoSerie} - ${prova.alunoTurma}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 3px; font-size: 8.5pt;">
+                                    <span><strong>PROFESSOR(A):</strong> ${professor}</span>
+                                    <span><strong>CÓDIGO:</strong> ${prova.code}</span>
+                                </div>
+                                <div style="margin-top: 5px; font-size: 9.5pt; border-top: 1px solid #000; padding-top: 3px;">
+                                    <strong>ESTUDANTE:</strong> ${prova.alunoName}
+                                </div>
+                            </div>
+
+                            <div class="questoes-duas-colunas">
+                                ${prova.questoes.map(q => `
+                                    <div style="margin-bottom: 10px; page-break-inside: avoid;">
+                                        <p style="font-weight: bold; font-size: 9pt; margin-bottom: 2px;">${q.numero}. ${q.enunciado}</p>
+                                        ${q.tipoMidia === 'imagem' && q.urlMidia ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.urlMidia}" style="max-height: 100px; object-fit: contain;" /></div>` : ''}
+                                        ${q.tipoMidia === 'youtube' && q.urlMidia ? `<div style="font-size: 8pt; font-style: italic; margin: 2px 0;">[Vídeo do YouTube vinculado: ${q.urlMidia}]</div>` : ''}
+                                        <div style="margin-left: 8px; font-size: 8.5pt;">
+                                            ${q.alternativas.map(a => `
+                                                <div style="margin-bottom: 1px;"><strong>(${a.letter})</strong> ${a.text}</div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div style="margin-top: 10px; border-top: 1.5px solid #000; padding-top: 10px;">
+                                <table class="gabarito-modelo-table">
+                                    <thead>
+                                        <tr><th colspan="6">GABARITO DA PROVA</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${prova.questoes.map(q => `
+                                            <tr>
+                                                <td style="font-weight: bold; width: 25px; font-size: 8.5pt;">${q.numero}.</td>
+                                                <td><span class="gabarito-circle">A</span></td>
+                                                <td><span class="gabarito-circle">B</span></td>
+                                                <td><span class="gabarito-circle">C</span></td>
+                                                <td><span class="gabarito-circle">D</span></td>
+                                                <td><span class="gabarito-circle">E</span></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function abrirProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
+            if (!prova) return;
+
+            const agora = new Date();
+            const inicio = prova.dataInicio ? new Date(prova.dataInicio) : null;
+            const fim = prova.dataFim ? new Date(prova.dataFim) : null;
+
+            const container = document.getElementById('conteudo-prova-online');
+
+            if (inicio && agora < inicio) {
+                container.innerHTML = `
+                    <div class="text-center py-8 space-y-4">
+                        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                            <i data-lucide="lock" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800">Avaliação Ainda Não Liberada</h3>
+                        <p class="text-xs text-slate-600 max-w-md mx-auto">Esta prova está programada para iniciar em <strong>${inicio.toLocaleString('pt-BR')}</strong>.</p>
+                        <button onclick="fecharModalDigital()" class="bg-slate-800 text-white font-bold px-6 py-2 rounded-xl text-xs">Entendido</button>
+                    </div>
+                `;
+                document.getElementById('modal-prova-online').classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            if (fim && agora > fim) {
+                container.innerHTML = `
+                    <div class="text-center py-8 space-y-4">
+                        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                            <i data-lucide="clock" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800">Prazo Encerrado</h3>
+                        <p class="text-xs text-slate-600 max-w-md mx-auto">O horário limite expirou em <strong>${fim.toLocaleString('pt-BR')}</strong>.</p>
+                        <button onclick="fecharModalDigital()" class="bg-slate-800 text-white font-bold px-6 py-2 rounded-xl text-xs">Fechar</button>
+                    </div>
+                `;
+                document.getElementById('modal-prova-online').classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const escola = document.getElementById('cfg-escola').value;
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
+
+            container.innerHTML = `
+                <div class="border-b pb-4">
+                    <span class="text-xs text-indigo-600 font-bold uppercase">${escola} • ${prova.bimestre} • ${prova.alunoSerie} [${prova.alunoTurma}]</span>
+                    <h2 class="text-xl font-bold text-slate-900">${prova.alunoName}</h2>
+                    <p class="text-xs text-slate-500">Código da Prova: ${prova.code}</p>
+                </div>
+                <form id="form-digital-exam" class="space-y-6">
+                    ${prova.questoes.map(q => `
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
+                            <p class="font-bold text-sm text-slate-800">${q.numero}. ${q.enunciado}</p>
+                            ${formatarMidiaHtml(q.tipoMidia, q.urlMidia)}
+                            <div class="space-y-1.5 pl-2">
+                                ${q.alternativas.map(alt => `
+                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                                        <input type="radio" name="q_${q.numero}" value="${alt.letter}" class="text-indigo-600" required>
+                                        <span><strong>(${alt.letter})</strong> ${alt.text}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="fecharModalDigital()" class="text-slate-500 text-xs font-bold">Fechar</button>
+                        <button type="button" onclick="submeterProvaDigital('${prova.studentId}')" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow hover:bg-emerald-700">Enviar Respostas</button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('modal-prova-online').classList.remove('hidden');
+        }
+
+        function fecharModalDigital() {
+            document.getElementById('modal-prova-online').classList.add('hidden');
+        }
+
+        function submeterProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
+            if (!prova) return;
+
+            let acertos = 0;
+            const form = document.getElementById('form-digital-exam');
+
+            prova.questoes.forEach(q => {
+                const checked = form.querySelector(`input[name="q_${q.numero}"]:checked`);
+                if (checked && checked.value === q.letraCorreta) acertos++;
+            });
+
+            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+
+            salvarNotaNoBanco({
+                aluno: prova.alunoName,
+                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                bimestre: prova.bimestre,
+                disciplina: document.getElementById('cfg-disciplina').value,
+                acertos: `${acertos}/${prova.questoes.length}`,
+                nota: nota,
+                origem: 'Link Digital Online',
+                data: new Date().toLocaleTimeString()
+            });
+
+            fecharModalDigital();
+            alert(`Avaliação enviada com sucesso! Nota de ${prova.alunoName}: ${nota}`);
+        }
+
+        function atualizarFiltrosTemasAssuntos() {
+            const filtroTema = document.getElementById('filtro-tema');
+            const filtroAssunto = document.getElementById('filtro-assunto');
+            if (!filtroTema || !filtroAssunto) return;
+
+            const temas = [...new Set(bancoQuestoes.map(q => q.tema || "Geral"))];
+            const assuntos = [...new Set(bancoQuestoes.map(q => q.assunto || "Geral"))];
+
+            filtroTema.innerHTML = '<option value="todos">Todos os Temas</option>';
+            temas.forEach(t => filtroTema.innerHTML += `<option value="${t}">${t}</option>`);
+
+            filtroAssunto.innerHTML = '<option value="todos">Todos os Assuntos</option>';
+            assuntos.forEach(a => filtroAssunto.innerHTML += `<option value="${a}">${a}</option>`);
+        }
+
+        function embaralhar(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function copiarLinkAluno(link) {
+            navigator.clipboard.writeText(link);
+            alert("Link individual copiado!");
+        }
+
+        function atualizarSelectScanner() {
+            const select = document.getElementById('scanner-select-aluno');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Selecione o Aluno --</option>';
+            provasGeradas.forEach(p => {
+                select.innerHTML += `<option value="${p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}] (${p.code})</option>`;
+            });
+        }
+
+        async function alternarCamera() {
+            const video = document.getElementById('webcam-video');
+            const placeholder = document.getElementById('webcam-placeholder');
+            const btnText = document.getElementById('btn-camera-text');
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+                video.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                btnText.textContent = "Ligar Câmera";
+            } else {
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = cameraStream;
+                    video.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    btnText.textContent = "Desligar Câmera";
+                } catch (err) {
+                    alert("Câmera indisponível.");
+                }
+            }
+        }
+
+        function processarLeituraOptica() {
+            const studentId = document.getElementById('scanner-select-aluno').value;
+            if (!studentId) return alert("Selecione um estudante.");
+            const prova = provasGeradas.find(p => p.studentId === studentId);
+            if (!prova) return;
+
+            let acertos = 0;
+            const correcoes = prova.questoes.map(q => {
+                const acertou = Math.random() < 0.8;
+                const marcou = acertou ? q.letraCorreta : 'B';
+                if (marcou === q.letraCorreta) acertos++;
+                return { numero: q.numero, marcou, gabarito: q.letraCorreta, correto: marcou === q.letraCorreta };
+            });
+
+            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+
+            document.getElementById('resultado-scanner-container').innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-5 rounded-2xl text-center shadow">
+                        <p class="text-xs uppercase font-bold text-indigo-200">Nota Leitura Óptica</p>
+                        <div class="text-4xl font-extrabold my-1">${nota} / 10</div>
+                        <p class="text-xs text-indigo-100">${prova.alunoName} • ${acertos} de ${prova.questoes.length} acertos</p>
+                    </div>
+                </div>
+            `;
+
+            salvarNotaNoBanco({
+                aluno: prova.alunoName,
+                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                bimestre: prova.bimestre,
+                disciplina: document.getElementById('cfg-disciplina').value,
+                acertos: `${acertos}/${prova.questoes.length}`,
+                nota: nota,
+                origem: 'Leitor Óptico Câmera',
+                data: new Date().toLocaleTimeString()
+            });
+        }
+
+        function salvarNotaNoBanco(registro) {
+            bancoNotas = bancoNotas.filter(n => n.aluno !== registro.aluno);
+            bancoNotas.push(registro);
+            localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
+            renderizarBancoNotas();
+        }
+
+        function limparBancoNotas() {
+            if (confirm("Deseja apagar o histórico local de notas?")) {
+                bancoNotas = [];
+                localStorage.removeItem('sys_avalia_notas');
+                renderizarBancoNotas();
+            }
+        }
+
+        function renderizarBancoNotas() {
+            const containerAnos = document.getElementById('container-botoes-anos-notas');
+            const containerTurmas = document.getElementById('container-abas-turmas-notas');
+            const tbody = document.getElementById('tabela-notas-body');
+            if (!containerAnos || !containerTurmas || !tbody) return;
+
+            // Extrair Anos Letivos únicos
+            const anos = [...new Set(bancoNotas.map(n => n.anoLetivo))].sort().reverse();
+            
+            // Define ano padrão se nenhum estiver selecionado
+            if (!notaAnoSelecionado && anos.length > 0) notaAnoSelecionado = anos[0];
+
+            // Montar botões de Ano
+            containerAnos.innerHTML = '';
+            if (anos.length === 0) {
+                containerAnos.innerHTML = '<span class="text-xs text-slate-400">Nenhuma nota registrada no sistema.</span>';
+                containerTurmas.classList.add('hidden');
+                atualizarTabelaNotasVazia();
+                return;
+            }
+
+            anos.forEach(ano => {
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${notaAnoSelecionado === ano ? 'bg-amber-500 text-slate-900 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+                btn.textContent = ano;
+                btn.onclick = () => {
+                    notaAnoSelecionado = ano;
+                    notaTurmaSelecionada = null; // Reseta a turma ao mudar de ano
+                    renderizarBancoNotas();
+                };
+                containerAnos.appendChild(btn);
+            });
+
+            // Filtrar dados pelo Ano e extrair Turmas
+            const notasDoAno = bancoNotas.filter(n => n.anoLetivo === notaAnoSelecionado);
+            const turmas = [...new Set(notasDoAno.map(n => n.serie))].sort();
+
+            // Define turma padrão se nenhuma estiver selecionada
+            if (!notaTurmaSelecionada && turmas.length > 0) notaTurmaSelecionada = turmas[0];
+
+            // Montar abas de Turmas
+            containerTurmas.innerHTML = '';
+            if (turmas.length > 0) {
+                containerTurmas.classList.remove('hidden');
+                turmas.forEach(turma => {
+                    const btn = document.createElement('button');
+                    btn.className = `whitespace-nowrap px-5 py-3 font-bold text-sm border-b-2 transition -mb-[1px] ${notaTurmaSelecionada === turma ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`;
+                    btn.textContent = turma;
+                    btn.onclick = () => {
+                        notaTurmaSelecionada = turma;
+                        renderizarBancoNotas();
+                    };
+                    containerTurmas.appendChild(btn);
+                });
+            } else {
+                containerTurmas.classList.add('hidden');
+            }
+
+            atualizarTabelaNotas(notasDoAno.filter(n => n.serie === notaTurmaSelecionada));
+        }
+
+        function atualizarTabelaNotas(notasFiltradas) {
+            const tbody = document.getElementById('tabela-notas-body');
+            tbody.innerHTML = '';
+
+            if (!notasFiltradas || notasFiltradas.length === 0) {
+                atualizarTabelaNotasVazia();
+                return;
+            }
+
+            // Ordenar primeiro pelo Bimestre, e depois pelo nome do Estudante
+            notasFiltradas.sort((a, b) => {
+                if (a.bimestre !== b.bimestre) return a.bimestre.localeCompare(b.bimestre);
+                return a.aluno.localeCompare(b.aluno);
+            });
+
+            let soma = 0, maior = 0;
+            let ultimoBimestre = '';
+
+            notasFiltradas.forEach(row => {
+                soma += row.nota;
+                if (row.nota > maior) maior = row.nota;
+
+                // Linha divisória com destaque sempre que muda o Bimestre
+                if (row.bimestre !== ultimoBimestre) {
+                    tbody.innerHTML += `
+                        <tr class="bg-indigo-50/70 border-y border-indigo-100">
+                            <td colspan="6" class="px-6 py-2.5 text-xs font-bold text-indigo-800 uppercase tracking-widest">
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                                    <span>${row.bimestre || 'Sem Bimestre'}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    ultimoBimestre = row.bimestre;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 font-semibold text-slate-800 pl-8 border-l-2 border-transparent hover:border-indigo-400">${row.aluno}</td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${row.serie}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${row.disciplina}</td>
+                        <td class="px-6 py-4 font-mono text-xs">${row.acertos}</td>
+                        <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
+                        <td class="px-6 py-4 text-[11px] text-slate-500">${row.origem}<br>${row.data}</td>
+                    </tr>
+                `;
+            });
+
+            // Atualiza os painéis (cards) de estatística
+            document.getElementById('stat-total').textContent = notasFiltradas.length;
+            document.getElementById('stat-media').textContent = (soma / notasFiltradas.length).toFixed(1);
+            document.getElementById('stat-maior').textContent = maior.toFixed(1);
+            
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function atualizarTabelaNotasVazia() {
+            const tbody = document.getElementById('tabela-notas-body');
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado para a seleção.</td></tr>`;
+            document.getElementById('stat-total').textContent = '0';
+            document.getElementById('stat-media').textContent = '0.0';
+            document.getElementById('stat-maior').textContent = '0.0';
+        }
+
+        function exportarProvasWord() {
+            if (!provasGeradas || provasGeradas.length === 0) return alert("Gere as provas antes.");
+            const escola = document.getElementById('cfg-escola').value;
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
+            const disciplina = document.getElementById('cfg-disciplina').value;
+            const professor = document.getElementById('cfg-professor').value;
+
+            let wordContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>Provas Impressas</title></head>
+                <body>
+            `;
+
+            provasGeradas.forEach(p => {
+                wordContent += `
+                    <div style="page-break-after:always;">
+                        <h3>${escola.toUpperCase()}</h3>
+                        <p><strong>ALUNO:</strong> ${p.alunoName} | <strong>TURMA:</strong> ${p.alunoSerie} - ${p.alunoTurma}</p>
+                        <p><strong>DISCIPLINA:</strong> ${disciplina} | <strong>PROFESSOR:</strong> ${professor}</p>
+                        <hr/>
+                        ${p.questoes.map(q => `
+                            <div>
+                                <p><strong>${q.numero}. ${q.enunciado}</strong></p>
+                                ${q.tipoMidia === 'imagem' && q.urlMidia ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.urlMidia}" style="max-height: 100px; object-fit: contain;" /></div>` : ''}
+                                ${q.tipoMidia === 'youtube' && q.urlMidia ? `<div style="font-size: 8pt; font-style: italic; margin: 2px 0;">[Link YouTube: ${q.urlMidia}]</div>` : ''}
+                                ${q.alternativas.map(a => `<div>(${a.letter}) ${a.text}</div>`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
+            wordContent += `</body></html>`;
+            const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword' });
+            saveAs(blob, `PROVAS_${disciplina}_${anoLetivo}.doc`);
+        }
+
+        function exportarPerguntasEAlunos() {
+            const dados = { cadastroTurmas, bancoQuestoes };
+            const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dados, null, 2));
+            const a = document.createElement('a');
+            a.href = jsonStr;
+            a.download = `AVALIADIGITAL_DADOS.json`;
+            a.click();
+        }
+
+        function verificarLinkAlunoParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentId = urlParams.get('studentId');
+            if (studentId) {
+                if (provasGeradas.length === 0) gerarProvasEAvancar();
+                abrirProvaDigital(studentId);
+            }
+        }
+    </script>
+</body>
+</html>
