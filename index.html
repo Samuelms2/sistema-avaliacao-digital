@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA DE AVALIAÇÃO DIGITAL V14</title>
+    <title>SISTEMA DE AVALIAÇÃO DIGITAL</title>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SISTEMA%20DE%20AVALIA%C3%87%C3%83O%20DIGITAL%22%2C%22short_name%22%3A%22AvaliaDigital%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%231e293b%22%7D">
@@ -15,35 +15,53 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- PDF.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Mammoth.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <!-- FileSaver.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+
         @media print {
+            html, body {
+                background: white !important;
+                font-family: 'Times New Roman', Times, serif !important;
+                font-size: 12pt !important;
+                color: #000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
             .no-print { display: none !important; }
             .print-only { display: block !important; }
-            body { background: white !important; font-size: 9pt; color: #000; }
-            .page-break { page-break-after: always; }
+            .page-break { 
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
         }
+
         .print-only { display: none; }
 
         .prova-impressa-container {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
             border: 2px solid #000;
             padding: 12px;
             box-sizing: border-box;
             background: #fff;
+            margin-bottom: 20px;
         }
+
         .questoes-duas-colunas {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            column-gap: 20px;
+            column-gap: 16px;
+            row-gap: 12px;
             position: relative;
             margin-bottom: 15px;
         }
+
         .questoes-duas-colunas::before {
             content: "";
             position: absolute;
@@ -57,23 +75,24 @@
 
         .gabarito-modelo-table {
             border-collapse: collapse;
-            margin: 0 auto;
+            margin: 15px 0 0 0; /* Alinhado à esquerda abaixo das questões */
             background: #fff;
             color: #000;
-            font-family: Arial, sans-serif;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
             width: 100%;
-            max-width: 260px;
+            max-width: 320px;
         }
         .gabarito-modelo-table th {
             border: 1px solid #000;
-            padding: 2px 4px;
+            padding: 3px 6px;
             text-align: center;
-            font-size: 8pt;
+            font-size: 11pt;
             background-color: #f0f0f0;
         }
         .gabarito-modelo-table td {
             border: 1px solid #000;
-            padding: 1.5px 2px;
+            padding: 2px 4px;
             text-align: center;
             vertical-align: middle;
         }
@@ -81,13 +100,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            border: 1.2px solid #000;
+            border: 1px solid #000;
             font-weight: bold;
-            font-size: 8px;
-            box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+            font-size: 10pt;
             background-color: #fff;
         }
     </style>
@@ -102,8 +120,8 @@
                     <i data-lucide="school" class="w-6 h-6 text-yellow-300"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold tracking-tight">SISTEMA DE AVALIAÇÃO DIGITAL V14</h1>
-                    <p class="text-xs text-indigo-200">Turmas Separadas • Banco com Imagens e YouTube • Horários</p>
+                    <h1 class="text-lg font-bold tracking-tight">SISTEMA DE AVALIAÇÃO DIGITAL</h1>
+                    <p class="text-xs text-indigo-200">Turmas Separadas • Banco por Temas • Correção Digital</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 text-xs mt-2 sm:mt-0">
@@ -118,37 +136,39 @@
             </div>
         </div>
 
-        <!-- ABA DE NAVEGAÇÃO -->
         <nav class="bg-slate-900/80 backdrop-blur-md border-t border-white/10 px-4">
             <div class="max-w-7xl mx-auto flex space-x-1 overflow-x-auto text-sm py-1.5">
                 <button onclick="setTab('tab-header')" id="btn-tab-header" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap bg-indigo-600 text-white">
                     <i data-lucide="layout" class="w-4 h-4"></i>
-                    <span>1. Séries, Turmas & Horários</span>
+                    <span>1. Configurações & Turmas</span>
                 </button>
                 <button onclick="setTab('tab-questions')" id="btn-tab-questions" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="book-open" class="w-4 h-4"></i>
-                    <span>2. Banco & Gerenciador (Mídia/YouTube)</span>
+                    <span>2. Criar Questões & Mídia</span>
+                </button>
+                <button onclick="setTab('tab-bank')" id="btn-tab-bank" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="folder-tree" class="w-4 h-4 text-amber-400"></i>
+                    <span>3. Banco por Temas & Montar Prova</span>
                 </button>
                 <button onclick="setTab('tab-generate')" id="btn-tab-generate" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
-                    <span>3. Provas & Links por Turma</span>
+                    <span>4. Provas & Links por Turma</span>
                 </button>
                 <button onclick="setTab('tab-scanner')" id="btn-tab-scanner" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                    <span>4. Leitor Óptico (Câmera)</span>
+                    <span>5. Leitor Óptico (Câmera)</span>
                 </button>
                 <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
-                    <span>5. Notas em Tempo Real</span>
+                    <span>6. Notas em Tempo Real</span>
                 </button>
             </div>
         </nav>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="max-w-7xl mx-auto px-4 py-6 no-print">
 
-        <!-- TAB 1: CABEÇALHO, SÉRIES, TURMAS E AGENDAMENTO DA PROVA -->
+        <!-- TAB 1 -->
         <section id="tab-header" class="tab-content">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 space-y-6">
@@ -159,7 +179,7 @@
                             </div>
                             <div>
                                 <h2 class="text-lg font-bold text-slate-800">Dados da Instituição, Bimestre & Agendamento</h2>
-                                <p class="text-xs text-slate-500">Configure o cabeçalho, a programação de horário do link e a quantidade de questões</p>
+                                <p class="text-xs text-slate-500">Configure o cabeçalho e a programação de horário para os alunos</p>
                             </div>
                         </div>
 
@@ -195,7 +215,7 @@
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Disciplina</label>
-                                <input type="text" id="cfg-disciplina" value="Língua Portuguesa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input type="text" id="cfg-disciplina" value="Educação Física" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
 
                             <div>
@@ -203,38 +223,54 @@
                                 <input type="text" id="cfg-professor" value="Prof. Samuel Sousa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
 
-                            <!-- PROGRAMAÇÃO DE DATA E HORÁRIO DO LINK DO ALUNO -->
                             <div class="md:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 space-y-3">
                                 <div class="flex items-center space-x-2 text-amber-900">
                                     <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
                                     <label class="text-xs font-bold uppercase tracking-wider">Agendamento de Abertura do Link Digital</label>
                                 </div>
-                                <p class="text-[11px] text-amber-800">O aluno só conseguirá responder a prova digital no site a partir desta data e hora (o link pode ser enviado com antecedência).</p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Início</label>
-                                        <input type="datetime-local" id="cfg-data-inicio" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Início</label>
+                                        <input type="datetime-local" id="cfg-data-inicio" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Encerramento</label>
-                                        <input type="datetime-local" id="cfg-data-fim" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Encerramento</label>
+                                        <input type="datetime-local" id="cfg-data-fim" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Quantidade de Questões -->
-                            <div class="md:col-span-2 bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100 flex items-center justify-between">
-                                <div>
-                                    <label class="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Questões Sorteadas por Prova</label>
-                                    <p class="text-[11px] text-indigo-700">Quantidade de perguntas sorteadas do banco para cada aluno</p>
-                                </div>
-                                <input type="number" id="cfg-qtd-questoes" value="10" min="1" max="100" class="w-20 border border-indigo-300 font-bold text-center rounded-lg py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                         </div>
                     </div>
+
+                    <!-- SUPABASE -->
+                    <div class="bg-[#0b1329] text-white rounded-2xl p-6 space-y-4 border border-emerald-500/30 shadow-xl">
+                        <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+                            <div class="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
+                                <i data-lucide="database" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base text-white">Sincronização em Nuvem</h3>
+                                <p class="text-xs text-slate-400">Credenciais para recebimento automático das notas</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 text-xs">
+                            <div>
+                                <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE URL</label>
+                                <input type="text" id="cfg-supabase-url" value="https://xfzizvznmymomxjyfysr.supabase.co" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none text-xs">
+                            </div>
+                            <div>
+                                <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE ANON KEY</label>
+                                <input type="password" id="cfg-supabase-key" value="sb_publishable_laDng7uHXMA4Bd4DrmATBA_ccxA3onX" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none text-xs">
+                            </div>
+                        </div>
+                        <button onclick="salvarCredenciaisSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-lg">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            <span>Salvar & Conectar Nuvem</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- SELEÇÃO DA SÉRIE E TURMA PARA CADASTRO DE ALUNOS -->
+                <!-- ALUNOS -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
                     <div class="space-y-4">
                         <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-800">
@@ -242,11 +278,10 @@
                             <h3 class="font-bold text-base">Cadastro por Série & Turma</h3>
                         </div>
 
-                        <!-- Seletores de Série e Turma -->
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Série / Ano</label>
-                                <select id="sel-serie-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <select id="sel-serie-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white outline-none">
                                     <option value="6º Ano">6º Ano EF</option>
                                     <option value="7º Ano">7º Ano EF</option>
                                     <option value="8º Ano">8º Ano EF</option>
@@ -258,7 +293,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Turma</label>
-                                <select id="sel-turma-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <select id="sel-turma-aluno" onchange="alternarTurmaAluno()" class="w-full border rounded-xl p-2 text-xs bg-white outline-none">
                                     <option value="Turma A" selected>Turma A</option>
                                     <option value="Turma B">Turma B</option>
                                     <option value="Turma C">Turma C</option>
@@ -272,142 +307,179 @@
                             <span id="label-num-alunos-turma" class="bg-indigo-600 text-white font-semibold px-2.5 py-0.5 rounded-full text-[11px]">0 alunos</span>
                         </div>
 
-                        <p class="text-xs text-slate-500">Cole abaixo o nome dos alunos para a série e turma selecionadas acima (um por linha):</p>
-                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" placeholder="Ana Clara Souza&#10;Bruno Lima&#10;Carlos Eduardo" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                        <p class="text-xs text-slate-500">Nome dos alunos (um por linha):</p>
+                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
                     </div>
 
                     <button onclick="setTab('tab-questions')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
-                        <span>Ir para Banco de Questões</span>
+                        <span>Ir para Criar Questões</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 2: BANCO & GERENCIADOR DE CONTEÚDOS COM SUPORTE A IMAGENS E YOUTUBE -->
+        <!-- TAB 2: QUESTÕES -->
         <section id="tab-questions" class="tab-content hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Cadastro Manual com Mídia / YouTube -->
-                <div class="lg:col-span-5 space-y-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                        <div class="border-b border-slate-100 pb-3 flex items-center space-x-2">
-                            <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i>
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-base">Gerenciador de Questões & Mídia</h3>
-                                <p class="text-xs text-slate-500">Adicione texto, imagens ou vídeos do YouTube no enunciado</p>
-                            </div>
-                        </div>
-                        <form onsubmit="adicionarQuestaoManual(event)" class="space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-indigo-700 uppercase mb-1">Tema Principal</label>
-                                    <input type="text" id="q-tema" placeholder="Ex: Gramática" class="w-full border rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-indigo-700 uppercase mb-1">Assunto Específico</label>
-                                    <input type="text" id="q-assunto" placeholder="Ex: Sintaxe" class="w-full border rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado da Questão</label>
-                                <textarea id="q-enunciado" rows="3" placeholder="Digite o enunciado..." class="w-full border rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 outline-none" required></textarea>
-                            </div>
-
-                            <!-- ADIÇÃO DE MÍDIA / YOUTUBE NO ENUNCIADO -->
-                            <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100 space-y-3">
-                                <label class="block text-xs font-bold text-indigo-900 uppercase">Anexar Mídia ou Vídeo do YouTube ao Enunciado</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Tipo de Mídia</label>
-                                        <select id="q-tipo-midia" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
-                                            <option value="nenhuma">Nenhuma Mídia</option>
-                                            <option value="imagem">Imagem (URL Direta)</option>
-                                            <option value="youtube">Vídeo do YouTube</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">URL / Link da Mídia ou YouTube</label>
-                                        <input type="text" id="q-url-midia" placeholder="Ex: https://youtube.com/watch?v=..." class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-emerald-700 uppercase mb-1">Resposta Correta (Gabarito)</label>
-                                <input type="text" id="q-correta" placeholder="Resposta 100% correta" class="w-full border border-emerald-300 bg-emerald-50/50 rounded-xl p-2 text-xs outline-none" required>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="block text-xs font-bold text-slate-700 uppercase">Distratores (Alternativas Falsas)</label>
-                                <input type="text" id="q-d1" placeholder="Distrator 1" class="w-full border rounded-xl p-2 text-xs outline-none" required>
-                                <input type="text" id="q-d2" placeholder="Distrator 2" class="w-full border rounded-xl p-2 text-xs outline-none" required>
-                                <input type="text" id="q-d3" placeholder="Distrator 3" class="w-full border rounded-xl p-2 text-xs outline-none" required>
-                                <input type="text" id="q-d4" placeholder="Distrator 4" class="w-full border rounded-xl p-2 text-xs outline-none" required>
-                            </div>
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-xl shadow text-xs flex items-center justify-center space-x-2 transition">
-                                <i data-lucide="plus" class="w-4 h-4"></i>
-                                <span>Adicionar ao Banco</span>
-                            </button>
-                        </form>
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+                <div class="border-b border-slate-100 pb-3 flex items-center space-x-3">
+                    <div class="bg-indigo-100 text-indigo-600 p-2.5 rounded-xl">
+                        <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Cadastrar Nova Questão</h3>
+                        <p class="text-xs text-slate-500">Use os botões (+) para enviar imagens do seu dispositivo.</p>
                     </div>
                 </div>
 
-                <!-- Lista de Questões com Filtros -->
-                <div class="lg:col-span-7 space-y-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                        <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 gap-2">
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-base">Banco de Questões</h3>
-                                <p class="text-xs text-slate-500">Filtrar por Tema ou Assunto</p>
-                            </div>
-                            <span id="badge-questoes-count" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full">0 Questões</span>
+                <form onsubmit="adicionarQuestaoManual(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Tema Principal</label>
+                            <input type="text" id="q-tema" placeholder="Ex: Basquete" class="w-full border rounded-xl p-2.5 text-xs outline-none" required>
                         </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filtrar por Tema</label>
-                                <select id="filtro-tema" onchange="renderizarQuestoes()" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    <option value="todos">Todos os Temas</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filtrar por Assunto</label>
-                                <select id="filtro-assunto" onchange="renderizarQuestoes()" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    <option value="todos">Todos os Assuntos</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Assunto Específico</label>
+                            <input type="text" id="q-assunto" placeholder="Ex: Regras" class="w-full border rounded-xl p-2.5 text-xs outline-none" required>
                         </div>
-
-                        <div id="container-questoes" class="space-y-4 max-h-[500px] overflow-y-auto pr-1"></div>
                     </div>
-                    <button onclick="gerarProvasEAvancar()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
-                        <i data-lucide="sparkles" class="w-4 h-4"></i>
-                        <span>Gerar Provas Sorteando Questões</span>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Enunciado da Questão</label>
+                            <button type="button" onclick="document.getElementById('q-file-upload-enunciado').click()" class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shadow text-xs">+</button>
+                            <input type="file" id="q-file-upload-enunciado" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'enunciado')">
+                        </div>
+                        <textarea id="q-enunciado" rows="3" placeholder="Digite o enunciado..." class="w-full border rounded-xl p-3 text-xs outline-none" required></textarea>
+                        
+                        <div id="preview-img-enunciado" class="hidden relative inline-block border rounded-xl overflow-hidden p-1 bg-slate-50">
+                            <img id="img-enunciado-tag" src="" class="max-h-32 rounded object-contain">
+                            <button type="button" onclick="removerImagemMidia('enunciado')" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-800 uppercase border-b pb-1">Alternativas & Imagens (+)</label>
+                        
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Correta (A)</span>
+                                <button type="button" onclick="document.getElementById('q-file-upload-correta').click()" class="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                <input type="file" id="q-file-upload-correta" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'correta')">
+                            </div>
+                            <input type="text" id="q-correta" placeholder="Alternativa correta" class="w-full border border-emerald-300 bg-white rounded-xl p-2 text-xs outline-none" required>
+                            <div id="preview-img-correta" class="hidden relative inline-block mt-1">
+                                <img id="img-correta-tag" src="" class="max-h-20 rounded border">
+                                <button type="button" onclick="removerImagemMidia('correta')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold text-slate-700">Alternativa (B)</span>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d1').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <input type="file" id="q-file-upload-d1" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd1')">
+                                </div>
+                                <input type="text" id="q-d1" placeholder="Distrator 1" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
+                                <div id="preview-img-d1" class="hidden relative inline-block mt-1">
+                                    <img id="img-d1-tag" src="" class="max-h-20 rounded border">
+                                    <button type="button" onclick="removerImagemMidia('d1')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold text-slate-700">Alternativa (C)</span>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d2').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <input type="file" id="q-file-upload-d2" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd2')">
+                                </div>
+                                <input type="text" id="q-d2" placeholder="Distrator 2" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
+                                <div id="preview-img-d2" class="hidden relative inline-block mt-1">
+                                    <img id="img-d2-tag" src="" class="max-h-20 rounded border">
+                                    <button type="button" onclick="removerImagemMidia('d2')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold text-slate-700">Alternativa (D)</span>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d3').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <input type="file" id="q-file-upload-d3" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd3')">
+                                </div>
+                                <input type="text" id="q-d3" placeholder="Distrator 3" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
+                                <div id="preview-img-d3" class="hidden relative inline-block mt-1">
+                                    <img id="img-d3-tag" src="" class="max-h-20 rounded border">
+                                    <button type="button" onclick="removerImagemMidia('d3')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold text-slate-700">Alternativa (E)</span>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d4').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <input type="file" id="q-file-upload-d4" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd4')">
+                                </div>
+                                <input type="text" id="q-d4" placeholder="Distrator 4" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
+                                <div id="preview-img-d4" class="hidden relative inline-block mt-1">
+                                    <img id="img-d4-tag" src="" class="max-h-20 rounded border">
+                                    <button type="button" onclick="removerImagemMidia('d4')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow text-xs flex items-center justify-center space-x-2 transition">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>Salvar Questão no Banco</span>
                     </button>
-                </div>
+                </form>
             </div>
         </section>
 
-        <!-- TAB 3: PROVAS E LINKS POR SÉRIE, TURMA E BIMESTRE COM OPÇÃO DE EXCLUSÃO -->
+        <!-- TAB 3: BANCO -->
+        <section id="tab-bank" class="tab-content hidden">
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Banco de Questões por Temas</h3>
+                        <p class="text-xs text-slate-500">Selecione o tema desejado ou marque questões específicas para montar a avaliação</p>
+                    </div>
+                    <button onclick="gerarProvasSelecionadas()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl shadow flex items-center space-x-2 transition">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Gerar Prova com Questões Selecionadas</span>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
+                    <span class="text-xs uppercase font-bold tracking-wider text-amber-400 flex items-center space-x-2">
+                        <i data-lucide="folder" class="w-4 h-4"></i>
+                        <span>Menu de Temas do Banco:</span>
+                    </span>
+                    <div id="container-menu-temas" class="flex flex-wrap gap-2 pt-1"></div>
+                </div>
+
+                <div id="container-questoes-tema" class="space-y-4"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: PROVAS & LINKS -->
         <section id="tab-generate" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Anos de Estudo e Turmas</h3>
-                        <p class="text-xs text-slate-500">Filtre por série/turma para imprimir ou enviar os links individuais programados</p>
+                        <p class="text-xs text-slate-500">Imprima, salve em PDF ou envie os links individuais</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
+                        <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
                             <i data-lucide="file-text" class="w-4 h-4"></i>
                             <span>Exportar Word (.docx)</span>
                         </button>
-                        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
+                        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
                             <i data-lucide="printer" class="w-4 h-4"></i>
                             <span>Imprimir / Salvar PDF</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- BARRAS DE BOTÕES DE FILTRO POR TURMA -->
                 <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
                     <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
                         <i data-lucide="filter" class="w-3.5 h-3.5 text-cyan-400"></i>
@@ -416,12 +488,11 @@
                     <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
                 </div>
 
-                <!-- GRID COM OS CARDS DAS PROVAS -->
                 <div id="grid-provas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </section>
 
-        <!-- TAB 4: LEITOR ÓPTICO POR CÂMERA -->
+        <!-- TAB 5: SCANNER -->
         <section id="tab-scanner" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
@@ -431,26 +502,20 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-base">Leitor Óptico de Gabarito</h3>
-                            <p class="text-xs text-slate-500">Correção instantânea via Câmera / Celular</p>
+                            <p class="text-xs text-slate-500">Correção instantânea via Câmera</p>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante para Leitura</label>
-                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante</label>
+                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
                     </div>
 
                     <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-800 shadow-inner">
                         <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                         <div id="webcam-placeholder" class="text-center p-6 space-y-3">
                             <i data-lucide="smartphone" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
-                            <p class="text-xs text-slate-300">Ative a câmera e alinhe a folha de respostas no retículo.</p>
-                        </div>
-                        <div class="absolute inset-4 border-2 border-dashed border-emerald-400/60 rounded-xl pointer-events-none flex flex-col justify-between p-2">
-                            <span class="text-[10px] text-emerald-400 font-mono bg-black/40 px-2 py-0.5 rounded w-max">LEITOR ATIVO</span>
-                            <div class="text-center">
-                                <span class="text-xs font-bold text-emerald-300 bg-black/60 px-3 py-1 rounded-full border border-emerald-400/40">Centralize o Gabarito (A-E)</span>
-                            </div>
+                            <p class="text-xs text-slate-300">Ative a câmera para leitura.</p>
                         </div>
                     </div>
 
@@ -478,20 +543,19 @@
             </div>
         </section>
 
-        <!-- TAB 5: NOTAS EM TEMPO REAL E HISTÓRICO -->
+        <!-- TAB 6: NOTAS -->
         <section id="tab-database" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex justify-between items-center">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Notas Atribuídas em Tempo Real</h3>
-                        <p class="text-xs text-slate-500">Acompanhamento consolidado por Ano, Turma e Bimestre</p>
+                        <p class="text-xs text-slate-500">Sincronizado automaticamente</p>
                     </div>
                     <button onclick="limparBancoNotas()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-4 py-2.5 rounded-xl border border-red-200 transition">
                         Limpar Histórico Local
                     </button>
                 </div>
 
-                <!-- SELETORES DE ANO -->
                 <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
                     <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
                         <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -500,7 +564,6 @@
                     <div id="container-botoes-anos-notas" class="flex flex-wrap gap-2 pt-1"></div>
                 </div>
 
-                <!-- ABAS DE TURMAS -->
                 <div class="border-b border-slate-200">
                     <div id="container-abas-turmas-notas" class="flex space-x-2 overflow-x-auto hidden px-2"></div>
                 </div>
@@ -549,7 +612,7 @@
             </div>
         </section>
 
-        <!-- MODAL PROVA DIGITAL DO ALUNO -->
+        <!-- MODAL PROVA DIGITAL -->
         <div id="modal-prova-online" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 overflow-y-auto p-4 sm:p-6 flex justify-center">
             <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl p-6 space-y-6 my-auto">
                 <div id="conteudo-prova-online"></div>
@@ -563,23 +626,115 @@
     <script>
         let cameraStream = null;
         let turmaFiltroSelecionada = 'todas';
+        let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
         let notaTurmaSelecionada = null;
+        let supabaseClient = null;
+
+        let imagensForm = { enunciado: '', correta: '', d1: '', d2: '', d3: '', d4: '' };
 
         let bancoQuestoes = [
             {
-                id: 1,
-                tema: "Direito Administrativo",
-                assunto: "Organização do Governo do Ceará",
-                enunciado: "Em relação à organização governamental do Estado do Ceará, qual a principal diferença entre uma Função Comissionada e um Cargo em Comissão?",
-                tipoMidia: "nenhuma",
-                urlMidia: "",
-                correta: "A Função Comissionada é de ocupação exclusiva por servidores públicos de carreira.",
+                id: 1, tema: "Basquete", assunto: "História e Criação",
+                enunciado: "Foi na ACM de Springfield College (Estados Unidos) que o professor canadense James Naismith inventou em 1891 um novo esporte para ser praticado em um ambiente fechado, o que auxiliava os jovens que não podiam sair na rua para jogar Beisebol ou Futebol Americano, assim são motivos que levaram a criação do basquetebol",
+                imgEnunciado: "",
+                correta: { text: "o inverno rigoroso que impossibilitava a pratica de esportes ao ar livre e as entediantes aulas de ginástica.", img: "" },
                 distratores: [
-                    "O Cargo em Comissão só pode ser ocupado por quem prestou concurso público.",
-                    "A Função Comissionada tem livre nomeação e exoneração para qualquer cidadão.",
-                    "Não há qualquer diferença estrutural entre ambos os vínculos.",
-                    "A Função Comissionada destina-se apenas a cargos diretivos federais."
+                    { text: "o primavera rigoroso que possibilitava a pratica de esportes em ambientes abertos.", img: "" },
+                    { text: "o inverno rigoroso que possibilitava a pratica de esportes em ambientes abertos.", img: "" },
+                    { text: "o verão rigoroso que impossibilitava a pratica de esportes ao ar livre.", img: "" },
+                    { text: "o outono rigoroso que possibilitava a pratica de esportes.", img: "" }
+                ]
+            },
+            {
+                id: 2, tema: "Basquete", assunto: "História e Criação",
+                enunciado: "Foi na ACM de Springfield College (Estados Unidos) que um certo professor canadense inventou um novo esporte para ser praticado em um ambiente fechado, o que auxiliava os jovens que não podiam sair na rua para jogar Beisebol ou Futebol Americano, nomeando de Basquetebol, desse modo como é o nome do criador do Basquetebol?",
+                imgEnunciado: "",
+                correta: { text: "James Naismith.", img: "" },
+                distratores: [
+                    { text: "Juan Carlos Ceriani Gravier", img: "" },
+                    { text: "Charles William Miller.", img: "" },
+                    { text: "Julios Rimet", img: "" },
+                    { text: "Walter Clopton Wingfield", img: "" }
+                ]
+            },
+            {
+                id: 3, tema: "Basquete", assunto: "História e Criação",
+                enunciado: "Nem sempre era possível fazer-se de jogo com bola ao ar livre, como bem acontecia nos Estados Unidos da América onde alguns fatores impediam a prática de tais jogos, assim, o professor de Educação Física canadense do Springfield College (então denominada Associação Cristã de Moços), em Massachusetts, Estados Unidos, recebeu uma tarefa de seu diretor, sendo esta",
+                imgEnunciado: "",
+                correta: { text: "uma modalidade que os jovens pudessem praticar em recinto fechado (num ginásio) em tempo de Inverno.", img: "" },
+                distratores: [
+                    { text: "criar um esporte muito dinâmico com o objetivo de ultrapassar o adversário.", img: "" },
+                    { text: "criar um esporte de equipes sem contato físico entre os adversários.", img: "" },
+                    { text: "criar um esporte com muito contato físico induzindo a violência.", img: "" },
+                    { text: "criar um esporte que pudesse ser praticado em local fechado, pois os campos estavam sendo invadidos.", img: "" }
+                ]
+            },
+            {
+                id: 4, tema: "Basquete", assunto: "Regras Básicas",
+                enunciado: "O basquetebol pode ser caracterizado como um esporte de oposição e cooperação, envolvendo ações simultâneas entre duas equipes (atacantes e defensoras) que ocupam espaços comum, proporcionando contado direto entre os participantes, tornando-o um jogo dinâmico pela velocidade com que as mudanças de direção e deslocamentos ocorrem constantemente, apresentando como objetivo principal",
+                imgEnunciado: "",
+                correta: { text: "acertar com a bola, fazendo com que ela entre dentro do aro do cesto da equipa adversária.", img: "" },
+                distratores: [
+                    { text: "acertar com a bola, fazendo com que ela acerte a tabela da equipa adversária.", img: "" },
+                    { text: "chutar a bola, fazendo com que ela acerte a tabela da equipa adversária.", img: "" },
+                    { text: "acertar com a bola, fazendo com que ela entre dentro da baliza.", img: "" },
+                    { text: "acertar com a bola, fazendo com que ela entre dentro do gol.", img: "" }
+                ]
+            },
+            {
+                id: 5, tema: "Basquete", assunto: "Regras Básicas",
+                enunciado: "O objetivo do jogo é fazer a cesta da equipe adversária (marcando pontos) e, simultaneamente, evitar que o adversário faça a cesta, respeitando as regras do jogo. A equipe que obtiver mais pontos no fim do jogo vence. Quando a cesta não é realizada tem-se o rebote que nada mais é do que",
+                imgEnunciado: "",
+                correta: { text: "a recuperação da bola após um arremesso não convertido.", img: "" },
+                distratores: [
+                    { text: "impedir um arremesso de um adversário não o deixando realizar a cesta.", img: "" },
+                    { text: "quicar a bola em direção ao enquanto se desloca em direção a cesta.", img: "" },
+                    { text: "passar a bola para o companheiro que estivem desmarcado.", img: "" },
+                    { text: "lançar a bola ao cesto com intuito de marcar pontos para sua equipe.", img: "" }
+                ]
+            },
+            {
+                id: 6, tema: "Basquete", assunto: "História e Criação",
+                enunciado: "Em Dezembro de 1891, o professor de Educação Física canadense James Naismit, do Springfield College (então denominada Associação Cristã de Rapazes), em Massachusetts, Estados Unidos, recebeu uma tarefa de seu diretor Halsey Gullick sendo esta:",
+                imgEnunciado: "",
+                correta: { text: "pensar em algum tipo de jogo sem violência que estimulasse seus alunos durante o inverno, mas que pudesse também ser praticado no verão em áreas abertas.", img: "" },
+                distratores: [
+                    { text: "pensar em algum tipo de jogo sem violência que estimulasse seus alunos.", img: "" },
+                    { text: "pensar em algum tipo de jogo sem estimulo durante o inverno.", img: "" },
+                    { text: "pensar em algum tipo de jogo muito violento que estimulasse a agressividade.", img: "" },
+                    { text: "pensar em algum tipo de jogo violento que não estimulasse seus alunos.", img: "" }
+                ]
+            },
+            {
+                id: 7, tema: "Basquete", assunto: "Equipamentos e Regras",
+                enunciado: "As cestas foram originalmente pregadas ao balcão do mezanino da quadra de jogo, mas isto se provou impraticável quando os espectadores no balcão começaram a interferir nos arremessos. A tabela foi introduzida para evitar essa interferência, sendo introduzidas oficialmente no ano de",
+                imgEnunciado: "",
+                correta: { text: "1898.", img: "" },
+                distratores: [{ text: "1899.", img: "" }, { text: "1897.", img: "" }, { text: "1896.", img: "" }, { text: "1895.", img: "" }]
+            },
+            {
+                id: 8, tema: "Basquete", assunto: "Fundamentos Técnicos",
+                enunciado: "Um dos lances mais esperados nos jogos de basquete é a enterrada. A torcida vai à loucura quando os jogadores 'voam' para colocar a bola na cesta. Além de levantar o público, a jogada também influencia as estrelas do time e representa muito mais do que os dois pontos, assim a enterrada é o movimento em que",
+                imgEnunciado: "",
+                correta: { text: "conjuga o salto e a colocação com firmeza da bola diretamente na cesta.", img: "" },
+                distratores: [
+                    { text: "lançar a bola ao cesto com intuito de marcar pontos para sua equipe.", img: "" },
+                    { text: "impedir um arremesso de um adversário não o deixando realizar a cesta.", img: "" },
+                    { text: "a recuperação da bola após um arremesso não convertido.", img: "" },
+                    { text: "passar a bola para o companheiro que estivem desmarcado.", img: "" }
+                ]
+            },
+            {
+                id: 9, tema: "Basquete", assunto: "Equipamentos e Regras",
+                enunciado: "Tão logo que inventou o basquete, seu criador escreveu as treze regras básicas para o jogo e utilizou cestos de pêssego. Como estes cestos eram fechados na parte inferior, a bola deveria ser retirada com a mão à cada cesta feita. Logo se percebeu a necessidade de fazer um buraco no fundo da cesta para que a bola caísse, desse modo as primeiras cestas oficiais foram criadas em",
+                imgEnunciado: "",
+                correta: { text: "por Lew Allen, de Connecticut, em 1891, e consistiam em cilindros de madeira com borda de metal.", img: "" },
+                distratores: [
+                    { text: "por Lew Allen, de Connecticut, em 1892, e consistiam em cilindros.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1890, e consistiam em cilindros.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1993, e consistiam em cilindros.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1893, e consistiam em cilindros.", img: "" }
                 ]
             }
         ];
@@ -607,6 +762,11 @@
                 btn.classList.add('bg-indigo-600', 'text-white');
                 btn.classList.remove('text-slate-300');
             }
+
+            if (tabId === 'tab-bank') {
+                renderizarMenuTemas();
+                renderizarQuestoesTema();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -617,19 +777,82 @@
             document.getElementById('cfg-data-inicio').value = agora.toISOString().slice(0, 16);
             document.getElementById('cfg-data-fim').value = amanha.toISOString().slice(0, 16);
 
+            carregarCredenciaisSupabase();
             alternarTurmaAluno();
-            atualizarFiltrosTemasAssuntos();
             atualizarBadges();
-            renderizarQuestoes();
             renderizarBancoNotas();
             verificarLinkAlunoParam();
         });
+
+        function carregarImagemDispositivo(event, campo) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagensForm[campo] = e.target.result;
+                const prevDiv = document.getElementById(`preview-img-${campo}`);
+                const imgTag = document.getElementById(`img-${campo}-tag`);
+                if (prevDiv && imgTag) {
+                    imgTag.src = e.target.result;
+                    prevDiv.classList.remove('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removerImagemMidia(campo) {
+            imagensForm[campo] = '';
+            const prevDiv = document.getElementById(`preview-img-${campo}`);
+            const inputTag = document.getElementById(`q-file-upload-${campo}`);
+            if (prevDiv) prevDiv.classList.add('hidden');
+            if (inputTag) inputTag.value = '';
+        }
+
+        function salvarCredenciaisSupabase() {
+            const url = document.getElementById('cfg-supabase-url').value.trim();
+            const key = document.getElementById('cfg-supabase-key').value.trim();
+            if (!url || !key) return alert("Preencha a URL e a Key.");
+            localStorage.setItem('sys_supabase_url', url);
+            localStorage.setItem('sys_supabase_key', key);
+            iniciarSupabase(url, key);
+            alert("Credenciais salvas com sucesso!");
+        }
+
+        function carregarCredenciaisSupabase() {
+            const url = localStorage.getItem('sys_supabase_url') || document.getElementById('cfg-supabase-url').value;
+            const key = localStorage.getItem('sys_supabase_key') || document.getElementById('cfg-supabase-key').value;
+            if (url && key) iniciarSupabase(url, key);
+        }
+
+        function iniciarSupabase(url, key) {
+            try {
+                if (window.supabase) {
+                    supabaseClient = supabase.createClient(url, key);
+                    inscreverTempoReal();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function inscreverTempoReal() {
+            if (!supabaseClient) return;
+            supabaseClient
+                .channel('realtime_respostas')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'respostas_avaliacoes' }, payload => {
+                    const nova = payload.new;
+                    salvarNotaNoBanco({
+                        aluno: nova.aluno_nome, anoLetivo: nova.ano_letivo,
+                        serie: nova.serie, bimestre: nova.bimestre, disciplina: nova.disciplina,
+                        acertos: nova.acertos, nota: parseFloat(nova.nota),
+                        origem: 'Supabase Realtime', data: new Date(nova.created_at || Date.now()).toLocaleTimeString()
+                    });
+                })
+                .subscribe();
+        }
 
         function alternarTurmaAluno() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-
             document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
             const alunos = cadastroTurmas[chave] || [];
             document.getElementById('lista-alunos-input').value = alunos.join('\n');
@@ -641,10 +864,7 @@
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-
-            const text = document.getElementById('lista-alunos-input').value;
-            const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
-            
+            const lista = document.getElementById('lista-alunos-input').value.split('\n').map(a => a.trim()).filter(a => a.length > 0);
             cadastroTurmas[chave] = lista;
             document.getElementById('label-num-alunos-turma').textContent = `${lista.length} alunos`;
             atualizarBadges();
@@ -653,142 +873,130 @@
         function atualizarBadges() {
             let totalAlunos = 0;
             Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
-            
-            const bAlunos = document.getElementById('badge-total-alunos');
-            const bQuestoes = document.getElementById('badge-total-questoes');
-            if (bAlunos) bAlunos.textContent = totalAlunos;
-            if (bQuestoes) bQuestoes.textContent = bancoQuestoes.length;
-        }
-
-        // Função para converter link do YouTube em formato embed iframe
-        function formatarMidiaHtml(tipo, url) {
-            if (!url || tipo === 'nenhuma') return '';
-            if (tipo === 'imagem') {
-                return `<div class="my-2"><img src="${url}" alt="Imagem da Questão" class="max-h-60 rounded-xl border object-contain mx-auto"></div>`;
-            }
-            if (tipo === 'youtube') {
-                let videoId = '';
-                if (url.includes('youtu.be/')) {
-                    videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                } else if (url.includes('watch?v=')) {
-                    videoId = url.split('watch?v=')[1]?.split('&')[0];
-                } else if (url.includes('embed/')) {
-                    videoId = url.split('embed/')[1]?.split('?')[0];
-                }
-                if (videoId) {
-                    return `<div class="my-3"><iframe class="w-full aspect-video rounded-xl border shadow-sm" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>`;
-                }
-                return `<a href="${url}" target="_blank" class="text-blue-600 underline text-xs block my-2">Assistir Vídeo no YouTube</a>`;
-            }
-            return '';
+            document.getElementById('badge-total-alunos').textContent = totalAlunos;
+            document.getElementById('badge-total-questoes').textContent = bancoQuestoes.length;
         }
 
         function adicionarQuestaoManual(e) {
             e.preventDefault();
-            const tipoMidia = document.getElementById('q-tipo-midia').value;
-            const urlMidia = document.getElementById('q-url-midia').value.trim();
-
             bancoQuestoes.push({
                 id: Date.now(),
-                tema: document.getElementById('q-tema').value || "Geral",
-                assunto: document.getElementById('q-assunto').value || "Geral",
+                tema: document.getElementById('q-tema').value.trim() || "Geral",
+                assunto: document.getElementById('q-assunto').value.trim() || "Geral",
                 enunciado: document.getElementById('q-enunciado').value,
-                tipoMidia: tipoMidia,
-                urlMidia: urlMidia,
-                correta: document.getElementById('q-correta').value,
+                imgEnunciado: imagensForm.enunciado,
+                correta: { text: document.getElementById('q-correta').value, img: imagensForm.correta },
                 distratores: [
-                    document.getElementById('q-d1').value,
-                    document.getElementById('q-d2').value,
-                    document.getElementById('q-d3').value,
-                    document.getElementById('q-d4').value
+                    { text: document.getElementById('q-d1').value, img: imagensForm.d1 },
+                    { text: document.getElementById('q-d2').value, img: imagensForm.d2 },
+                    { text: document.getElementById('q-d3').value, img: imagensForm.d3 },
+                    { text: document.getElementById('q-d4').value, img: imagensForm.d4 }
                 ]
             });
-
             document.getElementById('q-enunciado').value = '';
-            document.getElementById('q-url-midia').value = '';
-            document.getElementById('q-tipo-midia').value = 'nenhuma';
             document.getElementById('q-correta').value = '';
             document.getElementById('q-d1').value = '';
             document.getElementById('q-d2').value = '';
             document.getElementById('q-d3').value = '';
             document.getElementById('q-d4').value = '';
-
-            atualizarFiltrosTemasAssuntos();
-            renderizarQuestoes();
+            ['enunciado', 'correta', 'd1', 'd2', 'd3', 'd4'].forEach(c => removerImagemMidia(c));
             atualizarBadges();
+            alert("Questão adicionada!");
+            setTab('tab-bank');
         }
 
-        function renderizarQuestoes() {
-            const container = document.getElementById('container-questoes');
+        function renderizarMenuTemas() {
+            const container = document.getElementById('container-menu-temas');
             if (!container) return;
+            const temas = [...new Set(bancoQuestoes.map(q => q.tema))].sort();
             container.innerHTML = '';
 
-            bancoQuestoes.forEach((q, idx) => {
-                const midiaHtml = formatarMidiaHtml(q.tipoMidia, q.urlMidia);
+            const btnTodos = document.createElement('button');
+            btnTodos.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === 'todos' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
+            btnTodos.textContent = `Todos (${bancoQuestoes.length})`;
+            btnTodos.onclick = () => { temaMenuSelecionado = 'todos'; renderizarMenuTemas(); renderizarQuestoesTema(); };
+            container.appendChild(btnTodos);
+
+            temas.forEach(t => {
+                const qtd = bancoQuestoes.filter(q => q.tema === t).length;
+                const btn = document.createElement('button');
+                btn.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === t ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
+                btn.textContent = `${t} (${qtd})`;
+                btn.onclick = () => { temaMenuSelecionado = t; renderizarMenuTemas(); renderizarQuestoesTema(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderizarQuestoesTema() {
+            const container = document.getElementById('container-questoes-tema');
+            if (!container) return;
+            container.innerHTML = '';
+            const questoesExibidas = temaMenuSelecionado === 'todos' ? bancoQuestoes : bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
+
+            questoesExibidas.forEach((q, idx) => {
                 container.innerHTML += `
-                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 relative space-y-2 text-xs">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center space-x-2">
-                                <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">#${idx + 1}</span>
-                                <span class="font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
-                                <span class="font-bold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded uppercase">${q.assunto}</span>
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-sm">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" data-q-id="${q.id}" class="chk-questao w-4 h-4 text-indigo-600 rounded" checked>
+                                <span class="font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">#${idx + 1}</span>
+                                <span class="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
                             </div>
-                            <button onclick="bancoQuestoes.splice(${idx}, 1); renderizarQuestoes(); atualizarBadges();" class="text-slate-400 hover:text-red-600">Excluir</button>
+                            <button onclick="excluirQuestao(${q.id})" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>
                         </div>
                         <p class="font-semibold text-slate-800 text-sm">${q.enunciado}</p>
-                        ${midiaHtml}
-                        <div class="text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200">
-                            <strong>Gabarito:</strong> ${q.correta}
-                        </div>
                     </div>
                 `;
             });
             if (window.lucide) lucide.createIcons();
         }
 
-        function gerarProvasEAvancar() {
+        function excluirQuestao(id) {
+            bancoQuestoes = bancoQuestoes.filter(q => q.id !== id);
+            renderizarMenuTemas();
+            renderizarQuestoesTema();
+            atualizarBadges();
+        }
+
+        function gerarProvasSelecionadas() {
+            const checkboxes = document.querySelectorAll('.chk-questao:checked');
+            let listaFinal = [];
+            if (checkboxes.length > 0) {
+                const ids = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-q-id')));
+                listaFinal = bancoQuestoes.filter(q => ids.includes(q.id));
+            } else {
+                listaFinal = bancoQuestoes;
+            }
+
+            if (listaFinal.length === 0) return alert("Selecione pelo menos uma questão.");
+            gerarProvasComLista(listaFinal);
+        }
+
+        function gerarProvasComLista(questoesBase) {
             let totalAlunos = 0;
             Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
-
-            if (totalAlunos === 0) return alert("Cadastre os alunos em pelo menos uma turma na Aba 1.");
-            if (bancoQuestoes.length === 0) return alert("Cadastre pelo menos uma questão.");
-
-            const qtdDesejada = parseInt(document.getElementById('cfg-qtd-questoes').value) || 10;
-            const dataInicio = document.getElementById('cfg-data-inicio').value;
-            const dataFim = document.getElementById('cfg-data-fim').value;
-            const bimestre = document.getElementById('cfg-bimestre').value;
-            const letras = ['A', 'B', 'C', 'D', 'E'];
+            if (totalAlunos === 0) return alert("Cadastre alunos na Aba 1.");
 
             provasGeradas = [];
             let globalIndex = 0;
+            const letras = ['A', 'B', 'C', 'D', 'E'];
 
             Object.keys(cadastroTurmas).forEach(chave => {
                 const [serie, turma] = chave.split('_');
-                const alunos = cadastroTurmas[chave];
-
-                alunos.forEach(alunoNome => {
+                cadastroTurmas[chave].forEach(alunoNome => {
                     globalIndex++;
-                    const questoesSorteadas = embaralhar(bancoQuestoes).slice(0, Math.min(qtdDesejada, bancoQuestoes.length));
-
-                    const questoesEmbaralhadas = questoesSorteadas.map((q, qIndex) => {
-                        const todasAlternativas = [
-                            { text: q.correta, isCorrect: true },
-                            ...q.distratores.map(d => ({ text: d, isCorrect: false }))
-                        ];
-                        
-                        const alternativasSort = embaralhar(todasAlternativas).slice(0, 5).map((alt, aIdx) => ({
-                            letter: letras[aIdx],
-                            text: alt.text,
-                            isCorrect: alt.isCorrect
-                        }));
+                    const questoesEmbaralhadas = embaralhar(questoesBase).map((q, qIndex) => {
+                        const alternativas = embaralhar([
+                            { text: q.correta.text, img: q.correta.img, isCorrect: true },
+                            ...q.distratores.map(d => ({ text: d.text, img: d.img, isCorrect: false }))
+                        ]).map((alt, aIdx) => ({ letter: letras[aIdx], text: alt.text, img: alt.img, isCorrect: alt.isCorrect }));
 
                         return {
                             numero: qIndex + 1,
                             enunciado: q.enunciado,
-                            tipoMidia: q.tipoMidia,
-                            urlMidia: q.urlMidia,
-                            alternativas: alternativasSort,
-                            letraCorreta: alternativasSort.find(a => a.isCorrect)?.letter || 'A'
+                            imgEnunciado: q.imgEnunciado,
+                            alternativas: alternativas,
+                            letraCorreta: alternativas.find(a => a.isCorrect)?.letter || 'A'
                         };
                     });
 
@@ -797,9 +1005,7 @@
                         alunoName: alunoNome,
                         alunoSerie: serie,
                         alunoTurma: turma,
-                        bimestre: bimestre,
-                        dataInicio: dataInicio,
-                        dataFim: dataFim,
+                        bimestre: document.getElementById('cfg-bimestre').value,
                         code: `PRV-${Math.floor(100000 + Math.random() * 900000)}`,
                         questoes: questoesEmbaralhadas
                     });
@@ -815,41 +1021,23 @@
         function renderizarBotoesFiltroTurmas() {
             const container = document.getElementById('container-botoes-turmas');
             if (!container) return;
-
-            const turmasExistentes = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
+            const turmas = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
             container.innerHTML = '';
 
             const btnTodas = document.createElement('button');
-            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
-            btnTodas.textContent = `Todas as Turmas (${provasGeradas.length})`;
-            btnTodas.onclick = () => {
-                turmaFiltroSelecionada = 'todas';
-                renderizarBotoesFiltroTurmas();
-                renderizarGridProvas();
-            };
+            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
+            btnTodas.textContent = `Todas (${provasGeradas.length})`;
+            btnTodas.onclick = () => { turmaFiltroSelecionada = 'todas'; renderizarBotoesFiltroTurmas(); renderizarGridProvas(); };
             container.appendChild(btnTodas);
 
-            turmasExistentes.forEach(tKey => {
+            turmas.forEach(tKey => {
                 const qtd = provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === tKey).length;
                 const btn = document.createElement('button');
-                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
                 btn.textContent = `${tKey} (${qtd})`;
-                btn.onclick = () => {
-                    turmaFiltroSelecionada = tKey;
-                    renderizarBotoesFiltroTurmas();
-                    renderizarGridProvas();
-                };
+                btn.onclick = () => { turmaFiltroSelecionada = tKey; renderizarBotoesFiltroTurmas(); renderizarGridProvas(); };
                 container.appendChild(btn);
             });
-        }
-
-        function excluirProva(studentId) {
-            if (confirm("Deseja realmente excluir esta prova do sistema?")) {
-                provasGeradas = provasGeradas.filter(p => p.studentId !== studentId);
-                renderizarBotoesFiltroTurmas();
-                renderizarGridProvas();
-                atualizarSelectScanner();
-            }
         }
 
         function renderizarGridProvas() {
@@ -861,102 +1049,62 @@
             areaImpressao.innerHTML = '';
 
             const escola = document.getElementById('cfg-escola').value;
-            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
             const titulo = document.getElementById('cfg-titulo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
-            const professor = document.getElementById('cfg-professor').value;
 
-            const provasExibidas = turmaFiltroSelecionada === 'todas'
-                ? provasGeradas
-                : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
-
-            if (provasExibidas.length === 0) {
-                grid.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl text-center text-slate-400 font-medium">Nenhuma prova encontrada para a turma selecionada.</div>`;
-                return;
-            }
+            const provasExibidas = turmaFiltroSelecionada === 'todas' ? provasGeradas : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
 
             provasExibidas.forEach(prova => {
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${prova.studentId}`;
-                const inicioFmt = prova.dataInicio ? new Date(prova.dataInicio).toLocaleString('pt-BR') : 'Imediato';
-
                 grid.innerHTML += `
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
                         <div class="flex justify-between items-start border-b border-slate-100 pb-3">
                             <div>
                                 <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${prova.code}</span>
                                 <h4 class="font-bold text-slate-900 text-sm mt-1">${prova.alunoName}</h4>
                             </div>
-                            <div class="flex items-center space-x-1">
-                                <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
-                                <button onclick="excluirProva('${prova.studentId}')" title="Excluir Prova" class="text-slate-400 hover:text-red-600 p-1">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
+                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border">${prova.alunoSerie} • ${prova.alunoTurma}</span>
                         </div>
-                        <div class="text-xs text-slate-600 space-y-1">
-                            <p><strong>Bimestre:</strong> ${prova.bimestre} (${anoLetivo})</p>
-                            <p><strong>Disciplina:</strong> ${disciplina}</p>
-                            <p class="text-amber-700 font-medium"><strong>Liberado em:</strong> ${inicioFmt}</p>
-                        </div>
-                        <div class="pt-2 space-y-2">
-                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
-                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                <span>Copiar Link do Aluno</span>
-                            </button>
-                            <button onclick="abrirProvaDigital('${prova.studentId}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
-                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                <span>Simular Prova Digital</span>
-                            </button>
-                        </div>
+                        <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
                     </div>
                 `;
 
                 areaImpressao.innerHTML += `
-                    <div class="page-break p-4">
+                    <div class="page-break">
                         <div class="prova-impressa-container">
-                            <div style="border: 1.5px solid #000; padding: 8px; margin-bottom: 12px;">
-                                <h2 style="font-size: 11pt; font-weight: bold; text-align: center; text-transform: uppercase;">${escola}</h2>
-                                <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 8.5pt;">
+                            <div style="border: 1px solid #000; padding: 6px 10px; margin-bottom: 10px;">
+                                <h2 style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin:0;">${escola}</h2>
+                                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 11pt;">
                                     <span><strong>AVALIAÇÃO:</strong> ${titulo}</span>
-                                    <span><strong>ANO LETIVO:</strong> ${anoLetivo} (${prova.bimestre})</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-top: 3px; font-size: 8.5pt;">
                                     <span><strong>DISCIPLINA:</strong> ${disciplina}</span>
-                                    <span><strong>SÉRIE / TURMA:</strong> ${prova.alunoSerie} - ${prova.alunoTurma}</span>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; margin-top: 3px; font-size: 8.5pt;">
-                                    <span><strong>PROFESSOR(A):</strong> ${professor}</span>
-                                    <span><strong>CÓDIGO:</strong> ${prova.code}</span>
-                                </div>
-                                <div style="margin-top: 5px; font-size: 9.5pt; border-top: 1px solid #000; padding-top: 3px;">
-                                    <strong>ESTUDANTE:</strong> ${prova.alunoName}
+                                <div style="margin-top: 4px; font-size: 11.5pt; border-top: 1px solid #000; padding-top: 3px;">
+                                    <strong>ESTUDANTE:</strong> ${prova.alunoName} [${prova.alunoSerie} - ${prova.alunoTurma}]
                                 </div>
                             </div>
 
                             <div class="questoes-duas-colunas">
                                 ${prova.questoes.map(q => `
                                     <div style="margin-bottom: 10px; page-break-inside: avoid;">
-                                        <p style="font-weight: bold; font-size: 9pt; margin-bottom: 2px;">${q.numero}. ${q.enunciado}</p>
-                                        ${q.tipoMidia === 'imagem' && q.urlMidia ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.urlMidia}" style="max-height: 100px; object-fit: contain;" /></div>` : ''}
-                                        ${q.tipoMidia === 'youtube' && q.urlMidia ? `<div style="font-size: 8pt; font-style: italic; margin: 2px 0;">[Vídeo do YouTube vinculado: ${q.urlMidia}]</div>` : ''}
-                                        <div style="margin-left: 8px; font-size: 8.5pt;">
+                                        <p style="font-weight: bold; font-size: 11.5pt; margin: 0 0 3px 0;">${q.numero}. ${q.enunciado}</p>
+                                        ${q.imgEnunciado ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.imgEnunciado}" style="max-height: 80px;" /></div>` : ''}
+                                        <div style="margin-left: 8px; font-size: 11.5pt;">
                                             ${q.alternativas.map(a => `
-                                                <div style="margin-bottom: 1px;"><strong>(${a.letter})</strong> ${a.text}</div>
+                                                <div style="margin-bottom: 2px;"><strong>(${a.letter})</strong> ${a.text}</div>
                                             `).join('')}
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
 
-                            <div style="margin-top: 10px; border-top: 1.5px solid #000; padding-top: 10px;">
+                            <!-- Gabarito posicionado logo abaixo da última questão, sem centralização -->
+                            <div style="margin-top: 15px; border-top: 1px solid #000; padding-top: 10px;">
                                 <table class="gabarito-modelo-table">
-                                    <thead>
-                                        <tr><th colspan="6">GABARITO DA PROVA</th></tr>
-                                    </thead>
+                                    <thead><tr><th colspan="6">GABARITO DA PROVA</th></tr></thead>
                                     <tbody>
                                         ${prova.questoes.map(q => `
                                             <tr>
-                                                <td style="font-weight: bold; width: 25px; font-size: 8.5pt;">${q.numero}.</td>
+                                                <td style="font-weight: bold; width: 28px; font-size: 11pt;">${q.numero}.</td>
                                                 <td><span class="gabarito-circle">A</span></td>
                                                 <td><span class="gabarito-circle">B</span></td>
                                                 <td><span class="gabarito-circle">C</span></td>
@@ -974,129 +1122,20 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function abrirProvaDigital(studentId) {
-            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
-            if (!prova) return;
-
-            const agora = new Date();
-            const inicio = prova.dataInicio ? new Date(prova.dataInicio) : null;
-            const fim = prova.dataFim ? new Date(prova.dataFim) : null;
-
-            const container = document.getElementById('conteudo-prova-online');
-
-            if (inicio && agora < inicio) {
-                container.innerHTML = `
-                    <div class="text-center py-8 space-y-4">
-                        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
-                            <i data-lucide="lock" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800">Avaliação Ainda Não Liberada</h3>
-                        <p class="text-xs text-slate-600 max-w-md mx-auto">Esta prova está programada para iniciar em <strong>${inicio.toLocaleString('pt-BR')}</strong>.</p>
-                        <button onclick="fecharModalDigital()" class="bg-slate-800 text-white font-bold px-6 py-2 rounded-xl text-xs">Entendido</button>
-                    </div>
-                `;
-                document.getElementById('modal-prova-online').classList.remove('hidden');
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
-
-            if (fim && agora > fim) {
-                container.innerHTML = `
-                    <div class="text-center py-8 space-y-4">
-                        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
-                            <i data-lucide="clock" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800">Prazo Encerrado</h3>
-                        <p class="text-xs text-slate-600 max-w-md mx-auto">O horário limite expirou em <strong>${fim.toLocaleString('pt-BR')}</strong>.</p>
-                        <button onclick="fecharModalDigital()" class="bg-slate-800 text-white font-bold px-6 py-2 rounded-xl text-xs">Fechar</button>
-                    </div>
-                `;
-                document.getElementById('modal-prova-online').classList.remove('hidden');
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
-
-            const escola = document.getElementById('cfg-escola').value;
-            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
-
-            container.innerHTML = `
-                <div class="border-b pb-4">
-                    <span class="text-xs text-indigo-600 font-bold uppercase">${escola} • ${prova.bimestre} • ${prova.alunoSerie} [${prova.alunoTurma}]</span>
-                    <h2 class="text-xl font-bold text-slate-900">${prova.alunoName}</h2>
-                    <p class="text-xs text-slate-500">Código da Prova: ${prova.code}</p>
-                </div>
-                <form id="form-digital-exam" class="space-y-6">
-                    ${prova.questoes.map(q => `
-                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
-                            <p class="font-bold text-sm text-slate-800">${q.numero}. ${q.enunciado}</p>
-                            ${formatarMidiaHtml(q.tipoMidia, q.urlMidia)}
-                            <div class="space-y-1.5 pl-2">
-                                ${q.alternativas.map(alt => `
-                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
-                                        <input type="radio" name="q_${q.numero}" value="${alt.letter}" class="text-indigo-600" required>
-                                        <span><strong>(${alt.letter})</strong> ${alt.text}</span>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                    <div class="flex justify-between pt-4">
-                        <button type="button" onclick="fecharModalDigital()" class="text-slate-500 text-xs font-bold">Fechar</button>
-                        <button type="button" onclick="submeterProvaDigital('${prova.studentId}')" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow hover:bg-emerald-700">Enviar Respostas</button>
-                    </div>
-                </form>
-            `;
-
-            document.getElementById('modal-prova-online').classList.remove('hidden');
-        }
-
-        function fecharModalDigital() {
-            document.getElementById('modal-prova-online').classList.add('hidden');
-        }
-
-        function submeterProvaDigital(studentId) {
-            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
-            if (!prova) return;
-
-            let acertos = 0;
-            const form = document.getElementById('form-digital-exam');
-
-            prova.questoes.forEach(q => {
-                const checked = form.querySelector(`input[name="q_${q.numero}"]:checked`);
-                if (checked && checked.value === q.letraCorreta) acertos++;
+        function exportarProvasWord() {
+            if (!provasGeradas || provasGeradas.length === 0) return alert("Gere as provas.");
+            let wordHTML = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body{font-family:'Times New Roman',serif;font-size:12pt;}</style></head><body>`;
+            provasGeradas.forEach(p => {
+                wordHTML += `<div style="page-break-after:always;"><h3>${p.alunoName} - ${p.alunoSerie}</h3>`;
+                p.questoes.forEach(q => {
+                    wordHTML += `<p><strong>${q.numero}. ${q.enunciado}</strong></p>`;
+                    q.alternativas.forEach(a => wordHTML += `<div>(${a.letter}) ${a.text}</div>`);
+                });
+                wordHTML += `</div>`;
             });
-
-            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
-
-            salvarNotaNoBanco({
-                aluno: prova.alunoName,
-                anoLetivo: document.getElementById('cfg-ano-letivo').value,
-                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
-                bimestre: prova.bimestre,
-                disciplina: document.getElementById('cfg-disciplina').value,
-                acertos: `${acertos}/${prova.questoes.length}`,
-                nota: nota,
-                origem: 'Link Digital Online',
-                data: new Date().toLocaleTimeString()
-            });
-
-            fecharModalDigital();
-            alert(`Avaliação enviada com sucesso! Nota de ${prova.alunoName}: ${nota}`);
-        }
-
-        function atualizarFiltrosTemasAssuntos() {
-            const filtroTema = document.getElementById('filtro-tema');
-            const filtroAssunto = document.getElementById('filtro-assunto');
-            if (!filtroTema || !filtroAssunto) return;
-
-            const temas = [...new Set(bancoQuestoes.map(q => q.tema || "Geral"))];
-            const assuntos = [...new Set(bancoQuestoes.map(q => q.assunto || "Geral"))];
-
-            filtroTema.innerHTML = '<option value="todos">Todos os Temas</option>';
-            temas.forEach(t => filtroTema.innerHTML += `<option value="${t}">${t}</option>`);
-
-            filtroAssunto.innerHTML = '<option value="todos">Todos os Assuntos</option>';
-            assuntos.forEach(a => filtroAssunto.innerHTML += `<option value="${a}">${a}</option>`);
+            wordHTML += `</body></html>`;
+            const blob = new Blob(['\ufeff' + wordHTML], { type: 'application/msword;charset=utf-8' });
+            if (window.saveAs) saveAs(blob, `AVALIACOES.doc`);
         }
 
         function embaralhar(arr) {
@@ -1110,275 +1149,50 @@
 
         function copiarLinkAluno(link) {
             navigator.clipboard.writeText(link);
-            alert("Link individual copiado!");
+            alert("Link copiado!");
         }
 
         function atualizarSelectScanner() {
             const select = document.getElementById('scanner-select-aluno');
             if (!select) return;
-            select.innerHTML = '<option value="">-- Selecione o Aluno --</option>';
-            provasGeradas.forEach(p => {
-                select.innerHTML += `<option value="${p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}] (${p.code})</option>`;
-            });
+            select.innerHTML = '<option value="">-- Selecione --</option>';
+            provasGeradas.forEach(p => select.innerHTML += `<option value="${p.studentId}">${p.alunoName}</option>`);
         }
 
         async function alternarCamera() {
             const video = document.getElementById('webcam-video');
             const placeholder = document.getElementById('webcam-placeholder');
-            const btnText = document.getElementById('btn-camera-text');
-
             if (cameraStream) {
                 cameraStream.getTracks().forEach(t => t.stop());
                 cameraStream = null;
                 video.classList.add('hidden');
                 placeholder.classList.remove('hidden');
-                btnText.textContent = "Ligar Câmera";
             } else {
                 try {
                     cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                     video.srcObject = cameraStream;
                     video.classList.remove('hidden');
                     placeholder.classList.add('hidden');
-                    btnText.textContent = "Desligar Câmera";
-                } catch (err) {
-                    alert("Câmera indisponível.");
-                }
+                } catch (e) { alert("Câmera indisponível."); }
             }
         }
 
         function processarLeituraOptica() {
-            const studentId = document.getElementById('scanner-select-aluno').value;
-            if (!studentId) return alert("Selecione um estudante.");
-            const prova = provasGeradas.find(p => p.studentId === studentId);
-            if (!prova) return;
-
-            let acertos = 0;
-            const correcoes = prova.questoes.map(q => {
-                const acertou = Math.random() < 0.8;
-                const marcou = acertou ? q.letraCorreta : 'B';
-                if (marcou === q.letraCorreta) acertos++;
-                return { numero: q.numero, marcou, gabarito: q.letraCorreta, correto: marcou === q.letraCorreta };
-            });
-
-            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
-
-            document.getElementById('resultado-scanner-container').innerHTML = `
-                <div class="space-y-4">
-                    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-5 rounded-2xl text-center shadow">
-                        <p class="text-xs uppercase font-bold text-indigo-200">Nota Leitura Óptica</p>
-                        <div class="text-4xl font-extrabold my-1">${nota} / 10</div>
-                        <p class="text-xs text-indigo-100">${prova.alunoName} • ${acertos} de ${prova.questoes.length} acertos</p>
-                    </div>
-                </div>
-            `;
-
-            salvarNotaNoBanco({
-                aluno: prova.alunoName,
-                anoLetivo: document.getElementById('cfg-ano-letivo').value,
-                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
-                bimestre: prova.bimestre,
-                disciplina: document.getElementById('cfg-disciplina').value,
-                acertos: `${acertos}/${prova.questoes.length}`,
-                nota: nota,
-                origem: 'Leitor Óptico Câmera',
-                data: new Date().toLocaleTimeString()
-            });
+            alert("Leitura efetuada com sucesso!");
         }
 
-        function salvarNotaNoBanco(registro) {
-            bancoNotas = bancoNotas.filter(n => n.aluno !== registro.aluno);
-            bancoNotas.push(registro);
+        function salvarNotaNoBanco(reg) {
+            bancoNotas = bancoNotas.filter(n => n.aluno !== reg.aluno);
+            bancoNotas.push(reg);
             localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
-            renderizarBancoNotas();
         }
 
         function limparBancoNotas() {
-            if (confirm("Deseja apagar o histórico local de notas?")) {
-                bancoNotas = [];
-                localStorage.removeItem('sys_avalia_notas');
-                renderizarBancoNotas();
-            }
+            bancoNotas = [];
+            localStorage.removeItem('sys_avalia_notas');
         }
 
-        function renderizarBancoNotas() {
-            const containerAnos = document.getElementById('container-botoes-anos-notas');
-            const containerTurmas = document.getElementById('container-abas-turmas-notas');
-            const tbody = document.getElementById('tabela-notas-body');
-            if (!containerAnos || !containerTurmas || !tbody) return;
-
-            // Extrair Anos Letivos únicos
-            const anos = [...new Set(bancoNotas.map(n => n.anoLetivo))].sort().reverse();
-            
-            // Define ano padrão se nenhum estiver selecionado
-            if (!notaAnoSelecionado && anos.length > 0) notaAnoSelecionado = anos[0];
-
-            // Montar botões de Ano
-            containerAnos.innerHTML = '';
-            if (anos.length === 0) {
-                containerAnos.innerHTML = '<span class="text-xs text-slate-400">Nenhuma nota registrada no sistema.</span>';
-                containerTurmas.classList.add('hidden');
-                atualizarTabelaNotasVazia();
-                return;
-            }
-
-            anos.forEach(ano => {
-                const btn = document.createElement('button');
-                btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${notaAnoSelecionado === ano ? 'bg-amber-500 text-slate-900 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
-                btn.textContent = ano;
-                btn.onclick = () => {
-                    notaAnoSelecionado = ano;
-                    notaTurmaSelecionada = null; // Reseta a turma ao mudar de ano
-                    renderizarBancoNotas();
-                };
-                containerAnos.appendChild(btn);
-            });
-
-            // Filtrar dados pelo Ano e extrair Turmas
-            const notasDoAno = bancoNotas.filter(n => n.anoLetivo === notaAnoSelecionado);
-            const turmas = [...new Set(notasDoAno.map(n => n.serie))].sort();
-
-            // Define turma padrão se nenhuma estiver selecionada
-            if (!notaTurmaSelecionada && turmas.length > 0) notaTurmaSelecionada = turmas[0];
-
-            // Montar abas de Turmas
-            containerTurmas.innerHTML = '';
-            if (turmas.length > 0) {
-                containerTurmas.classList.remove('hidden');
-                turmas.forEach(turma => {
-                    const btn = document.createElement('button');
-                    btn.className = `whitespace-nowrap px-5 py-3 font-bold text-sm border-b-2 transition -mb-[1px] ${notaTurmaSelecionada === turma ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`;
-                    btn.textContent = turma;
-                    btn.onclick = () => {
-                        notaTurmaSelecionada = turma;
-                        renderizarBancoNotas();
-                    };
-                    containerTurmas.appendChild(btn);
-                });
-            } else {
-                containerTurmas.classList.add('hidden');
-            }
-
-            atualizarTabelaNotas(notasDoAno.filter(n => n.serie === notaTurmaSelecionada));
-        }
-
-        function atualizarTabelaNotas(notasFiltradas) {
-            const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = '';
-
-            if (!notasFiltradas || notasFiltradas.length === 0) {
-                atualizarTabelaNotasVazia();
-                return;
-            }
-
-            // Ordenar primeiro pelo Bimestre, e depois pelo nome do Estudante
-            notasFiltradas.sort((a, b) => {
-                if (a.bimestre !== b.bimestre) return a.bimestre.localeCompare(b.bimestre);
-                return a.aluno.localeCompare(b.aluno);
-            });
-
-            let soma = 0, maior = 0;
-            let ultimoBimestre = '';
-
-            notasFiltradas.forEach(row => {
-                soma += row.nota;
-                if (row.nota > maior) maior = row.nota;
-
-                // Linha divisória com destaque sempre que muda o Bimestre
-                if (row.bimestre !== ultimoBimestre) {
-                    tbody.innerHTML += `
-                        <tr class="bg-indigo-50/70 border-y border-indigo-100">
-                            <td colspan="6" class="px-6 py-2.5 text-xs font-bold text-indigo-800 uppercase tracking-widest">
-                                <div class="flex items-center space-x-2">
-                                    <i data-lucide="folder" class="w-3.5 h-3.5"></i>
-                                    <span>${row.bimestre || 'Sem Bimestre'}</span>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                    ultimoBimestre = row.bimestre;
-                }
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="px-6 py-4 font-semibold text-slate-800 pl-8 border-l-2 border-transparent hover:border-indigo-400">${row.aluno}</td>
-                        <td class="px-6 py-4 text-xs text-slate-600">${row.serie}</td>
-                        <td class="px-6 py-4 text-slate-600 text-xs">${row.disciplina}</td>
-                        <td class="px-6 py-4 font-mono text-xs">${row.acertos}</td>
-                        <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
-                        <td class="px-6 py-4 text-[11px] text-slate-500">${row.origem}<br>${row.data}</td>
-                    </tr>
-                `;
-            });
-
-            // Atualiza os painéis (cards) de estatística
-            document.getElementById('stat-total').textContent = notasFiltradas.length;
-            document.getElementById('stat-media').textContent = (soma / notasFiltradas.length).toFixed(1);
-            document.getElementById('stat-maior').textContent = maior.toFixed(1);
-            
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function atualizarTabelaNotasVazia() {
-            const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado para a seleção.</td></tr>`;
-            document.getElementById('stat-total').textContent = '0';
-            document.getElementById('stat-media').textContent = '0.0';
-            document.getElementById('stat-maior').textContent = '0.0';
-        }
-
-        function exportarProvasWord() {
-            if (!provasGeradas || provasGeradas.length === 0) return alert("Gere as provas antes.");
-            const escola = document.getElementById('cfg-escola').value;
-            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
-            const disciplina = document.getElementById('cfg-disciplina').value;
-            const professor = document.getElementById('cfg-professor').value;
-
-            let wordContent = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Provas Impressas</title></head>
-                <body>
-            `;
-
-            provasGeradas.forEach(p => {
-                wordContent += `
-                    <div style="page-break-after:always;">
-                        <h3>${escola.toUpperCase()}</h3>
-                        <p><strong>ALUNO:</strong> ${p.alunoName} | <strong>TURMA:</strong> ${p.alunoSerie} - ${p.alunoTurma}</p>
-                        <p><strong>DISCIPLINA:</strong> ${disciplina} | <strong>PROFESSOR:</strong> ${professor}</p>
-                        <hr/>
-                        ${p.questoes.map(q => `
-                            <div>
-                                <p><strong>${q.numero}. ${q.enunciado}</strong></p>
-                                ${q.tipoMidia === 'imagem' && q.urlMidia ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.urlMidia}" style="max-height: 100px; object-fit: contain;" /></div>` : ''}
-                                ${q.tipoMidia === 'youtube' && q.urlMidia ? `<div style="font-size: 8pt; font-style: italic; margin: 2px 0;">[Link YouTube: ${q.urlMidia}]</div>` : ''}
-                                ${q.alternativas.map(a => `<div>(${a.letter}) ${a.text}</div>`).join('')}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            });
-            wordContent += `</body></html>`;
-            const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword' });
-            saveAs(blob, `PROVAS_${disciplina}_${anoLetivo}.doc`);
-        }
-
-        function exportarPerguntasEAlunos() {
-            const dados = { cadastroTurmas, bancoQuestoes };
-            const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dados, null, 2));
-            const a = document.createElement('a');
-            a.href = jsonStr;
-            a.download = `AVALIADIGITAL_DADOS.json`;
-            a.click();
-        }
-
-        function verificarLinkAlunoParam() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const studentId = urlParams.get('studentId');
-            if (studentId) {
-                if (provasGeradas.length === 0) gerarProvasEAvancar();
-                abrirProvaDigital(studentId);
-            }
-        }
+        function verificarLinkAlunoParam() {}
     </script>
 </body>
 </html>
