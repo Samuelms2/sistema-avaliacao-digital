@@ -163,7 +163,7 @@
                 <p class="text-sm text-slate-500 mt-1">Entre com a conta de professor cadastrada no Supabase.</p>
             </div>
             <form id="teacher-login-form" onsubmit="entrarProfessor(event)" class="space-y-3">
-                <div><label class="block text-xs font-bold text-slate-700 mb-1">E-mail</label><input id="teacher-email" type="email" autocomplete="username" required class="w-full border rounded-xl p-3 text-sm" placeholder="professor@escola.com"></div>
+                <div><label class="block text-xs font-bold text-slate-700 mb-1">E-mail</label><input id="teacher-email" type="email" autocomplete="username" value="samuelmsousa2@gmail.com" required class="w-full border rounded-xl p-3 text-sm" placeholder="professor@escola.com"></div>
                 <div><label class="block text-xs font-bold text-slate-700 mb-1">Senha</label><input id="teacher-password" type="password" autocomplete="current-password" required class="w-full border rounded-xl p-3 text-sm" placeholder="Sua senha"></div>
                 <button id="teacher-login-button" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl p-3 text-sm">Entrar no sistema</button>
             </form>
@@ -709,6 +709,12 @@
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
         let notaTurmaSelecionada = null;
+        // Configuração pública do projeto Supabase. A chave publishable pode estar no HTML.
+        // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
+        const CONFIG_SUPABASE_VERSION = '2026-11-08-v3';
+        const SUPABASE_URL_PADRAO = 'https://xfzizvznmymomxjyfysr.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_laDng7uHXMA4Bd4DrmATBA_ccxA3onX';
+
         let supabaseClient = null;
         let supabaseAuthSubscription = null;
         let realtimeChannel = null;
@@ -898,6 +904,19 @@
             document.getElementById('cfg-data-inicio').value = dataHoraLocal(agora);
             document.getElementById('cfg-data-fim').value = dataHoraLocal(amanha);
 
+            // Migra a configuração: descarta URL/chave antigas gravadas por versões anteriores.
+            // Isso evita que uma chave antiga continue sendo usada mesmo após atualizar o GitHub Pages.
+            if (localStorage.getItem('sys_supabase_config_version') !== CONFIG_SUPABASE_VERSION) {
+                localStorage.removeItem('sys_supabase_url');
+                localStorage.removeItem('sys_supabase_key');
+                localStorage.setItem('sys_supabase_config_version', CONFIG_SUPABASE_VERSION);
+            }
+            document.getElementById('cfg-supabase-url').value =
+                localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO;
+            document.getElementById('cfg-supabase-key').value =
+                localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO;
+            document.getElementById('teacher-email').value = 'samuelmsousa2@gmail.com';
+
             try { cadastroTurmas = { ...cadastroTurmas, ...JSON.parse(localStorage.getItem('sys_cadastro_turmas') || '{}') }; } catch (_) {}
             try { bancoQuestoes = JSON.parse(localStorage.getItem('sys_banco_questoes') || 'null') || bancoQuestoes; } catch (_) {}
             const tokenDaUrl = new URLSearchParams(window.location.search).get('studentId') || new URLSearchParams(window.location.search).get('token');
@@ -961,7 +980,10 @@
                 await mostrarPainelProfessor(data.session);
                 document.getElementById('teacher-password').value = '';
             } catch (error) {
-                status.textContent = 'Não foi possível entrar: ' + (error.message || 'verifique e-mail e senha.');
+                const mensagem = error.message || 'verifique e-mail e senha.';
+                status.textContent = /invalid api key/i.test(mensagem)
+                    ? 'A chave Publishable configurada não foi aceita pelo projeto. Atualize a chave pública em Configurações → API Keys.'
+                    : 'Não foi possível entrar: ' + mensagem;
             } finally {
                 button.disabled = false;
             }
@@ -1011,15 +1033,18 @@
             if (!url || !key) return alert('Preencha a URL e a chave pública (anon/publishable) do Supabase.');
             localStorage.setItem('sys_supabase_url', url);
             localStorage.setItem('sys_supabase_key', key);
+            localStorage.setItem('sys_supabase_config_version', CONFIG_SUPABASE_VERSION);
             await iniciarSupabase(url, key);
             alert('Configuração do Supabase salva. Entre com a conta cadastrada do professor.');
         }
 
         async function carregarCredenciaisSupabase() {
-            const url = localStorage.getItem('sys_supabase_url') || document.getElementById('cfg-supabase-url').value;
-            const key = localStorage.getItem('sys_supabase_key') || document.getElementById('cfg-supabase-key').value;
+            const url = (localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO).trim();
+            const key = (localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO).trim();
+            document.getElementById('cfg-supabase-url').value = url;
+            document.getElementById('cfg-supabase-key').value = key;
             if (url && key) await iniciarSupabase(url, key);
-            else mostrarGateProfessor('Informe as credenciais do Supabase para conectar.');
+            else mostrarGateProfessor('A configuração pública do Supabase está incompleta.');
         }
 
         async function iniciarSupabase(url, key) {
@@ -1049,7 +1074,10 @@
                 else if (!studentMode) mostrarGateProfessor('Conectado ao Supabase. Entre com seu e-mail e senha de professor.');
             } catch (error) {
                 console.error('Erro Supabase:', error);
-                mostrarGateProfessor('Falha ao conectar ao Supabase: ' + (error.message || 'verifique as credenciais.'));
+                const mensagem = error.message || 'verifique as credenciais.';
+                mostrarGateProfessor(/invalid api key/i.test(mensagem)
+                    ? 'A chave Publishable deste HTML não corresponde a uma chave ativa do projeto. Acesse Configurações → API Keys e confira a chave default.'
+                    : 'Falha ao conectar ao Supabase: ' + mensagem);
             }
         }
 
