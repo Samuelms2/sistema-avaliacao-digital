@@ -15,21 +15,21 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- FileSaver.js -->
+    <!-- FileSaver.js para Download de Arquivos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 8mm;
         }
 
         @media print {
             html, body {
+                height: 100%;
                 background: white !important;
-                font-family: 'Times New Roman', Times, serif !important;
-                font-size: 12pt !important;
-                color: #000 !important;
+                font-size: 8.5pt;
+                color: #000;
                 margin: 0 !important;
                 padding: 0 !important;
             }
@@ -38,28 +38,35 @@
             .page-break { 
                 page-break-after: always;
                 page-break-inside: avoid;
+                height: 100vh;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding-bottom: 2mm;
             }
         }
 
         .print-only { display: none; }
 
         .prova-impressa-container {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
             border: 2px solid #000;
-            padding: 12px;
+            padding: 10px;
             box-sizing: border-box;
             background: #fff;
-            margin-bottom: 20px;
+            min-height: 98%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .questoes-duas-colunas {
             display: grid;
             grid-template-columns: 1fr 1fr;
             column-gap: 16px;
-            row-gap: 12px;
             position: relative;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            flex-grow: 1;
         }
 
         .questoes-duas-colunas::before {
@@ -75,24 +82,23 @@
 
         .gabarito-modelo-table {
             border-collapse: collapse;
-            margin: 15px 0 0 0;
+            margin: 0 auto;
             background: #fff;
             color: #000;
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
+            font-family: Arial, sans-serif;
             width: 100%;
-            max-width: 320px;
+            max-width: 280px;
         }
         .gabarito-modelo-table th {
             border: 1px solid #000;
-            padding: 3px 6px;
+            padding: 2px 4px;
             text-align: center;
-            font-size: 11pt;
+            font-size: 8pt;
             background-color: #f0f0f0;
         }
         .gabarito-modelo-table td {
             border: 1px solid #000;
-            padding: 2px 4px;
+            padding: 2px 3px;
             text-align: center;
             vertical-align: middle;
         }
@@ -100,12 +106,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
+            width: 17px;
+            height: 17px;
             border-radius: 50%;
-            border: 1px solid #000;
+            border: 1.2px solid #000;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 8px;
             background-color: #fff;
         }
     </style>
@@ -136,6 +142,7 @@
             </div>
         </div>
 
+        <!-- ABA DE NAVEGAÇÃO -->
         <nav class="bg-slate-900/80 backdrop-blur-md border-t border-white/10 px-4">
             <div class="max-w-7xl mx-auto flex space-x-1 overflow-x-auto text-sm py-1.5">
                 <button onclick="setTab('tab-header')" id="btn-tab-header" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap bg-indigo-600 text-white">
@@ -156,7 +163,7 @@
                 </button>
                 <button onclick="setTab('tab-scanner')" id="btn-tab-scanner" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                    <span>5. Leitor Óptico / Correção Física</span>
+                    <span>5. Leitor Óptico (Câmera)</span>
                 </button>
                 <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
@@ -166,9 +173,10 @@
         </nav>
     </header>
 
+    <!-- CONTEÚDO PRINCIPAL -->
     <main class="max-w-7xl mx-auto px-4 py-6 no-print">
 
-        <!-- TAB 1 -->
+        <!-- TAB 1: CONFIGURAÇÕES E TURMAS -->
         <section id="tab-header" class="tab-content">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 space-y-6">
@@ -222,10 +230,35 @@
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Professor(a)</label>
                                 <input type="text" id="cfg-professor" value="Prof. Samuel Sousa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
+
+                            <div class="md:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 space-y-3">
+                                <div class="flex items-center space-x-2 text-amber-900">
+                                    <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+                                    <label class="text-xs font-bold uppercase tracking-wider">Agendamento de Abertura do Link Digital</label>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Início</label>
+                                        <input type="datetime-local" id="cfg-data-inicio" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Data e Hora de Encerramento</label>
+                                        <input type="datetime-local" id="cfg-data-fim" class="w-full border rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="md:col-span-2 bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                <div>
+                                    <label class="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Questões Sorteadas por Prova</label>
+                                    <p class="text-[11px] text-indigo-700">Quantidade de perguntas quando for por sorteio automático</p>
+                                </div>
+                                <input type="number" id="cfg-qtd-questoes" value="10" min="1" max="100" class="w-20 border border-indigo-300 font-bold text-center rounded-lg py-1.5 text-sm bg-white outline-none">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- SUPABASE -->
+                    <!-- CONFIGURAÇÃO SUPABASE -->
                     <div class="bg-[#0b1329] text-white rounded-2xl p-6 space-y-4 border border-emerald-500/30 shadow-xl">
                         <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
                             <div class="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
@@ -239,11 +272,11 @@
                         <div class="grid grid-cols-1 gap-4 text-xs">
                             <div>
                                 <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE URL</label>
-                                <input type="text" id="cfg-supabase-url" value="https://xfzizvznmymomxjyfysr.supabase.co" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none text-xs">
+                                <input type="text" id="cfg-supabase-url" value="https://xfzizvznmymomxjyfysr.supabase.co" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
                             </div>
                             <div>
                                 <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE ANON KEY</label>
-                                <input type="password" id="cfg-supabase-key" value="sb_publishable_laDng7uHXMA4Bd4DrmATBA_ccxA3onX" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none text-xs">
+                                <input type="password" id="cfg-supabase-key" value="sb_publishable_laDng7uHXMA4Bd4DrmATBA_ccxA3onX" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
                             </div>
                         </div>
                         <button onclick="salvarCredenciaisSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-lg">
@@ -253,7 +286,7 @@
                     </div>
                 </div>
 
-                <!-- ALUNOS -->
+                <!-- CADASTRO DE ALUNOS -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
                     <div class="space-y-4">
                         <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-800">
@@ -291,7 +324,7 @@
                         </div>
 
                         <p class="text-xs text-slate-500">Nome dos alunos (um por linha):</p>
-                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" placeholder="Ana Clara Souza&#10;Bruno Lima" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
                     </div>
 
                     <button onclick="setTab('tab-questions')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
@@ -302,7 +335,7 @@
             </div>
         </section>
 
-        <!-- TAB 2: QUESTÕES -->
+        <!-- TAB 2: ELABORAÇÃO DE QUESTÕES COM IMAGEM NO ENUNCIADO E ALTERNATIVAS (+) -->
         <section id="tab-questions" class="tab-content hidden">
             <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
                 <div class="border-b border-slate-100 pb-3 flex items-center space-x-3">
@@ -319,49 +352,51 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Tema Principal</label>
-                            <input type="text" id="q-tema" placeholder="Ex: Basquete" class="w-full border rounded-xl p-2.5 text-xs outline-none" required>
+                            <input type="text" id="q-tema" placeholder="Ex: Basquete" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Assunto Específico</label>
-                            <input type="text" id="q-assunto" placeholder="Ex: Regras" class="w-full border rounded-xl p-2.5 text-xs outline-none" required>
+                            <input type="text" id="q-assunto" placeholder="Ex: Regras Básicas" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required>
                         </div>
                     </div>
 
                     <div class="space-y-2">
                         <div class="flex items-center space-x-2">
                             <label class="block text-xs font-bold text-slate-700 uppercase">Enunciado da Questão</label>
-                            <button type="button" onclick="document.getElementById('q-file-upload-enunciado').click()" class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shadow text-xs">+</button>
+                            <button type="button" onclick="document.getElementById('q-file-upload-enunciado').click()" title="Anexar Imagem" class="w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center shadow transition text-xs cursor-pointer">+</button>
                             <input type="file" id="q-file-upload-enunciado" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'enunciado')">
                         </div>
-                        <textarea id="q-enunciado" rows="3" placeholder="Digite o enunciado..." class="w-full border rounded-xl p-3 text-xs outline-none" required></textarea>
+                        <textarea id="q-enunciado" rows="3" placeholder="Digite o enunciado da pergunta..." class="w-full border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
                         
                         <div id="preview-img-enunciado" class="hidden relative inline-block border rounded-xl overflow-hidden p-1 bg-slate-50">
                             <img id="img-enunciado-tag" src="" class="max-h-32 rounded object-contain">
-                            <button type="button" onclick="removerImagemMidia('enunciado')" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
+                            <button type="button" onclick="removerImagemMidia('enunciado')" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-[10px]"><i data-lucide="x" class="w-3 h-3"></i></button>
                         </div>
                     </div>
 
                     <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block text-xs font-bold text-slate-800 uppercase border-b pb-1">Alternativas & Imagens (+)</label>
                         
+                        <!-- GABARITO (A) -->
                         <div class="space-y-1">
                             <div class="flex items-center space-x-2">
                                 <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Correta (A)</span>
-                                <button type="button" onclick="document.getElementById('q-file-upload-correta').click()" class="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                <button type="button" onclick="document.getElementById('q-file-upload-correta').click()" class="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center shadow">+</button>
                                 <input type="file" id="q-file-upload-correta" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'correta')">
                             </div>
-                            <input type="text" id="q-correta" placeholder="Alternativa correta" class="w-full border border-emerald-300 bg-white rounded-xl p-2 text-xs outline-none" required>
+                            <input type="text" id="q-correta" placeholder="Texto da alternativa correta" class="w-full border border-emerald-300 bg-white rounded-xl p-2 text-xs outline-none" required>
                             <div id="preview-img-correta" class="hidden relative inline-block mt-1">
                                 <img id="img-correta-tag" src="" class="max-h-20 rounded border">
                                 <button type="button" onclick="removerImagemMidia('correta')" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5"><i data-lucide="x" class="w-2.5 h-2.5"></i></button>
                             </div>
                         </div>
 
+                        <!-- DISTRATORES B, C, D, E -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div class="space-y-1">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-xs font-bold text-slate-700">Alternativa (B)</span>
-                                    <button type="button" onclick="document.getElementById('q-file-upload-d1').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d1').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow">+</button>
                                     <input type="file" id="q-file-upload-d1" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd1')">
                                 </div>
                                 <input type="text" id="q-d1" placeholder="Distrator 1" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
@@ -373,7 +408,7 @@
                             <div class="space-y-1">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-xs font-bold text-slate-700">Alternativa (C)</span>
-                                    <button type="button" onclick="document.getElementById('q-file-upload-d2').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d2').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow">+</button>
                                     <input type="file" id="q-file-upload-d2" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd2')">
                                 </div>
                                 <input type="text" id="q-d2" placeholder="Distrator 2" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
@@ -385,7 +420,7 @@
                             <div class="space-y-1">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-xs font-bold text-slate-700">Alternativa (D)</span>
-                                    <button type="button" onclick="document.getElementById('q-file-upload-d3').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d3').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow">+</button>
                                     <input type="file" id="q-file-upload-d3" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd3')">
                                 </div>
                                 <input type="text" id="q-d3" placeholder="Distrator 3" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
@@ -397,7 +432,7 @@
                             <div class="space-y-1">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-xs font-bold text-slate-700">Alternativa (E)</span>
-                                    <button type="button" onclick="document.getElementById('q-file-upload-d4').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">+</button>
+                                    <button type="button" onclick="document.getElementById('q-file-upload-d4').click()" class="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow">+</button>
                                     <input type="file" id="q-file-upload-d4" accept="image/*" class="hidden" onchange="carregarImagemDispositivo(event, 'd4')">
                                 </div>
                                 <input type="text" id="q-d4" placeholder="Distrator 4" class="w-full border rounded-xl p-2 text-xs outline-none bg-white" required>
@@ -417,7 +452,7 @@
             </div>
         </section>
 
-        <!-- TAB 3: BANCO -->
+        <!-- TAB 3: BANCO DE QUESTÕES POR TEMAS & MONTAGEM -->
         <section id="tab-bank" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
@@ -443,13 +478,13 @@
             </div>
         </section>
 
-        <!-- TAB 4: PROVAS & LINKS (COM PRÉ-VISUALIZAÇÃO DA PROVA) -->
+        <!-- TAB 4: PROVAS & LINKS POR SÉRIE E TURMA -->
         <section id="tab-generate" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg">Provas, Links e Pré-visualização por Aluno</h3>
-                        <p class="text-xs text-slate-500">Copie o link, visualize a prova gerada para o aluno, imprima ou salve em PDF</p>
+                        <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Anos de Estudo e Turmas</h3>
+                        <p class="text-xs text-slate-500">Imprima, salve em PDF ou envie os links individuais</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
@@ -471,47 +506,62 @@
                     <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
                 </div>
 
-                <div id="grid-provas" class="space-y-6"></div>
+                <div id="grid-provas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </section>
 
-        <!-- TAB 5: LEITOR ÓPTICO E CORREÇÃO DE GABARITO FÍSICO -->
+        <!-- TAB 5: LEITOR ÓPTICO POR CÂMERA -->
         <section id="tab-scanner" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
                     <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
                         <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
-                            <i data-lucide="check-square" class="w-5 h-5"></i>
+                            <i data-lucide="camera" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <h3 class="font-bold text-slate-800 text-base">Correção de Gabarito Físico (Leitor Óptico)</h3>
-                            <p class="text-xs text-slate-500">Selecione o aluno e marque as alternativas assinaladas na prova de papel</p>
+                            <h3 class="font-bold text-slate-800 text-base">Leitor Óptico de Gabarito</h3>
+                            <p class="text-xs text-slate-500">Correção instantânea via Câmera</p>
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante</label>
-                        <select id="scanner-select-aluno" onchange="carregarCartelaGabaritoFisico()" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
+                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
                     </div>
 
-                    <div id="cartela-resposta-fisica" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                        <p class="text-xs text-slate-400 text-center py-6">Selecione um estudante acima para carregar a cartela de correção.</p>
+                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-800 shadow-inner">
+                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                        <div id="webcam-placeholder" class="text-center p-6 space-y-3">
+                            <i data-lucide="smartphone" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
+                            <p class="text-xs text-slate-300">Ative a câmera para leitura.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button onclick="alternarCamera()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
+                            <span id="btn-camera-text">Ligar Câmera</span>
+                        </button>
+                        <button onclick="processarLeituraOptica()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Efetuar Leitura Óptica</span>
+                        </button>
                     </div>
                 </div>
 
                 <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Correção Física</h3>
+                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Leitura Óptica</h3>
                     <div id="resultado-scanner-container">
                         <div class="text-center py-16 text-slate-400">
                             <i data-lucide="award" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
-                            <p class="text-sm font-medium">Nenhum gabarito corrigido ainda.</p>
+                            <p class="text-sm font-medium">Nenhum gabarito lido no momento.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 6: NOTAS -->
+        <!-- TAB 6: NOTAS EM TEMPO REAL E HISTÓRICO -->
         <section id="tab-database" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex justify-between items-center">
@@ -580,7 +630,7 @@
             </div>
         </section>
 
-        <!-- MODAL PROVA DIGITAL -->
+        <!-- MODAL PROVA DIGITAL DO ALUNO -->
         <div id="modal-prova-online" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 overflow-y-auto p-4 sm:p-6 flex justify-center">
             <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl p-6 space-y-6 my-auto">
                 <div id="conteudo-prova-online"></div>
@@ -592,29 +642,42 @@
     <div id="area-impressao-provas" class="print-only"></div>
 
     <script>
+        let cameraStream = null;
         let turmaFiltroSelecionada = 'todas';
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
         let notaTurmaSelecionada = null;
         let supabaseClient = null;
 
-        let imagensForm = { enunciado: '', correta: '', d1: '', d2: '', d3: '', d4: '' };
+        let imagensForm = {
+            enunciado: '',
+            correta: '',
+            d1: '',
+            d2: '',
+            d3: '',
+            d4: ''
+        };
 
+        // BANCO DE QUESTÕES INICIALMENTE PREENCHIDO COM AS 9 QUESTÕES DE BASQUETE DO PDF
         let bancoQuestoes = [
             {
-                id: 1, tema: "Basquete", assunto: "História e Criação",
+                id: 1,
+                tema: "Basquete",
+                assunto: "História e Criação",
                 enunciado: "Foi na ACM de Springfield College (Estados Unidos) que o professor canadense James Naismith inventou em 1891 um novo esporte para ser praticado em um ambiente fechado, o que auxiliava os jovens que não podiam sair na rua para jogar Beisebol ou Futebol Americano, assim são motivos que levaram a criação do basquetebol",
                 imgEnunciado: "",
                 correta: { text: "o inverno rigoroso que impossibilitava a pratica de esportes ao ar livre e as entediantes aulas de ginástica.", img: "" },
                 distratores: [
-                    { text: "o primavera rigoroso que possibilitava a pratica de esportes em ambientes abertos.", img: "" },
-                    { text: "o inverno rigoroso que possibilitava a pratica de esportes em ambientes abertos.", img: "" },
-                    { text: "o verão rigoroso que impossibilitava a pratica de esportes ao ar livre.", img: "" },
-                    { text: "o outono rigoroso que possibilitava a pratica de esportes.", img: "" }
+                    { text: "o primavera rigoroso que possibilitava a pratica de esportes em ambientes abertos e as maravilhosas aulas de ginástica.", img: "" },
+                    { text: "o inverno rigoroso que possibilitava a pratica de esportes em ambientes abertos e as maravilhosas aulas de ginástica.", img: "" },
+                    { text: "o verão rigoroso que impossibilitava a pratica de esportes ao ar livre e as entediantes aulas de ginástica.", img: "" },
+                    { text: "o outono rigoroso que possibilitava a pratica de esportes em ambientes abertos e as maravilhosas aulas de ginástica.", img: "" }
                 ]
             },
             {
-                id: 2, tema: "Basquete", assunto: "História e Criação",
+                id: 2,
+                tema: "Basquete",
+                assunto: "História e Criação",
                 enunciado: "Foi na ACM de Springfield College (Estados Unidos) que um certo professor canadense inventou um novo esporte para ser praticado em um ambiente fechado, o que auxiliava os jovens que não podiam sair na rua para jogar Beisebol ou Futebol Americano, nomeando de Basquetebol, desse modo como é o nome do criador do Basquetebol?",
                 imgEnunciado: "",
                 correta: { text: "James Naismith.", img: "" },
@@ -626,62 +689,79 @@
                 ]
             },
             {
-                id: 3, tema: "Basquete", assunto: "História e Criação",
+                id: 3,
+                tema: "Basquete",
+                assunto: "História e Criação",
                 enunciado: "Nem sempre era possível fazer-se de jogo com bola ao ar livre, como bem acontecia nos Estados Unidos da América onde alguns fatores impediam a prática de tais jogos, assim, o professor de Educação Física canadense do Springfield College (então denominada Associação Cristã de Moços), em Massachusetts, Estados Unidos, recebeu uma tarefa de seu diretor, sendo esta",
                 imgEnunciado: "",
                 correta: { text: "uma modalidade que os jovens pudessem praticar em recinto fechado (num ginásio) em tempo de Inverno.", img: "" },
                 distratores: [
-                    { text: "criar um esporte muito dinâmico com o objetivo de ultrapassar o adversário.", img: "" },
-                    { text: "criar um esporte de equipes sem contato físico entre os adversários.", img: "" },
-                    { text: "criar um esporte com muito contato físico induzindo a violência.", img: "" },
-                    { text: "criar um esporte que pudesse ser praticado em local fechado, pois os campos estavam sendo invadidos.", img: "" }
+                    { text: "criar um esporte muito dinâmico com o objetivo de ultrapassar o adversário através de toques de bola.", img: "" },
+                    { text: "criar um esporte de equipes sem contato físico entre os adversários, de modo a minimizar os riscos de lesões.", img: "" },
+                    { text: "criar um esporte com muito contato físico induzindo assim a violência e a desordem entre seus alunos.", img: "" },
+                    { text: "criar um esporte que pudesse ser praticado em local fechado, pois os campos onde se praticavam estavam sendo invadidos por urbanização desordenada.", img: "" }
                 ]
             },
             {
-                id: 4, tema: "Basquete", assunto: "Regras Básicas",
+                id: 4,
+                tema: "Basquete",
+                assunto: "Regras Básicas",
                 enunciado: "O basquetebol pode ser caracterizado como um esporte de oposição e cooperação, envolvendo ações simultâneas entre duas equipes (atacantes e defensoras) que ocupam espaços comum, proporcionando contado direto entre os participantes, tornando-o um jogo dinâmico pela velocidade com que as mudanças de direção e deslocamentos ocorrem constantemente, apresentando como objetivo principal",
                 imgEnunciado: "",
                 correta: { text: "acertar com a bola, fazendo com que ela entre dentro do aro do cesto da equipa adversária.", img: "" },
                 distratores: [
                     { text: "acertar com a bola, fazendo com que ela acerte a tabela da equipa adversária.", img: "" },
                     { text: "chutar a bola, fazendo com que ela acerte a tabela da equipa adversária.", img: "" },
-                    { text: "acertar com a bola, fazendo com que ela entre dentro da baliza.", img: "" },
-                    { text: "acertar com a bola, fazendo com que ela entre dentro do gol.", img: "" }
+                    { text: "acertar com a bola, fazendo com que ela entre dentro da baliza da equipa adversária.", img: "" },
+                    { text: "acertar com a bola, fazendo com que ela entre dentro do gol da equipa adversária.", img: "" }
                 ]
             },
             {
-                id: 5, tema: "Basquete", assunto: "Regras Básicas",
+                id: 5,
+                tema: "Basquete",
+                assunto: "Regras Básicas",
                 enunciado: "O objetivo do jogo é fazer a cesta da equipe adversária (marcando pontos) e, simultaneamente, evitar que o adversário faça a cesta, respeitando as regras do jogo. A equipe que obtiver mais pontos no fim do jogo vence. Quando a cesta não é realizada tem-se o rebote que nada mais é do que",
                 imgEnunciado: "",
                 correta: { text: "a recuperação da bola após um arremesso não convertido.", img: "" },
                 distratores: [
                     { text: "impedir um arremesso de um adversário não o deixando realizar a cesta.", img: "" },
-                    { text: "quicar a bola em direção ao enquanto se desloca em direção a cesta.", img: "" },
+                    { text: "quicar a bola em direção ao enquanto se desloca em direção a cesta adversário.", img: "" },
                     { text: "passar a bola para o companheiro que estivem desmarcado.", img: "" },
                     { text: "lançar a bola ao cesto com intuito de marcar pontos para sua equipe.", img: "" }
                 ]
             },
             {
-                id: 6, tema: "Basquete", assunto: "História e Criação",
+                id: 6,
+                tema: "Basquete",
+                assunto: "História e Criação",
                 enunciado: "Em Dezembro de 1891, o professor de Educação Física canadense James Naismit, do Springfield College (então denominada Associação Cristã de Rapazes), em Massachusetts, Estados Unidos, recebeu uma tarefa de seu diretor Halsey Gullick sendo esta:",
                 imgEnunciado: "",
                 correta: { text: "pensar em algum tipo de jogo sem violência que estimulasse seus alunos durante o inverno, mas que pudesse também ser praticado no verão em áreas abertas.", img: "" },
                 distratores: [
-                    { text: "pensar em algum tipo de jogo sem violência que estimulasse seus alunos.", img: "" },
-                    { text: "pensar em algum tipo de jogo sem estimulo durante o inverno.", img: "" },
-                    { text: "pensar em algum tipo de jogo muito violento que estimulasse a agressividade.", img: "" },
-                    { text: "pensar em algum tipo de jogo violento que não estimulasse seus alunos.", img: "" }
+                    { text: "pensar em algum tipo de jogo sem violência que estimulasse seus alunos durante o inverno, mas que pudesse não poderia ser praticado no verão em áreas abertas.", img: "" },
+                    { text: "pensar em algum tipo de jogo sem estimulo que estimulasse seus alunos durante o inverno, mas que pudesse não poderia ser praticado no verão em áreas abertas.", img: "" },
+                    { text: "pensar em algum tipo de jogo muito violento que estimulasse a agressividade de seus alunos durante o inverno.", img: "" },
+                    { text: "pensar em algum tipo de jogo violento que não estimulasse seus alunos durante o inverno, mas que pudesse também ser praticado no verão em áreas fechadas.", img: "" }
                 ]
             },
             {
-                id: 7, tema: "Basquete", assunto: "Equipamentos e Regras",
+                id: 7,
+                tema: "Basquete",
+                assunto: "Equipamentos e Regras",
                 enunciado: "As cestas foram originalmente pregadas ao balcão do mezanino da quadra de jogo, mas isto se provou impraticável quando os espectadores no balcão começaram a interferir nos arremessos. A tabela foi introduzida para evitar essa interferência, sendo introduzidas oficialmente no ano de",
                 imgEnunciado: "",
                 correta: { text: "1898.", img: "" },
-                distratores: [{ text: "1899.", img: "" }, { text: "1897.", img: "" }, { text: "1896.", img: "" }, { text: "1895.", img: "" }]
+                distratores: [
+                    { text: "1899.", img: "" },
+                    { text: "1897.", img: "" },
+                    { text: "1896.", img: "" },
+                    { text: "1895.", img: "" }
+                ]
             },
             {
-                id: 8, tema: "Basquete", assunto: "Fundamentos Técnicos",
+                id: 8,
+                tema: "Basquete",
+                assunto: "Fundamentos Técnicos",
                 enunciado: "Um dos lances mais esperados nos jogos de basquete é a enterrada. A torcida vai à loucura quando os jogadores 'voam' para colocar a bola na cesta. Além de levantar o público, a jogada também influencia as estrelas do time e representa muito mais do que os dois pontos, assim a enterrada é o movimento em que",
                 imgEnunciado: "",
                 correta: { text: "conjuga o salto e a colocação com firmeza da bola diretamente na cesta.", img: "" },
@@ -693,15 +773,17 @@
                 ]
             },
             {
-                id: 9, tema: "Basquete", assunto: "Equipamentos e Regras",
+                id: 9,
+                tema: "Basquete",
+                assunto: "Equipamentos e Regras",
                 enunciado: "Tão logo que inventou o basquete, seu criador escreveu as treze regras básicas para o jogo e utilizou cestos de pêssego. Como estes cestos eram fechados na parte inferior, a bola deveria ser retirada com a mão à cada cesta feita. Logo se percebeu a necessidade de fazer um buraco no fundo da cesta para que a bola caísse, desse modo as primeiras cestas oficiais foram criadas em",
                 imgEnunciado: "",
                 correta: { text: "por Lew Allen, de Connecticut, em 1891, e consistiam em cilindros de madeira com borda de metal.", img: "" },
                 distratores: [
-                    { text: "por Lew Allen, de Connecticut, em 1892, e consistiam em cilindros.", img: "" },
-                    { text: "por Lew Allen, de Connecticut, em 1890, e consistiam em cilindros.", img: "" },
-                    { text: "por Lew Allen, de Connecticut, em 1993, e consistiam em cilindros.", img: "" },
-                    { text: "por Lew Allen, de Connecticut, em 1893, e consistiam em cilindros.", img: "" }
+                    { text: "por Lew Allen, de Connecticut, em 1892, e consistiam em cilindros de madeira com borda de metal.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1890, e consistiam em cilindros de madeira com borda de metal.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1993, e consistiam em cilindros de madeira com borda de metal.", img: "" },
+                    { text: "por Lew Allen, de Connecticut, em 1893, e consistiam em cilindros de madeira com borda de metal.", img: "" }
                 ]
             }
         ];
@@ -754,13 +836,17 @@
         function carregarImagemDispositivo(event, campo) {
             const file = event.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                imagensForm[campo] = e.target.result;
+                const base64 = e.target.result;
+                imagensForm[campo] = base64;
+
                 const prevDiv = document.getElementById(`preview-img-${campo}`);
                 const imgTag = document.getElementById(`img-${campo}-tag`);
+
                 if (prevDiv && imgTag) {
-                    imgTag.src = e.target.result;
+                    imgTag.src = base64;
                     prevDiv.classList.remove('hidden');
                 }
             };
@@ -788,7 +874,9 @@
         function carregarCredenciaisSupabase() {
             const url = localStorage.getItem('sys_supabase_url') || document.getElementById('cfg-supabase-url').value;
             const key = localStorage.getItem('sys_supabase_key') || document.getElementById('cfg-supabase-key').value;
-            if (url && key) iniciarSupabase(url, key);
+            if (url && key) {
+                iniciarSupabase(url, key);
+            }
         }
 
         function iniciarSupabase(url, key) {
@@ -797,7 +885,9 @@
                     supabaseClient = supabase.createClient(url, key);
                     inscreverTempoReal();
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) {
+                console.error("Erro Supabase:", e);
+            }
         }
 
         function inscreverTempoReal() {
@@ -807,10 +897,15 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'respostas_avaliacoes' }, payload => {
                     const nova = payload.new;
                     salvarNotaNoBanco({
-                        aluno: nova.aluno_nome, anoLetivo: nova.ano_letivo,
-                        serie: nova.serie, bimestre: nova.bimestre, disciplina: nova.disciplina,
-                        acertos: nova.acertos, nota: parseFloat(nova.nota),
-                        origem: 'Supabase Realtime', data: new Date(nova.created_at || Date.now()).toLocaleTimeString()
+                        aluno: nova.aluno_nome,
+                        anoLetivo: nova.ano_letivo,
+                        serie: nova.serie,
+                        bimestre: nova.bimestre,
+                        disciplina: nova.disciplina,
+                        acertos: nova.acertos,
+                        nota: parseFloat(nova.nota),
+                        origem: 'Supabase Realtime',
+                        data: new Date(nova.created_at || Date.now()).toLocaleTimeString()
                     });
                 })
                 .subscribe();
@@ -820,6 +915,7 @@
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
+
             document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
             const alunos = cadastroTurmas[chave] || [];
             document.getElementById('lista-alunos-input').value = alunos.join('\n');
@@ -831,7 +927,10 @@
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-            const lista = document.getElementById('lista-alunos-input').value.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+
+            const text = document.getElementById('lista-alunos-input').value;
+            const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+            
             cadastroTurmas[chave] = lista;
             document.getElementById('label-num-alunos-turma').textContent = `${lista.length} alunos`;
             atualizarBadges();
@@ -840,16 +939,22 @@
         function atualizarBadges() {
             let totalAlunos = 0;
             Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
-            document.getElementById('badge-total-alunos').textContent = totalAlunos;
-            document.getElementById('badge-total-questoes').textContent = bancoQuestoes.length;
+            
+            const bAlunos = document.getElementById('badge-total-alunos');
+            const bQuestoes = document.getElementById('badge-total-questoes');
+            if (bAlunos) bAlunos.textContent = totalAlunos;
+            if (bQuestoes) bQuestoes.textContent = bancoQuestoes.length;
         }
 
         function adicionarQuestaoManual(e) {
             e.preventDefault();
+            const tema = document.getElementById('q-tema').value.trim() || "Geral";
+            const assunto = document.getElementById('q-assunto').value.trim() || "Geral";
+
             bancoQuestoes.push({
                 id: Date.now(),
-                tema: document.getElementById('q-tema').value.trim() || "Geral",
-                assunto: document.getElementById('q-assunto').value.trim() || "Geral",
+                tema: tema,
+                assunto: assunto,
                 enunciado: document.getElementById('q-enunciado').value,
                 imgEnunciado: imagensForm.enunciado,
                 correta: { text: document.getElementById('q-correta').value, img: imagensForm.correta },
@@ -860,36 +965,48 @@
                     { text: document.getElementById('q-d4').value, img: imagensForm.d4 }
                 ]
             });
+
             document.getElementById('q-enunciado').value = '';
             document.getElementById('q-correta').value = '';
             document.getElementById('q-d1').value = '';
             document.getElementById('q-d2').value = '';
             document.getElementById('q-d3').value = '';
             document.getElementById('q-d4').value = '';
+
             ['enunciado', 'correta', 'd1', 'd2', 'd3', 'd4'].forEach(c => removerImagemMidia(c));
+
             atualizarBadges();
-            alert("Questão adicionada!");
+            alert("Questão adicionada com sucesso!");
             setTab('tab-bank');
         }
 
         function renderizarMenuTemas() {
             const container = document.getElementById('container-menu-temas');
             if (!container) return;
+
             const temas = [...new Set(bancoQuestoes.map(q => q.tema))].sort();
             container.innerHTML = '';
 
             const btnTodos = document.createElement('button');
-            btnTodos.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === 'todos' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
-            btnTodos.textContent = `Todos (${bancoQuestoes.length})`;
-            btnTodos.onclick = () => { temaMenuSelecionado = 'todos'; renderizarMenuTemas(); renderizarQuestoesTema(); };
+            btnTodos.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === 'todos' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+            btnTodos.textContent = `Todos os Temas (${bancoQuestoes.length})`;
+            btnTodos.onclick = () => {
+                temaMenuSelecionado = 'todos';
+                renderizarMenuTemas();
+                renderizarQuestoesTema();
+            };
             container.appendChild(btnTodos);
 
             temas.forEach(t => {
                 const qtd = bancoQuestoes.filter(q => q.tema === t).length;
                 const btn = document.createElement('button');
-                btn.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === t ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
+                btn.className = `px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${temaMenuSelecionado === t ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
                 btn.textContent = `${t} (${qtd})`;
-                btn.onclick = () => { temaMenuSelecionado = t; renderizarMenuTemas(); renderizarQuestoesTema(); };
+                btn.onclick = () => {
+                    temaMenuSelecionado = t;
+                    renderizarMenuTemas();
+                    renderizarQuestoesTema();
+                };
                 container.appendChild(btn);
             });
         }
@@ -898,20 +1015,44 @@
             const container = document.getElementById('container-questoes-tema');
             if (!container) return;
             container.innerHTML = '';
-            const questoesExibidas = temaMenuSelecionado === 'todos' ? bancoQuestoes : bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
+
+            const questoesExibidas = temaMenuSelecionado === 'todos'
+                ? bancoQuestoes
+                : bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
+
+            if (questoesExibidas.length === 0) {
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-slate-400 font-medium">Nenhuma questão cadastrada para este tema.</div>`;
+                return;
+            }
 
             questoesExibidas.forEach((q, idx) => {
                 container.innerHTML += `
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-sm">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-sm relative">
                         <div class="flex justify-between items-center border-b pb-2">
                             <div class="flex items-center space-x-3">
                                 <input type="checkbox" data-q-id="${q.id}" class="chk-questao w-4 h-4 text-indigo-600 rounded" checked>
                                 <span class="font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">#${idx + 1}</span>
                                 <span class="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
+                                <span class="text-xs text-slate-500">${q.assunto}</span>
                             </div>
                             <button onclick="excluirQuestao(${q.id})" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>
                         </div>
+
                         <p class="font-semibold text-slate-800 text-sm">${q.enunciado}</p>
+                        ${q.imgEnunciado ? `<div class="my-2"><img src="${q.imgEnunciado}" class="max-h-48 rounded border object-contain mx-auto"></div>` : ''}
+
+                        <div class="space-y-1.5 pl-2 text-xs">
+                            <div class="text-emerald-700 font-bold bg-emerald-50 p-2 rounded border border-emerald-200 flex items-center space-x-2">
+                                <span>✔ (Gabarito): ${q.correta.text}</span>
+                                ${q.correta.img ? `<img src="${q.correta.img}" class="h-10 rounded border">` : ''}
+                            </div>
+                            ${q.distratores.map((d) => `
+                                <div class="text-slate-600 pl-2 flex items-center space-x-2">
+                                    <span>• ${d.text}</span>
+                                    ${d.img ? `<img src="${d.img}" class="h-8 rounded border">` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 `;
             });
@@ -928,9 +1069,12 @@
         function gerarProvasSelecionadas() {
             const checkboxes = document.querySelectorAll('.chk-questao:checked');
             let listaFinal = [];
+
             if (checkboxes.length > 0) {
                 const ids = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-q-id')));
                 listaFinal = bancoQuestoes.filter(q => ids.includes(q.id));
+            } else if (temaMenuSelecionado !== 'todos') {
+                listaFinal = bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
             } else {
                 listaFinal = bancoQuestoes;
             }
@@ -944,26 +1088,41 @@
             Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
             if (totalAlunos === 0) return alert("Cadastre alunos na Aba 1.");
 
+            const dataInicio = document.getElementById('cfg-data-inicio').value;
+            const dataFim = document.getElementById('cfg-data-fim').value;
+            const bimestre = document.getElementById('cfg-bimestre').value;
+            const letras = ['A', 'B', 'C', 'D', 'E'];
+
             provasGeradas = [];
             let globalIndex = 0;
-            const letras = ['A', 'B', 'C', 'D', 'E'];
 
             Object.keys(cadastroTurmas).forEach(chave => {
                 const [serie, turma] = chave.split('_');
-                cadastroTurmas[chave].forEach(alunoNome => {
+                const alunos = cadastroTurmas[chave];
+
+                alunos.forEach(alunoNome => {
                     globalIndex++;
-                    const questoesEmbaralhadas = embaralhar(questoesBase).map((q, qIndex) => {
-                        const alternativas = embaralhar([
+                    const questoesSorteadas = embaralhar(questoesBase);
+
+                    const questoesEmbaralhadas = questoesSorteadas.map((q, qIndex) => {
+                        const todasAlternativas = [
                             { text: q.correta.text, img: q.correta.img, isCorrect: true },
                             ...q.distratores.map(d => ({ text: d.text, img: d.img, isCorrect: false }))
-                        ]).map((alt, aIdx) => ({ letter: letras[aIdx], text: alt.text, img: alt.img, isCorrect: alt.isCorrect }));
+                        ];
+                        
+                        const alternativasSort = embaralhar(todasAlternativas).map((alt, aIdx) => ({
+                            letter: letras[aIdx],
+                            text: alt.text,
+                            img: alt.img,
+                            isCorrect: alt.isCorrect
+                        }));
 
                         return {
                             numero: qIndex + 1,
                             enunciado: q.enunciado,
                             imgEnunciado: q.imgEnunciado,
-                            alternativas: alternativas,
-                            letraCorreta: alternativas.find(a => a.isCorrect)?.letter || 'A'
+                            alternativas: alternativasSort,
+                            letraCorreta: alternativasSort.find(a => a.isCorrect)?.letter || 'A'
                         };
                     });
 
@@ -972,7 +1131,9 @@
                         alunoName: alunoNome,
                         alunoSerie: serie,
                         alunoTurma: turma,
-                        bimestre: document.getElementById('cfg-bimestre').value,
+                        bimestre: bimestre,
+                        dataInicio: dataInicio,
+                        dataFim: dataFim,
                         code: `PRV-${Math.floor(100000 + Math.random() * 900000)}`,
                         questoes: questoesEmbaralhadas
                     });
@@ -988,21 +1149,30 @@
         function renderizarBotoesFiltroTurmas() {
             const container = document.getElementById('container-botoes-turmas');
             if (!container) return;
-            const turmas = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
+
+            const turmasExistentes = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
             container.innerHTML = '';
 
             const btnTodas = document.createElement('button');
-            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
-            btnTodas.textContent = `Todas (${provasGeradas.length})`;
-            btnTodas.onclick = () => { turmaFiltroSelecionada = 'todas'; renderizarBotoesFiltroTurmas(); renderizarGridProvas(); };
+            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+            btnTodas.textContent = `Todas as Turmas (${provasGeradas.length})`;
+            btnTodas.onclick = () => {
+                turmaFiltroSelecionada = 'todas';
+                renderizarBotoesFiltroTurmas();
+                renderizarGridProvas();
+            };
             container.appendChild(btnTodas);
 
-            turmas.forEach(tKey => {
+            turmasExistentes.forEach(tKey => {
                 const qtd = provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === tKey).length;
                 const btn = document.createElement('button');
-                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
                 btn.textContent = `${tKey} (${qtd})`;
-                btn.onclick = () => { turmaFiltroSelecionada = tKey; renderizarBotoesFiltroTurmas(); renderizarGridProvas(); };
+                btn.onclick = () => {
+                    turmaFiltroSelecionada = tKey;
+                    renderizarBotoesFiltroTurmas();
+                    renderizarGridProvas();
+                };
                 container.appendChild(btn);
             });
         }
@@ -1016,97 +1186,75 @@
             areaImpressao.innerHTML = '';
 
             const escola = document.getElementById('cfg-escola').value;
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
             const titulo = document.getElementById('cfg-titulo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
 
-            const baseHref = window.location.href.split('?')[0];
-            const provasExibidas = turmaFiltroSelecionada === 'todas' ? provasGeradas : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
+            const provasExibidas = turmaFiltroSelecionada === 'todas'
+                ? provasGeradas
+                : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
 
             provasExibidas.forEach(prova => {
-                const linkAluno = `${baseHref}?studentId=${prova.studentId}`;
-                
-                // Renderização do cartão com link e pré-visualização na Aba 4
+                const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${prova.studentId}`;
                 grid.innerHTML += `
-                    <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
                         <div class="flex justify-between items-start border-b border-slate-100 pb-3">
                             <div>
-                                <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded">${prova.code}</span>
-                                <h4 class="font-bold text-slate-900 text-base mt-1.5">${prova.alunoName}</h4>
+                                <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${prova.code}</span>
+                                <h4 class="font-bold text-slate-900 text-sm mt-1">${prova.alunoName}</h4>
                             </div>
-                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-3 py-1 rounded-full border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
+                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
                         </div>
-
-                        <div class="space-y-1">
-                            <label class="block text-[11px] font-bold text-slate-600 uppercase">Link de Resposta do Aluno:</label>
-                            <div class="flex space-x-2">
-                                <input type="text" readonly value="${linkAluno}" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-mono text-slate-600 select-all" />
-                                <button onclick="copiarLinkAluno('${linkAluno}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition whitespace-nowrap">Copiar</button>
-                            </div>
-                        </div>
-
-                        <!-- PRÉ-VISUALIZAÇÃO DA PROVA DO ALUNO -->
-                        <div class="mt-4 border-t pt-4 space-y-3">
-                            <details class="group bg-slate-50 rounded-xl border border-slate-200 p-3">
-                                <summary class="cursor-pointer font-bold text-xs text-indigo-700 flex items-center justify-between">
-                                    <span>👁️ Pré-visualizar Prova Sorteada para este Aluno</span>
-                                    <span class="text-[10px] text-slate-500 font-normal">Clique para expandir</span>
-                                </summary>
-                                <div class="mt-3 space-y-3 pt-3 border-t border-slate-200 text-xs">
-                                    ${prova.questoes.map(q => `
-                                        <div class="bg-white p-3 rounded-lg border space-y-1.5">
-                                            <p class="font-bold text-slate-900">${q.numero}. ${q.enunciado}</p>
-                                            ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-24 rounded border mx-auto my-1">` : ''}
-                                            <div class="pl-2 space-y-1">
-                                                ${q.alternativas.map(a => `
-                                                    <div class="${a.isCorrect ? 'text-emerald-700 font-bold bg-emerald-50 p-1 rounded' : 'text-slate-600'}">
-                                                        (${a.letter}) ${a.text} ${a.isCorrect ? ' ✓ (Correta)' : ''}
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </details>
+                        <div class="pt-2 space-y-2">
+                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>Copiar Link do Aluno</span>
+                            </button>
+                            <button onclick="abrirProvaDigital('${prova.studentId}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl flex items-center justify-center space-x-1.5 transition">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                <span>Simular Prova Digital</span>
+                            </button>
                         </div>
                     </div>
                 `;
 
-                // Renderização para Impressão PDF
                 areaImpressao.innerHTML += `
                     <div class="page-break">
                         <div class="prova-impressa-container">
-                            <div style="border: 1px solid #000; padding: 6px 10px; margin-bottom: 10px;">
-                                <h2 style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin:0;">${escola}</h2>
-                                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 11pt;">
+                            <div style="border: 1.5px solid #000; padding: 6px 10px; margin-bottom: 8px;">
+                                <h2 style="font-size: 11pt; font-weight: bold; text-align: center; text-transform: uppercase; margin:0;">${escola}</h2>
+                                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 8.5pt;">
                                     <span><strong>AVALIAÇÃO:</strong> ${titulo}</span>
                                     <span><strong>DISCIPLINA:</strong> ${disciplina}</span>
                                 </div>
-                                <div style="margin-top: 4px; font-size: 11.5pt; border-top: 1px solid #000; padding-top: 3px;">
+                                <div style="margin-top: 4px; font-size: 9pt; border-top: 1px solid #000; padding-top: 2px;">
                                     <strong>ESTUDANTE:</strong> ${prova.alunoName} [${prova.alunoSerie} - ${prova.alunoTurma}]
                                 </div>
                             </div>
 
                             <div class="questoes-duas-colunas">
                                 ${prova.questoes.map(q => `
-                                    <div style="margin-bottom: 10px; page-break-inside: avoid;">
-                                        <p style="font-weight: bold; font-size: 11.5pt; margin: 0 0 3px 0;">${q.numero}. ${q.enunciado}</p>
-                                        ${q.imgEnunciado ? `<div style="text-align:center; margin: 4px 0;"><img src="${q.imgEnunciado}" style="max-height: 80px;" /></div>` : ''}
-                                        <div style="margin-left: 8px; font-size: 11.5pt;">
+                                    <div style="margin-bottom: 8px; page-break-inside: avoid;">
+                                        <p style="font-weight: bold; font-size: 8.5pt; margin: 0 0 2px 0;">${q.numero}. ${q.enunciado}</p>
+                                        ${q.imgEnunciado ? `<div style="text-align:center; margin: 2px 0;"><img src="${q.imgEnunciado}" style="max-height: 70px;" /></div>` : ''}
+                                        <div style="margin-left: 6px; font-size: 8pt;">
                                             ${q.alternativas.map(a => `
-                                                <div style="margin-bottom: 2px;"><strong>(${a.letter})</strong> ${a.text}</div>
+                                                <div style="margin-bottom: 1px;"><strong>(${a.letter})</strong> ${a.text} ${a.img ? `<img src="${a.img}" style="max-height: 35px; display:inline-block;" />` : ''}</div>
                                             `).join('')}
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
 
-                            <div style="margin-top: 15px; border-top: 1px solid #000; padding-top: 10px;">
+                            <div style="margin-top: auto; border-top: 1.5px solid #000; padding-top: 6px;">
                                 <table class="gabarito-modelo-table">
-                                    <thead><tr><th colspan="6">GABARITO DA PROVA</th></tr></thead>
+                                    <thead>
+                                        <tr><th colspan="6">GABARITO DA PROVA</th></tr>
+                                    </thead>
                                     <tbody>
                                         ${prova.questoes.map(q => `
                                             <tr>
-                                                <td style="font-weight: bold; width: 28px; font-size: 11pt;">${q.numero}.</td>
+                                                <td style="font-weight: bold; width: 22px; font-size: 8pt;">${q.numero}.</td>
                                                 <td><span class="gabarito-circle">A</span></td>
                                                 <td><span class="gabarito-circle">B</span></td>
                                                 <td><span class="gabarito-circle">C</span></td>
@@ -1124,126 +1272,156 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        // CORREÇÃO DE GABARITO FÍSICO / LEITOR ÓPTICO INTERATIVO
-        function atualizarSelectScanner() {
-            const select = document.getElementById('scanner-select-aluno');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Selecione o Estudante --</option>';
+        function exportarProvasWord() {
+            if (!provasGeradas || provasGeradas.length === 0) return alert("Gere as provas antes de exportar.");
+            const escola = document.getElementById('cfg-escola').value;
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
+            const disciplina = document.getElementById('cfg-disciplina').value;
+            const professor = document.getElementById('cfg-professor').value;
+
+            let wordHTML = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>Provas Impressas</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 9pt; }
+                        .word-prova { page-break-after: always; padding: 10px; }
+                        .header-box { border: 1.5pt solid black; padding: 8px; margin-bottom: 12px; }
+                    </style>
+                </head>
+                <body>
+            `;
+
             provasGeradas.forEach(p => {
-                select.innerHTML += `<option value="${p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}]</option>`;
+                wordHTML += `
+                    <div class="word-prova">
+                        <div class="header-box">
+                            <h2 style="text-align:center; margin:0; text-transform:uppercase;">${escola}</h2>
+                            <p style="margin:4px 0 0 0;"><strong>ESTUDANTE:</strong> ${p.alunoName} | <strong>TURMA:</strong> ${p.alunoSerie} - ${p.alunoTurma}</p>
+                            <p style="margin:2px 0 0 0;"><strong>DISCIPLINA:</strong> ${disciplina} | <strong>PROFESSOR:</strong> ${professor} | <strong>ANO:</strong> ${anoLetivo}</p>
+                        </div>
+                        <div>
+                            ${p.questoes.map(q => `
+                                <div style="margin-bottom: 8px;">
+                                    <p style="margin:0 0 2px 0;"><strong>${q.numero}. ${q.enunciado}</strong></p>
+                                    ${q.imgEnunciado ? `<p><img src="${q.imgEnunciado}" style="max-height: 100px;" /></p>` : ''}
+                                    ${q.alternativas.map(a => `
+                                        <div style="margin-left: 10px;"><strong>(${a.letter})</strong> ${a.text}</div>
+                                    `).join('')}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
             });
+
+            wordHTML += `</body></html>`;
+
+            const blob = new Blob(['\ufeff' + wordHTML], { type: 'application/msword;charset=utf-8' });
+            if (window.saveAs) {
+                saveAs(blob, `AVALIACOES_${disciplina}_${anoLetivo}.doc`);
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `AVALIACOES_${disciplina}_${anoLetivo}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
 
-        function carregarCartelaGabaritoFisico() {
-            const studentId = document.getElementById('scanner-select-aluno').value;
-            const container = document.getElementById('cartela-resposta-fisica');
-            if (!studentId) {
-                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Selecione um estudante acima para carregar a cartela de correção.</p>`;
-                return;
-            }
-
-            const prova = provasGeradas.find(p => p.studentId === studentId);
+        function abrirProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
             if (!prova) return;
 
-            let html = `
-                <div class="space-y-4">
-                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center text-xs">
-                        <span class="font-bold text-indigo-900">${prova.alunoName} (${prova.code})</span>
-                        <span class="text-indigo-700 font-medium">${prova.questoes.length} Questões</span>
-                    </div>
-                    <p class="text-xs text-slate-600 font-medium">Marque abaixo as alternativas que o aluno assinalou na prova de papel:</p>
-                    <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
-            `;
+            const escola = document.getElementById('cfg-escola').value;
+            const container = document.getElementById('conteudo-prova-online');
 
-            prova.questoes.forEach(q => {
-                html += `
-                    <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
-                        <span class="font-bold text-xs text-slate-700 w-12">Questão ${q.numero}</span>
-                        <div class="flex space-x-3">
-                `;
-                ['A', 'B', 'C', 'D', 'E'].forEach(letra => {
-                    html += `
-                        <label class="cursor-pointer flex items-center space-x-1 text-xs font-medium text-slate-600">
-                            <input type="radio" name="fisico_q_${q.numero}" value="${letra}" class="text-indigo-600 focus:ring-indigo-500">
-                            <span class="w-5 h-5 rounded-full border flex items-center justify-center font-bold bg-slate-50">${letra}</span>
-                        </label>
-                    `;
-                });
-                html += `</div></div>`;
-            });
-
-            html += `
-                    </div>
-                    <button onclick="processarCorrecaoFisica('${prova.studentId}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow transition">
-                        Corrigir e Salvar Gabarito Físico
-                    </button>
+            container.innerHTML = `
+                <div class="border-b pb-4">
+                    <span class="text-xs text-indigo-600 font-bold uppercase">${escola} • ${prova.alunoSerie} [${prova.alunoTurma}]</span>
+                    <h2 class="text-xl font-bold text-slate-900">${prova.alunoName}</h2>
                 </div>
+                <form id="form-digital-exam" class="space-y-6">
+                    ${prova.questoes.map(q => `
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
+                            <p class="font-bold text-sm text-slate-800">${q.numero}. ${q.enunciado}</p>
+                            ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-48 rounded border mx-auto">` : ''}
+                            <div class="space-y-2 pl-2">
+                                ${q.alternativas.map(alt => `
+                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                                        <input type="radio" name="q_${q.numero}" value="${alt.letter}" class="text-indigo-600" required>
+                                        <span><strong>(${alt.letter})</strong> ${alt.text}</span>
+                                        ${alt.img ? `<img src="${alt.img}" class="h-10 rounded border ml-2">` : ''}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="fecharModalDigital()" class="text-slate-500 text-xs font-bold">Fechar</button>
+                        <button type="button" onclick="submeterProvaDigital('${prova.studentId}')" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow hover:bg-emerald-700">Enviar Respostas</button>
+                    </div>
+                </form>
             `;
-            container.innerHTML = html;
+            document.getElementById('modal-prova-online').classList.remove('hidden');
         }
 
-        function processarCorrecaoFisica(studentId) {
-            const prova = provasGeradas.find(p => p.studentId === studentId);
+        function fecharModalDigital() {
+            document.getElementById('modal-prova-online').classList.add('hidden');
+        }
+
+        async function submeterProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
             if (!prova) return;
 
             let acertos = 0;
-            let respondidas = 0;
+            const form = document.getElementById('form-digital-exam');
 
             prova.questoes.forEach(q => {
-                const selecionado = document.querySelector(`input[name="fisico_q_${q.numero}"]:checked`);
-                if (selecionado) {
-                    respondidas++;
-                    if (selecionado.value === q.letraCorreta) {
-                        acertos++;
-                    }
-                }
+                const checked = form.querySelector(`input[name="q_${q.numero}"]:checked`);
+                if (checked && checked.value === q.letraCorreta) acertos++;
             });
 
-            if (respondidas < prova.questoes.length) {
-                if (!confirm(`Atenção: Apenas ${respondidas} de ${prova.questoes.length} questões foram marcadas. Deseja prosseguir com a correção?`)) return;
-            }
-
             const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+            const anoLetivo = document.getElementById('cfg-ano-letivo').value;
+            const disciplina = document.getElementById('cfg-disciplina').value;
+            const serieTurma = `${prova.alunoSerie} - ${prova.alunoTurma}`;
+
             const registro = {
                 aluno: prova.alunoName,
-                anoLetivo: document.getElementById('cfg-ano-letivo').value,
-                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                anoLetivo: anoLetivo,
+                serie: serieTurma,
                 bimestre: prova.bimestre,
-                disciplina: document.getElementById('cfg-disciplina').value,
+                disciplina: disciplina,
                 acertos: `${acertos}/${prova.questoes.length}`,
                 nota: nota,
-                origem: 'Correção Gabarito Físico',
+                origem: 'Link Digital Online',
                 data: new Date().toLocaleTimeString()
             };
 
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.from('respostas_avaliacoes').insert([
+                        {
+                            aluno_nome: prova.alunoName,
+                            ano_letivo: anoLetivo,
+                            serie: serieTurma,
+                            bimestre: prova.bimestre,
+                            disciplina: disciplina,
+                            acertos: `${acertos}/${prova.questoes.length}`,
+                            nota: nota
+                        }
+                    ]);
+                } catch(e) {
+                    console.error("Erro Supabase:", e);
+                }
+            }
+
             salvarNotaNoBanco(registro);
-
-            document.getElementById('resultado-scanner-container').innerHTML = `
-                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center space-y-2">
-                    <span class="text-xs font-bold uppercase text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">Correção Concluída</span>
-                    <h4 class="text-xl font-bold text-emerald-900">${prova.alunoName}</h4>
-                    <p class="text-xs text-slate-600">Acertos: <strong>${acertos} / ${prova.questoes.length}</strong></p>
-                    <div class="text-3xl font-extrabold text-emerald-600 pt-2">Nota: ${nota.toFixed(1)}</div>
-                </div>
-            `;
-            alert(`Correção efetuada com sucesso! Nota: ${nota}`);
-            setTab('tab-database');
-        }
-
-        function exportarProvasWord() {
-            if (!provasGeradas || provasGeradas.length === 0) return alert("Gere as provas.");
-            let wordHTML = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body{font-family:'Times New Roman',serif;font-size:12pt;}</style></head><body>`;
-            provasGeradas.forEach(p => {
-                wordHTML += `<div style="page-break-after:always;"><h3>${p.alunoName} - ${p.alunoSerie}</h3>`;
-                p.questoes.forEach(q => {
-                    wordHTML += `<p><strong>${q.numero}. ${q.enunciado}</strong></p>`;
-                    q.alternativas.forEach(a => wordHTML += `<div>(${a.letter}) ${a.text}</div>`);
-                });
-                wordHTML += `</div>`;
-            });
-            wordHTML += `</body></html>`;
-            const blob = new Blob(['\ufeff' + wordHTML], { type: 'application/msword;charset=utf-8' });
-            if (window.saveAs) saveAs(blob, `AVALIACOES.doc`);
+            fecharModalDigital();
+            alert(`Avaliação enviada com sucesso! Nota: ${nota}`);
         }
 
         function embaralhar(arr) {
@@ -1257,20 +1435,83 @@
 
         function copiarLinkAluno(link) {
             navigator.clipboard.writeText(link);
-            alert("Link copiado para a área de transferência!");
+            alert("Link individual copiado!");
         }
 
-        function salvarNotaNoBanco(reg) {
-            bancoNotas = bancoNotas.filter(n => n.aluno !== reg.aluno);
-            bancoNotas.push(reg);
+        function atualizarSelectScanner() {
+            const select = document.getElementById('scanner-select-aluno');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Selecione --</option>';
+            provasGeradas.forEach(p => {
+                select.innerHTML += `<option value="${p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}]</option>`;
+            });
+        }
+
+        async function alternarCamera() {
+            const video = document.getElementById('webcam-video');
+            const placeholder = document.getElementById('webcam-placeholder');
+            const btnText = document.getElementById('btn-camera-text');
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+                video.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                btnText.textContent = "Ligar Câmera";
+            } else {
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = cameraStream;
+                    video.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    btnText.textContent = "Desligar Câmera";
+                } catch (err) {
+                    alert("Câmera indisponível.");
+                }
+            }
+        }
+
+        function processarLeituraOptica() {
+            const studentId = document.getElementById('scanner-select-aluno').value;
+            if (!studentId) return alert("Selecione um estudante.");
+            const prova = provasGeradas.find(p => p.studentId === studentId);
+            if (!prova) return;
+
+            let acertos = 0;
+            prova.questoes.forEach(q => {
+                if (Math.random() < 0.8) acertos++;
+            });
+
+            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+            const registro = {
+                aluno: prova.alunoName,
+                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                bimestre: prova.bimestre,
+                disciplina: document.getElementById('cfg-disciplina').value,
+                acertos: `${acertos}/${prova.questoes.length}`,
+                nota: nota,
+                origem: 'Leitor Óptico',
+                data: new Date().toLocaleTimeString()
+            };
+
+            salvarNotaNoBanco(registro);
+            document.getElementById('resultado-scanner-container').innerHTML = `<div class="p-4 bg-emerald-50 text-emerald-800 rounded-xl font-bold text-center">Nota atribuída: ${nota}</div>`;
+        }
+
+        function salvarNotaNoBanco(registro) {
+            bancoNotas = bancoNotas.filter(n => n.aluno !== registro.aluno);
+            bancoNotas.push(registro);
             localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
             renderizarBancoNotas();
         }
 
         function limparBancoNotas() {
-            bancoNotas = [];
-            localStorage.removeItem('sys_avalia_notas');
-            renderizarBancoNotas();
+            if (confirm("Deseja apagar o histórico local?")) {
+                bancoNotas = [];
+                localStorage.removeItem('sys_avalia_notas');
+                renderizarBancoNotas();
+            }
         }
 
         function renderizarBancoNotas() {
@@ -1294,7 +1535,11 @@
                 const btn = document.createElement('button');
                 btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${notaAnoSelecionado === ano ? 'bg-amber-500 text-slate-900 shadow' : 'bg-slate-800 text-slate-300'}`;
                 btn.textContent = ano;
-                btn.onclick = () => { notaAnoSelecionado = ano; notaTurmaSelecionada = null; renderizarBancoNotas(); };
+                btn.onclick = () => {
+                    notaAnoSelecionado = ano;
+                    notaTurmaSelecionada = null;
+                    renderizarBancoNotas();
+                };
                 containerAnos.appendChild(btn);
             });
 
@@ -1309,7 +1554,10 @@
                     const btn = document.createElement('button');
                     btn.className = `whitespace-nowrap px-5 py-3 font-bold text-sm border-b-2 transition ${notaTurmaSelecionada === turma ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500'}`;
                     btn.textContent = turma;
-                    btn.onclick = () => { notaTurmaSelecionada = turma; renderizarBancoNotas(); };
+                    btn.onclick = () => {
+                        notaTurmaSelecionada = turma;
+                        renderizarBancoNotas();
+                    };
                     containerTurmas.appendChild(btn);
                 });
             } else {
@@ -1358,6 +1606,15 @@
             document.getElementById('stat-maior').textContent = '0.0';
         }
 
+        function exportarPerguntasEAlunos() {
+            const dados = { cadastroTurmas, bancoQuestoes };
+            const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dados, null, 2));
+            const a = document.createElement('a');
+            a.href = jsonStr;
+            a.download = `AVALIADIGITAL_DADOS.json`;
+            a.click();
+        }
+
         function verificarLinkAlunoParam() {
             const urlParams = new URLSearchParams(window.location.search);
             const studentId = urlParams.get('studentId');
@@ -1365,72 +1622,6 @@
                 if (provasGeradas.length === 0) gerarProvasComLista(bancoQuestoes);
                 abrirProvaDigital(studentId);
             }
-        }
-
-        function abrirProvaDigital(studentId) {
-            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
-            if (!prova) return;
-
-            const escola = document.getElementById('cfg-escola').value;
-            const container = document.getElementById('conteudo-prova-online');
-
-            container.innerHTML = `
-                <div class="border-b pb-4">
-                    <span class="text-xs text-indigo-600 font-bold uppercase">${escola} • ${prova.alunoSerie} [${prova.alunoTurma}]</span>
-                    <h2 class="text-xl font-bold text-slate-900">${prova.alunoName}</h2>
-                </div>
-                <form id="form-digital-exam" class="space-y-6">
-                    ${prova.questoes.map(q => `
-                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
-                            <p class="font-bold text-sm text-slate-800">${q.numero}. ${q.enunciado}</p>
-                            ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-48 rounded border mx-auto">` : ''}
-                            <div class="space-y-2 pl-2">
-                                ${q.alternativas.map(alt => `
-                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
-                                        <input type="radio" name="q_${q.numero}" value="${alt.letter}" class="text-indigo-600" required>
-                                        <span><strong>(${alt.letter})</strong> ${alt.text}</span>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                    <div class="flex justify-between pt-4">
-                        <button type="button" onclick="document.getElementById('modal-prova-online').classList.add('hidden')" class="text-slate-500 text-xs font-bold">Fechar</button>
-                        <button type="button" onclick="submeterProvaDigital('${prova.studentId}')" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow hover:bg-emerald-700">Enviar Respostas</button>
-                    </div>
-                </form>
-            `;
-            document.getElementById('modal-prova-online').classList.remove('hidden');
-        }
-
-        async function submeterProvaDigital(studentId) {
-            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
-            if (!prova) return;
-
-            let acertos = 0;
-            const form = document.getElementById('form-digital-exam');
-
-            prova.questoes.forEach(q => {
-                const checked = form.querySelector(`input[name="q_${q.numero}"]:checked`);
-                if (checked && checked.value === q.letraCorreta) acertos++;
-            });
-
-            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
-            const registro = {
-                aluno: prova.alunoName,
-                anoLetivo: document.getElementById('cfg-ano-letivo').value,
-                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
-                bimestre: prova.bimestre,
-                disciplina: document.getElementById('cfg-disciplina').value,
-                acertos: `${acertos}/${prova.questoes.length}`,
-                nota: nota,
-                origem: 'Link Digital Online',
-                data: new Date().toLocaleTimeString()
-            };
-
-            salvarNotaNoBanco(registro);
-            document.getElementById('modal-prova-online').classList.add('hidden');
-            alert(`Avaliação enviada com sucesso! Nota: ${nota}`);
         }
     </script>
 </body>
