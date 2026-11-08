@@ -17,134 +17,249 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FileSaver.js para Download de Arquivos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Leitor OMR: alinhamento de folha, leitura de bolhas e QR do aluno -->
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
     <style>
         @page {
             size: A4 portrait;
-            margin: 12mm;
+            margin: 8mm;
         }
 
+        /* Impressão: Times New Roman 11, questões em duas colunas e OMR abaixo. */
         @media print {
             html, body {
                 background: #fff !important;
                 color: #000 !important;
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
-                line-height: 1.22 !important;
+                line-height: 1.16 !important;
                 margin: 0 !important;
                 padding: 0 !important;
             }
             .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            #area-impressao-provas { display: block !important; }
+            .print-only, #area-impressao-provas { display: block !important; }
             .page-break {
                 display: block !important;
                 height: auto !important;
                 min-height: 0 !important;
-                padding: 0 !important;
                 margin: 0 !important;
+                padding: 0 !important;
                 page-break-after: always;
                 break-after: page;
-                page-break-inside: auto;
             }
             .prova-impressa-container {
-                border: 1.5pt solid #000;
-                padding: 8mm;
-                min-height: 0 !important;
                 display: block !important;
+                box-sizing: border-box !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
                 background: #fff !important;
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
-                box-sizing: border-box;
+                color: #000 !important;
             }
-            .questoes-sequenciais { display: block !important; }
-            .questao-impressa {
-                display: block;
-                width: 100%;
-                margin: 0 0 5mm 0;
+            .prova-cabecalho {
+                border: 1pt solid #000 !important;
+                padding: 2.5mm 3mm !important;
+                margin-bottom: 3mm !important;
                 font-size: 11pt !important;
-                page-break-inside: avoid;
+                line-height: 1.12 !important;
                 break-inside: avoid;
+            }
+            .questoes-sequenciais {
+                display: block !important;
+                width: 100% !important;
+                column-count: 2 !important;
+                column-gap: 8mm !important;
+                column-fill: balance !important;
+                font-family: "Times New Roman", Times, serif !important;
+                font-size: 11pt !important;
+            }
+            .questao-impressa {
+                display: inline-block !important;
+                width: 100% !important;
+                margin: 0 0 3mm 0 !important;
+                vertical-align: top !important;
+                font-family: "Times New Roman", Times, serif !important;
+                font-size: 11pt !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
             .questao-impressa p, .alternativa-impressa {
-                font-size: 11pt !important;
                 font-family: "Times New Roman", Times, serif !important;
+                font-size: 11pt !important;
+                line-height: 1.12 !important;
             }
+            .questao-impressa p { margin-bottom: 1mm !important; }
+            .alternativa-impressa { margin: 0.5mm 0 !important; }
+            .questao-impressa img { max-width: 100% !important; max-height: 35mm !important; }
             .folha-gabarito {
-                margin-top: 8mm;
-                padding-top: 4mm;
-                border-top: 1.5pt solid #000;
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-            .gabarito-modelo-table {
+                display: block !important;
                 width: 100% !important;
-                max-width: none !important;
-                border-collapse: collapse !important;
+                margin: 4mm 0 0 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                clear: both !important;
+            }
+            .omr-scan-region {
+                position: relative !important;
+                display: block !important;
+                width: 160mm !important;
+                max-width: 160mm !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                color: #000 !important;
+                border: 0 !important;
+                overflow: visible !important;
                 font-family: "Times New Roman", Times, serif !important;
-                font-size: 11pt !important;
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
             }
-            .gabarito-modelo-table th, .gabarito-modelo-table td {
-                border: 1pt solid #000 !important;
-                padding: 3mm 2mm !important;
-                text-align: center !important;
-                font-size: 11pt !important;
-            }
-            .gabarito-circle {
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
+            .omr-marker {
+                position: absolute !important;
+                display: block !important;
                 width: 7mm !important;
                 height: 7mm !important;
-                border: 1.2pt solid #000 !important;
-                border-radius: 50% !important;
+                background: transparent !important;
+                border: 0 !important;
+                overflow: visible !important;
+            }
+            .omr-tl { top: 0 !important; left: 0 !important; }
+            .omr-tr { top: 0 !important; right: 0 !important; }
+            .omr-bl { bottom: 0 !important; left: 0 !important; }
+            .omr-br { bottom: 0 !important; right: 0 !important; }
+            .omr-sheet-heading {
+                position: absolute !important;
+                top: 1.4mm !important;
+                left: 9mm !important;
+                right: 24mm !important;
+                height: 9mm !important;
+                overflow: hidden !important;
+                font-size: 8.5pt !important;
+                line-height: 1.12 !important;
+            }
+            .omr-qr {
+                position: absolute !important;
+                top: 1mm !important;
+                right: 9mm !important;
+                width: 14mm !important;
+                height: 14mm !important;
+            }
+            .omr-qr img, .omr-qr canvas {
+                display: block !important;
+                width: 14mm !important;
+                height: 14mm !important;
+            }
+            .omr-token-fallback {
+                position: absolute !important;
+                top: 3mm !important;
+                right: 9mm !important;
+                width: 12mm !important;
+                font-size: 5pt !important;
+                word-break: break-all !important;
+            }
+            .omr-table {
+                position: absolute !important;
+                top: 16mm !important;
+                left: 8mm !important;
+                width: 144mm !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
-                font-weight: normal !important;
             }
+            .omr-table th, .omr-table td {
+                height: 6.5mm !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 0.35pt solid #000 !important;
+                text-align: center !important;
+                vertical-align: middle !important;
+                font-family: "Times New Roman", Times, serif !important;
+                font-size: 11pt !important;
+                line-height: 1 !important;
+            }
+            .omr-table thead th { height: 5.5mm !important; font-weight: bold !important; }
+            .omr-bubble {
+                display: inline-block !important;
+                box-sizing: border-box !important;
+                width: 4.4mm !important;
+                height: 4.4mm !important;
+                border: 0.45pt solid #000 !important;
+                border-radius: 50% !important;
+                background: #fff !important;
+            }
+            .omr-question-number { font-weight: bold !important; }
             img { max-width: 100% !important; }
         }
 
         .print-only { display: none; }
         .prova-impressa-container {
-            border: 2px solid #000;
-            padding: 10px;
+            border: 0;
+            padding: 0;
             box-sizing: border-box;
-            background: #fff;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 11pt;
-        }
-        .questoes-sequenciais { display: block; width: 100%; }
-        .questao-impressa { display: block; width: 100%; margin-bottom: 12px; }
-        .gabarito-modelo-table {
-            border-collapse: collapse;
-            margin: 0 auto;
             background: #fff;
             color: #000;
             font-family: "Times New Roman", Times, serif;
             font-size: 11pt;
+        }
+        .questoes-sequenciais { display: block; width: 100%; }
+        .questao-impressa {
+            display: inline-block;
             width: 100%;
+            margin: 0 0 3mm 0;
+            vertical-align: top;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            break-inside: avoid;
+        }
+        .folha-gabarito { margin-top: 4mm; }
+        .omr-scan-region {
+            position: relative;
+            width: 160mm;
             max-width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+            font-family: "Times New Roman", Times, serif;
         }
-        .gabarito-modelo-table th, .gabarito-modelo-table td {
-            border: 1px solid #000;
-            padding: 4px 5px;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 11pt;
+        .omr-marker { position: absolute; width: 7mm; height: 7mm; background: transparent; }
+        .omr-tl { top: 0; left: 0; }
+        .omr-tr { top: 0; right: 0; }
+        .omr-bl { bottom: 0; left: 0; }
+        .omr-br { bottom: 0; right: 0; }
+        .omr-sheet-heading {
+            position: absolute; top: 1.4mm; left: 9mm; right: 24mm;
+            height: 9mm; overflow: hidden; font-size: 8.5pt; line-height: 1.12;
         }
-        .gabarito-circle {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 1.2px solid #000;
-            font-weight: normal;
-            font-size: 11pt;
-            background-color: #fff;
+        .omr-qr { position: absolute; top: 1mm; right: 9mm; width: 14mm; height: 14mm; }
+        .omr-qr img, .omr-qr canvas { width: 14mm !important; height: 14mm !important; display: block; }
+        .omr-token-fallback { position: absolute; top: 3mm; right: 9mm; width: 12mm; font-size: 5pt; word-break: break-all; }
+        .omr-table {
+            position: absolute; top: 16mm; left: 8mm; width: 144mm;
+            border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;
+            color: #000; background: #fff; font-family: "Times New Roman", Times, serif; font-size: 11pt;
         }
+        .omr-table th, .omr-table td {
+            height: 6.5mm; padding: 0; margin: 0; border: .35pt solid #000;
+            text-align: center; vertical-align: middle; font-size: 11pt; line-height: 1;
+        }
+        .omr-table thead th { height: 5.5mm; font-weight: bold; }
+        .omr-bubble { display: inline-block; box-sizing: border-box; width: 4.4mm; height: 4.4mm; border: .45pt solid #000; border-radius: 50%; background: #fff; }
+        .omr-question-number { font-weight: bold; }
         .student-mode { background: #f8fafc; min-height: 100vh; }
         .student-question { border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 14px; background: #fff; }
         .student-option { display: flex; align-items: flex-start; gap: 9px; padding: 8px; border-radius: 8px; cursor: pointer; }
@@ -572,51 +687,56 @@
             </div>
         </section>
 
-        <!-- TAB 5: LEITOR ÓPTICO POR CÂMERA -->
+        <!-- TAB 5: LEITOR ÓPTICO OMR POR CÂMERA -->
         <section id="tab-scanner" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
                     <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
-                        <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
-                            <i data-lucide="camera" class="w-5 h-5"></i>
-                        </div>
+                        <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl"><i data-lucide="scan-line" class="w-5 h-5"></i></div>
                         <div>
-                            <h3 class="font-bold text-slate-800 text-base">Leitor / Conferência de Gabarito</h3>
-                            <p class="text-xs text-slate-500">Conferência das alternativas marcadas e comparação com o gabarito</p>
+                            <h3 class="font-bold text-slate-800 text-base">Leitor Óptico OMR — câmera do celular</h3>
+                            <p class="text-xs text-slate-500">Alinhamento por quatro marcadores, leitura das bolhas e conferência automática.</p>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante</label>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o estudante</label>
                         <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
                     </div>
 
-                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-800 shadow-inner">
-                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                    <div class="relative bg-slate-950 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center border-4 border-slate-800 shadow-inner">
+                        <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-contain hidden"></video>
                         <div id="webcam-placeholder" class="text-center p-6 space-y-3">
-                            <i data-lucide="smartphone" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
-                            <p class="text-xs text-slate-300">A câmera pode ser usada como apoio visual. Confira as alternativas marcadas na folha.</p>
+                            <i data-lucide="scan" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
+                            <p class="text-sm text-slate-200 font-semibold">Enquadre a folha de respostas inteira</p>
+                            <p class="text-xs text-slate-400">Os quatro quadrados pretos ao redor da grade devem aparecer na imagem. Use a folha OMR impressa por esta versão do sistema.</p>
                         </div>
                     </div>
 
-                    <div class="flex space-x-3">
-                        <button onclick="alternarCamera()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                            <span id="btn-camera-text">Ligar Câmera</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button onclick="alternarCamera()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i><span id="btn-camera-text">Ligar câmera traseira</span>
                         </button>
-                        <button onclick="processarLeituraOptica()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i>
-                            <span>Conferir respostas marcadas</span>
-                        </button>
+                        <label class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold py-3 rounded-xl shadow-sm flex items-center justify-center space-x-2 cursor-pointer">
+                            <i data-lucide="image" class="w-4 h-4"></i><span>Enviar foto da galeria</span>
+                            <input id="scanner-photo-input" type="file" accept="image/*" capture="environment" class="hidden" onchange="carregarFotoScanner(event)">
+                        </label>
                     </div>
+
+                    <button onclick="processarLeituraOptica()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
+                        <i data-lucide="scan-eye" class="w-4 h-4"></i><span>Capturar e ler gabarito</span>
+                    </button>
+                    <p id="scanner-status" class="text-xs text-slate-500 text-center" aria-live="polite">Leitor OMR pronto. Reimprima as provas por esta versão: folhas antigas não têm os marcadores. Recomendado até 20 questões por folha.</p>
+                    <canvas id="scanner-work-canvas" class="hidden"></canvas>
                 </div>
 
                 <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Leitura Óptica</h3>
+                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da leitura OMR</h3>
                     <div id="resultado-scanner-container">
                         <div class="text-center py-16 text-slate-400">
-                            <i data-lucide="award" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
-                            <p class="text-sm font-medium">Nenhum gabarito lido no momento.</p>
+                            <i data-lucide="scan-line" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p class="text-sm font-medium">Nenhuma folha processada ainda.</p>
+                            <p class="text-xs mt-2">Após a leitura, confira respostas duplas ou de baixa confiança antes de salvar a nota.</p>
                         </div>
                     </div>
                 </div>
@@ -680,6 +800,7 @@
                                     <th class="px-6 py-3.5">Estudante</th>
                                     <th class="px-6 py-3.5">Série / Turma</th>
                                     <th class="px-6 py-3.5">Disciplina</th>
+                                    <th class="px-6 py-3.5">Bimestre</th>
                                     <th class="px-6 py-3.5">Acertos</th>
                                     <th class="px-6 py-3.5">Nota Final</th>
                                     <th class="px-6 py-3.5">Origem / Hora</th>
@@ -705,6 +826,7 @@
 
     <script>
         let cameraStream = null;
+        let scannerImageAtual = null;
         let turmaFiltroSelecionada = 'todas';
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
@@ -1620,53 +1742,99 @@
 
             provasExibidas.forEach(prova => {
                 const token = prova.studentToken || prova.studentId;
+                const safeToken = escapeHtml(token);
+                const qrId = `omr-qr-${String(token).replace(/[^a-z0-9]/gi, '')}`;
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${encodeURIComponent(token)}`;
+                const bimestre = prova.bimestre || document.getElementById('cfg-bimestre').value || '—';
+                const metadeOmr = Math.ceil(prova.questoes.length / 2);
+                const alturaOmrMm = (26.5 + metadeOmr * 6.5).toFixed(1);
+
                 grid.innerHTML += `
                     <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
                         <div class="flex justify-between items-start border-b border-slate-100 pb-3">
-                            <div><span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${prova.code}</span><h4 class="font-bold text-slate-900 text-sm mt-1">${prova.alunoName}</h4></div>
-                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
+                            <div><span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${escapeHtml(prova.code || '')}</span><h4 class="font-bold text-slate-900 text-sm mt-1">${escapeHtml(prova.alunoName || '')}</h4></div>
+                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${escapeHtml(prova.alunoSerie || '')} • ${escapeHtml(prova.alunoTurma || '')}</span>
                         </div>
                         <div class="pt-2 space-y-2">
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
-                            <button onclick="window.open('${linkAluno}','_blank','noopener')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Abrir Prova Digital</button>
+                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link da avaliação</button>
                         </div>
                     </div>`;
+
+                const questoesHtml = prova.questoes.map(q => `
+                    <article class="questao-impressa">
+                        <p style="font-weight:bold;font-size:11pt;margin:0 0 1mm 0;">${q.numero}. ${escapeHtml(q.enunciado)}</p>
+                        ${q.imgEnunciado ? `<div style="text-align:center;margin:1mm 0;"><img src="${escapeHtml(q.imgEnunciado)}" alt="Imagem da questão ${q.numero}" style="max-height:32mm;max-width:100%;object-fit:contain;" /></div>` : ''}
+                        <div style="margin-left:3mm;font-size:11pt;">
+                            ${q.alternativas.map(a => `<div class="alternativa-impressa"><strong>(${escapeHtml(a.letter)})</strong> ${escapeHtml(a.text)} ${a.img ? `<img src="${escapeHtml(a.img)}" alt="Imagem da alternativa ${escapeHtml(a.letter)}" style="max-height:18mm;max-width:100%;display:inline-block;vertical-align:middle;" />` : ''}</div>`).join('')}
+                        </div>
+                    </article>`).join('');
+
+                const linhasOmr = Array.from({ length: metadeOmr }, (_, i) => {
+                    const esquerda = prova.questoes[i];
+                    const direita = prova.questoes[i + metadeOmr];
+                    const celulas = q => q
+                        ? `<td class="omr-question-number">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="omr-bubble" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}`
+                        : '<td></td><td></td><td></td><td></td><td></td><td></td>';
+                    return `<tr>${celulas(esquerda)}${celulas(direita)}</tr>`;
+                }).join('');
 
                 areaImpressao.innerHTML += `
                     <div class="page-break">
                         <div class="prova-impressa-container">
-                            <div style="border:1.5pt solid #000;padding:8px 10px;margin-bottom:12px;font-family:'Times New Roman',Times,serif;font-size:11pt;">
-                                <h2 style="font-size:11pt;font-weight:bold;text-align:center;text-transform:uppercase;margin:0;">${escola}</h2>
-                                <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:5px;font-size:11pt;">
-                                    <span><strong>AVALIAÇÃO:</strong> ${titulo}</span><span><strong>DISCIPLINA:</strong> ${disciplina}</span><span><strong>ANO:</strong> ${anoLetivo}</span>
+                            <div class="prova-cabecalho">
+                                <h2 style="font-size:11pt;font-weight:bold;text-align:center;text-transform:uppercase;margin:0;">${escapeHtml(escola)}</h2>
+                                <div style="display:flex;justify-content:space-between;gap:2mm;flex-wrap:wrap;margin-top:1.5mm;font-size:11pt;">
+                                    <span><strong>AVALIAÇÃO:</strong> ${escapeHtml(titulo)}</span>
+                                    <span><strong>DISCIPLINA:</strong> ${escapeHtml(disciplina)}</span>
+                                    <span><strong>ANO:</strong> ${escapeHtml(anoLetivo)}</span>
+                                    <span><strong>BIMESTRE:</strong> ${escapeHtml(bimestre)}</span>
                                 </div>
-                                <div style="margin-top:5px;font-size:11pt;border-top:1px solid #000;padding-top:4px;">
-                                    <strong>ESTUDANTE:</strong> ${prova.alunoName} &nbsp; <strong>TURMA:</strong> ${prova.alunoSerie} - ${prova.alunoTurma}
-                                    <br><strong>PROFESSOR(A):</strong> ${professor} &nbsp; <strong>DATA:</strong> ____/____/______
+                                <div style="margin-top:1.5mm;font-size:11pt;border-top:1px solid #000;padding-top:1.2mm;">
+                                    <strong>ESTUDANTE:</strong> ${escapeHtml(prova.alunoName)} &nbsp;
+                                    <strong>TURMA:</strong> ${escapeHtml(prova.alunoSerie)} - ${escapeHtml(prova.alunoTurma)}
+                                    <br><strong>PROFESSOR(A):</strong> ${escapeHtml(professor)} &nbsp; <strong>DATA:</strong> ____/____/______
                                 </div>
                             </div>
-                            <div class="questoes-sequenciais">
-                                ${prova.questoes.map(q => `
-                                    <div class="questao-impressa">
-                                        <p style="font-weight:bold;font-size:11pt;margin:0 0 4px 0;">${q.numero}. ${q.enunciado}</p>
-                                        ${q.imgEnunciado ? `<div style="text-align:center;margin:4px 0;"><img src="${q.imgEnunciado}" style="max-height:100px;max-width:100%;object-fit:contain;" /></div>` : ''}
-                                        <div style="margin-left:12px;font-size:11pt;">
-                                            ${q.alternativas.map(a => `<div class="alternativa-impressa" style="font-size:11pt;margin:2px 0;"><strong>(${a.letter})</strong> ${a.text} ${a.img ? `<img src="${a.img}" style="max-height:55px;max-width:100%;display:inline-block;vertical-align:middle;" />` : ''}</div>`).join('')}
-                                        </div>
-                                    </div>`).join('')}
-                            </div>
-                            <div class="folha-gabarito">
-                                <table class="gabarito-modelo-table">
-                                    <thead><tr><th colspan="6" style="font-size:11pt;font-weight:bold;padding:8px;">GABARITO DA PROVA</th></tr><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-                                    <tbody>
-                                        ${prova.questoes.map(q => `<tr><td style="font-weight:bold;">${q.numero}.</td>${['A','B','C','D','E'].map(letra => `<td><span class="gabarito-circle">${letra}</span></td>`).join('')}</tr>`).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <div class="questoes-sequenciais">${questoesHtml}</div>
+                            <section class="folha-gabarito">
+                                <div class="omr-scan-region" data-omr-count="${prova.questoes.length}" data-student-token="${safeToken}" style="height:${alturaOmrMm}mm;">
+                                    <svg class="omr-marker omr-tl" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-tr" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-bl" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-br" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg>
+                                    <div class="omr-sheet-heading">
+                                        <strong>FOLHA DE RESPOSTAS — NÃO DOBRAR</strong><br>
+                                        Aluno: ${escapeHtml(prova.alunoName)} | Código: ${escapeHtml(prova.code || '')}<br>
+                                        Preencha completamente apenas uma bolha por questão, com caneta ou lápis escuro.
+                                    </div>
+                                    <div id="${qrId}" class="omr-qr" data-omr-qr="${escapeHtml(prova.code || '')}"></div>
+                                    <table class="omr-table">
+                                        <colgroup>${Array.from({length:2}, () => '<col style="width:10mm;">' + Array.from({length:5}, () => '<col style="width:12.4mm;">').join('')).join('')}</colgroup>
+                                        <thead><tr><th>Qº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>Qº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+                                        <tbody>${linhasOmr}</tbody>
+                                    </table>
+                                </div>
+                            </section>
                         </div>
                     </div>`;
             });
+
+            // QR individual da prova: também permite identificar a folha quando o leitor o conseguir decodificar.
+            if (window.QRCode) {
+                areaImpressao.querySelectorAll('[data-omr-qr]').forEach(el => {
+                    try {
+                        new QRCode(el, {
+                            text: el.getAttribute('data-omr-qr'),
+                            width: 96, height: 96,
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } catch (error) {
+                        el.innerHTML = `<span class="omr-token-fallback">${escapeHtml(el.getAttribute('data-omr-qr'))}</span>`;
+                    }
+                });
+            } else {
+                areaImpressao.querySelectorAll('[data-omr-qr]').forEach(el => {
+                    el.innerHTML = `<span class="omr-token-fallback">${escapeHtml(el.getAttribute('data-omr-qr'))}</span>`;
+                });
+            }
             if (window.lucide) lucide.createIcons();
         }
 
@@ -1684,8 +1852,9 @@
                     @page { size: 21cm 29.7cm; margin: 1.2cm; }
                     body { font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.2; }
                     .word-prova { page-break-after:always; padding:0; }
-                    .header-box { border:1.5pt solid black; padding:8px; margin-bottom:12px; }
-                    .questao { margin:0 0 12px 0; page-break-inside:avoid; }
+                    .header-box { border:1.5pt solid black; padding:8px; margin-bottom:8px; }
+                    .questoes-word { column-count:2; column-gap:0.8cm; column-fill:balance; }
+                    .questao { display:inline-block; width:100%; margin:0 0 7px 0; page-break-inside:avoid; break-inside:avoid; }
                     .alternativa { margin:2px 0 2px 12px; font-size:11pt; }
                     table { width:100%; border-collapse:collapse; font-size:11pt; margin-top:8px; }
                     th,td { border:1pt solid #000; padding:5px; text-align:center; }
@@ -1697,13 +1866,13 @@
                         <h2 style="text-align:center;margin:0;font-size:11pt;text-transform:uppercase;">${escola}</h2>
                         <p style="margin:5px 0;"><strong>AVALIAÇÃO:</strong> ${titulo} | <strong>ANO:</strong> ${anoLetivo}</p>
                         <p style="margin:5px 0;"><strong>ESTUDANTE:</strong> ${p.alunoName} | <strong>TURMA:</strong> ${p.alunoSerie} - ${p.alunoTurma}</p>
-                        <p style="margin:5px 0;"><strong>DISCIPLINA:</strong> ${disciplina} | <strong>PROFESSOR:</strong> ${professor}</p>
+                        <p style="margin:5px 0;"><strong>DISCIPLINA:</strong> ${disciplina} | <strong>BIMESTRE:</strong> ${p.bimestre || ''} | <strong>PROFESSOR:</strong> ${professor}</p>
                     </div>
-                    ${p.questoes.map(q => `<div class="questao"><p style="margin:0 0 4px 0;"><strong>${q.numero}. ${q.enunciado}</strong></p>
+                    <div class="questoes-word">${p.questoes.map(q => `<div class="questao"><p style="margin:0 0 4px 0;"><strong>${q.numero}. ${q.enunciado}</strong></p>
                         ${q.imgEnunciado ? `<p><img src="${q.imgEnunciado}" style="max-height:100px;max-width:100%;" /></p>` : ''}
                         ${q.alternativas.map(a => `<div class="alternativa"><strong>(${a.letter})</strong> ${a.text} ${a.img ? `<img src="${a.img}" style="max-height:55px;max-width:100%;vertical-align:middle;" />` : ''}</div>`).join('')}
-                    </div>`).join('')}
-                    <table><thead><tr><th colspan="6" style="font-size:11pt;">GABARITO DA PROVA</th></tr><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+                    </div>`).join('')}</div>
+                    <table style="width:72%;margin-left:0;"><thead><tr><th colspan="6" style="font-size:11pt;">GABARITO DA PROVA</th></tr><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
                     <tbody>${p.questoes.map(q => `<tr><td><strong>${q.numero}.</strong></td>${['A','B','C','D','E'].map(l => `<td><span class="bolha">${l}</span></td>`).join('')}</tr>`).join('')}</tbody></table>
                     </div>`;
             });
@@ -1937,38 +2106,329 @@
             const video = document.getElementById('webcam-video');
             const placeholder = document.getElementById('webcam-placeholder');
             const btnText = document.getElementById('btn-camera-text');
+            const status = document.getElementById('scanner-status');
 
             if (cameraStream) {
                 cameraStream.getTracks().forEach(t => t.stop());
                 cameraStream = null;
+                video.pause();
+                video.srcObject = null;
                 video.classList.add('hidden');
                 placeholder.classList.remove('hidden');
-                btnText.textContent = "Ligar Câmera";
-            } else {
-                try {
-                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                    video.srcObject = cameraStream;
-                    video.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                    btnText.textContent = "Desligar Câmera";
-                } catch (err) {
-                    alert("Câmera indisponível.");
+                btnText.textContent = 'Ligar câmera traseira';
+                if (status) status.textContent = 'Câmera desligada. Você também pode enviar uma foto da galeria.';
+                return;
+            }
+
+            try {
+                if (!navigator.mediaDevices?.getUserMedia) {
+                    throw new Error('Este navegador não disponibiliza câmera. Utilize “Enviar foto da galeria”.');
                 }
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = cameraStream;
+                await video.play();
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                btnText.textContent = 'Desligar câmera';
+                scannerImageAtual = null;
+                if (status) status.textContent = 'Câmera ativa. Mantenha os quatro quadrados pretos visíveis e evite sombras.';
+            } catch (err) {
+                cameraStream = null;
+                if (status) status.textContent = err.message || 'Não foi possível abrir a câmera.';
+                alert(err.message || 'Câmera indisponível. Verifique a permissão do navegador.');
             }
         }
 
-        function processarLeituraOptica() {
+        function carregarFotoScanner(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('Selecione uma fotografia da folha de respostas.');
+                return;
+            }
+            const image = new Image();
+            image.onload = () => {
+                scannerImageAtual = image;
+                const status = document.getElementById('scanner-status');
+                if (status) status.textContent = `Foto carregada (${image.naturalWidth} × ${image.naturalHeight}). Clique em “Capturar e ler gabarito”.`;
+                const placeholder = document.getElementById('webcam-placeholder');
+                if (placeholder && !cameraStream) {
+                    placeholder.classList.remove('hidden');
+                    placeholder.innerHTML = '<i data-lucide="image-check" class="w-10 h-10 text-emerald-400 mx-auto"></i><p class="text-xs text-slate-200">Foto carregada. A leitura será feita a partir da imagem selecionada.</p>';
+                    if (window.lucide) lucide.createIcons();
+                }
+            };
+            image.onerror = () => alert('Não foi possível abrir a imagem selecionada.');
+            image.src = URL.createObjectURL(file);
+        }
+
+        function aguardarOpenCV(timeoutMs = 25000) {
+            return new Promise((resolve, reject) => {
+                const inicio = Date.now();
+                const verificar = () => {
+                    if (window.cv && window.cv.Mat && window.cv.findContours) return resolve(window.cv);
+                    if (Date.now() - inicio > timeoutMs) return reject(new Error('O módulo de visão computacional ainda não carregou. Verifique a conexão com a internet ou use a conferência manual.'));
+                    window.setTimeout(verificar, 150);
+                };
+                verificar();
+            });
+        }
+
+        function pontoExtremoMarcador(pontos, tipo) {
+            const valor = p => {
+                if (tipo === 'tl') return p.x + p.y;
+                if (tipo === 'tr') return p.x - p.y;
+                if (tipo === 'br') return p.x + p.y;
+                return p.y - p.x;
+            };
+            return pontos.reduce((melhor, p) => {
+                if (!melhor) return p;
+                if (tipo === 'tl' && valor(p) < valor(melhor)) return p;
+                if (tipo === 'tr' && valor(p) > valor(melhor)) return p;
+                if (tipo === 'br' && valor(p) > valor(melhor)) return p;
+                if (tipo === 'bl' && valor(p) > valor(melhor)) return p;
+                return melhor;
+            }, null);
+        }
+
+        function detectarMarcadoresOMR(cv, imagemCanvas) {
+            const src = cv.imread(imagemCanvas);
+            const gray = new cv.Mat();
+            const bin = new cv.Mat();
+            const contours = new cv.MatVector();
+            const hierarchy = new cv.Mat();
+            const candidatos = [];
+            try {
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
+                cv.threshold(gray, bin, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
+                cv.findContours(bin, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+                const minArea = Math.max(90, src.cols * src.rows * 0.000035); // filtra ruído pequeno e contornos das letras
+                for (let i = 0; i < contours.size(); i++) {
+                    const contour = contours.get(i);
+                    const area = Math.abs(cv.contourArea(contour));
+                    if (area < minArea) { contour.delete(); continue; }
+                    const perimetro = cv.arcLength(contour, true);
+                    const approx = new cv.Mat();
+                    cv.approxPolyDP(contour, approx, Math.max(2, perimetro * 0.035), true);
+                    if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                        const rect = cv.boundingRect(approx);
+                        const razao = rect.width / Math.max(1, rect.height);
+                        const preenchimento = area / Math.max(1, rect.width * rect.height);
+                        if (rect.width >= 12 && rect.height >= 12 && razao >= 0.62 && razao <= 1.15 && preenchimento >= 0.86) {
+                            const pontos = [];
+                            for (let j = 0; j < approx.data32S.length; j += 2) {
+                                pontos.push({ x: approx.data32S[j], y: approx.data32S[j + 1] });
+                            }
+                            candidatos.push({
+                                area, cx: rect.x + rect.width / 2, cy: rect.y + rect.height / 2,
+                                pontos
+                            });
+                        }
+                    }
+                    approx.delete();
+                    contour.delete();
+                }
+
+                // Seleciona os quatro quadrados sólidos de maior área. Como o quadro OMR
+                // fica abaixo das questões, seus marcadores podem estar todos na metade inferior
+                // da foto A4; por isso não usamos os quadrantes da fotografia inteira.
+                const maiores = candidatos.sort((a,b) => b.area-a.area).slice(0, 4);
+                if (maiores.length !== 4) {
+                    throw new Error('Não encontrei quatro marcadores. Reimprima a folha no modelo OMR novo e enquadre os quatro quadrados pretos.');
+                }
+                const tl = maiores.reduce((a,b) => (a.cx+a.cy) < (b.cx+b.cy) ? a : b);
+                const br = maiores.reduce((a,b) => (a.cx+a.cy) > (b.cx+b.cy) ? a : b);
+                const tr = maiores.reduce((a,b) => (a.cx-a.cy) > (b.cx-b.cy) ? a : b);
+                const bl = maiores.reduce((a,b) => (a.cx-a.cy) < (b.cx-b.cy) ? a : b);
+                if (new Set([tl, tr, br, bl]).size !== 4) {
+                    throw new Error('Não consegui distinguir os quatro cantos da folha. Posicione a câmera de frente para o gabarito.');
+                }
+                return {
+                    points: [
+                        pontoExtremoMarcador(tl.pontos, 'tl'),
+                        pontoExtremoMarcador(tr.pontos, 'tr'),
+                        pontoExtremoMarcador(br.pontos, 'br'),
+                        pontoExtremoMarcador(bl.pontos, 'bl')
+                    ],
+                    sourceWidth: src.cols,
+                    sourceHeight: src.rows
+                };
+            } finally {
+                src.delete(); gray.delete(); bin.delete(); contours.delete(); hierarchy.delete();
+            }
+        }
+
+        function calcularEscuridaoBolha(imageData, largura, xCentro, yCentro) {
+            const raio = 12;
+            let pixels = 0, escuros = 0, soma = 0;
+            for (let y = Math.max(0, Math.floor(yCentro - raio)); y < Math.min(imageData.height, Math.ceil(yCentro + raio)); y++) {
+                for (let x = Math.max(0, Math.floor(xCentro - raio)); x < Math.min(imageData.width, Math.ceil(xCentro + raio)); x++) {
+                    const dx = x - xCentro, dy = y - yCentro;
+                    if (dx * dx + dy * dy > raio * raio) continue;
+                    const idx = (y * largura + x) * 4;
+                    const cinza = (imageData.data[idx] * 0.299) + (imageData.data[idx + 1] * 0.587) + (imageData.data[idx + 2] * 0.114);
+                    soma += cinza;
+                    if (cinza < 170) escuros++;
+                    pixels++;
+                }
+            }
+            return pixels ? { ratio: escuros / pixels, media: soma / pixels } : { ratio: 0, media: 255 };
+        }
+
+        function lerBolhasOMR(cv, imagemCanvas, quantidadeQuestoes) {
+            const marcadores = detectarMarcadoresOMR(cv, imagemCanvas);
+            const larguraPadrao = 1600;
+            const metade = Math.ceil(quantidadeQuestoes / 2);
+            const alturaMm = 26.5 + metade * 6.5;
+            const alturaPadrao = Math.round(larguraPadrao * alturaMm / 160);
+            const src = cv.imread(imagemCanvas);
+            const warped = new cv.Mat();
+            const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, marcadores.points.flatMap(p => [p.x, p.y]));
+            const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, larguraPadrao - 1, 0, larguraPadrao - 1, alturaPadrao - 1, 0, alturaPadrao - 1]);
+            const transform = cv.getPerspectiveTransform(srcPts, dstPts);
+            try {
+                cv.warpPerspective(src, warped, transform, new cv.Size(larguraPadrao, alturaPadrao), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255,255,255,255));
+                const aligned = document.createElement('canvas');
+                aligned.width = larguraPadrao;
+                aligned.height = alturaPadrao;
+                cv.imshow(aligned, warped);
+                const ctx = aligned.getContext('2d', { willReadFrequently: true });
+                const data = ctx.getImageData(0, 0, aligned.width, aligned.height);
+                let qrToken = '';
+                if (window.jsQR) {
+                    try {
+                        const qrX = Math.max(0, larguraPadrao - 240);
+                        const qrCrop = ctx.getImageData(qrX, 0, 180, 180);
+                        const qrResult = jsQR(qrCrop.data, qrCrop.width, qrCrop.height, { inversionAttempts: 'attemptBoth' });
+                        if (qrResult && /^[A-Z0-9-]{4,32}$/i.test(qrResult.data)) qrToken = qrResult.data;
+                    } catch (_) { /* o QR é auxiliar; a seleção manual continua disponível */ }
+                }
+                const answers = {};
+                const scores = {};
+                const letras = ['A','B','C','D','E'];
+
+                for (let row = 0; row < metade; row++) {
+                    const yMm = 16 + 5.5 + (row + 0.5) * 6.5;
+                    const y = yMm * 10;
+                    for (let bloco = 0; bloco < 2; bloco++) {
+                        const indiceQuestao = bloco === 0 ? row : row + metade;
+                        if (indiceQuestao >= quantidadeQuestoes) continue;
+                        const numeroQuestao = indiceQuestao + 1;
+                        const linha = {};
+                        letras.forEach((letra, k) => {
+                            // Cada bloco mede 72 mm: número (10 mm) + cinco alternativas (12,4 mm).
+                            const xMm = 8 + bloco * 72 + 10 + (k + 0.5) * 12.4;
+                            linha[letra] = calcularEscuridaoBolha(data, aligned.width, xMm * 10, y);
+                        });
+                        const ordenadas = letras.map(letra => ({ letra, ...linha[letra] })).sort((a,b) => b.ratio-a.ratio);
+                        const primeira = ordenadas[0], segunda = ordenadas[1];
+                        let resposta = '';
+                        let estado = 'em branco';
+                        if (primeira.ratio >= 0.17 && segunda.ratio >= 0.13 && (primeira.ratio - segunda.ratio) < 0.045) {
+                            estado = 'dupla/ambígua';
+                        } else if (primeira.ratio >= 0.17 && (primeira.ratio - segunda.ratio) >= 0.035) {
+                            resposta = primeira.letra;
+                            estado = 'detectada';
+                        } else if (primeira.ratio >= 0.12) {
+                            estado = 'marca fraca — conferir';
+                        }
+                        answers[String(numeroQuestao)] = resposta;
+                        scores[String(numeroQuestao)] = { estado, confianca: primeira.ratio, alternativa: primeira.letra, segunda: segunda.ratio, linha };
+                    }
+                }
+
+                return { answers, scores, alignedCanvas: aligned, qrToken };
+            } finally {
+                src.delete(); warped.delete(); srcPts.delete(); dstPts.delete(); transform.delete();
+            }
+        }
+
+        async function processarLeituraOptica() {
             if (!professorLogado) return alert('Acesso restrito ao professor.');
             const studentId = document.getElementById('scanner-select-aluno').value;
-            if (!studentId) return alert('Selecione um estudante.');
+            if (!studentId) return alert('Selecione o estudante correspondente à folha.');
             const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === studentId || p.studentId === studentId);
             if (!prova) return alert('Prova não localizada. Gere/publice as provas novamente.');
+
+            const status = document.getElementById('scanner-status');
             const container = document.getElementById('resultado-scanner-container');
-            container.innerHTML = `<div class="space-y-4">
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">Confira na folha as alternativas preenchidas pelo estudante e registre abaixo o que foi identificado. O código original apenas simulava acertos aleatórios; esta versão não inventa marcações nem notas.</div>
-                <h4 class="font-bold text-sm text-slate-800">Conferência das respostas — ${escapeHtml(prova.alunoName)}</h4>
-                <div id="scanner-answers" class="space-y-2">${prova.questoes.map(q => `<label class="flex items-center justify-between gap-3 border rounded-lg p-2 text-xs"><span class="font-semibold">Questão ${q.numero}</span><select data-scanner-q="${q.numero}" class="border rounded-lg p-2 bg-white"><option value="">Em branco</option>${['A','B','C','D','E'].map(l => `<option value="${l}">${l}</option>`).join('')}</select></label>`).join('')}</div>
-                <button onclick="confirmarLeituraOptica('${prova.studentToken || prova.studentId}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs p-3 rounded-xl">Corrigir e mostrar acertos e erros</button>
+            try {
+                if (status) status.textContent = 'Carregando leitor de imagem e alinhando a folha...';
+                const cv = await aguardarOpenCV();
+                const video = document.getElementById('webcam-video');
+                const canvas = document.getElementById('scanner-work-canvas');
+                let largura = 0, altura = 0;
+                if (scannerImageAtual) {
+                    largura = scannerImageAtual.naturalWidth; altura = scannerImageAtual.naturalHeight;
+                    const escala = Math.min(1, 1800 / Math.max(largura, altura));
+                    canvas.width = Math.round(largura * escala); canvas.height = Math.round(altura * escala);
+                    canvas.getContext('2d').drawImage(scannerImageAtual, 0, 0, canvas.width, canvas.height);
+                } else if (cameraStream && video.readyState >= 2 && video.videoWidth > 0) {
+                    largura = video.videoWidth; altura = video.videoHeight;
+                    canvas.width = largura; canvas.height = altura;
+                    canvas.getContext('2d').drawImage(video, 0, 0, largura, altura);
+                } else {
+                    throw new Error('Ligue a câmera traseira ou envie uma foto da folha pela galeria antes de ler.');
+                }
+
+                const leitura = lerBolhasOMR(cv, canvas, prova.questoes.length);
+                if (leitura.qrToken && leitura.qrToken !== String(prova.code || '')) {
+                    throw new Error('O código QR desta folha não corresponde ao estudante selecionado. Escolha o aluno correto e leia novamente.');
+                }
+                const marcadas = leitura.answers;
+                const alertas = Object.entries(leitura.scores).filter(([,s]) => s.estado !== 'detectada');
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                            <strong>Folha alinhada e analisada.</strong> Confira as respostas detectadas abaixo. Campos em branco, marcas fracas ou duplas exigem revisão manual antes de salvar.
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="rounded-lg bg-slate-50 p-2"><strong class="text-lg">${prova.questoes.length}</strong><p class="text-[10px] text-slate-500">Questões lidas</p></div>
+                            <div class="rounded-lg bg-amber-50 p-2"><strong class="text-lg text-amber-700">${alertas.length}</strong><p class="text-[10px] text-slate-500">Itens para conferir</p></div>
+                        </div>
+                        <h4 class="font-bold text-sm">Respostas reconhecidas — ${escapeHtml(prova.alunoName)}</h4>
+                        <div class="space-y-2">
+                            ${prova.questoes.map(q => {
+                                const score = leitura.scores[String(q.numero)];
+                                const detected = marcadas[String(q.numero)] || '';
+                                const cls = score.estado === 'detectada' ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50';
+                                return `<label class="flex items-center justify-between gap-3 rounded-lg border ${cls} p-2 text-xs">
+                                    <span class="min-w-0"><strong>Questão ${q.numero}</strong><br><small class="text-slate-500">${escapeHtml(score.estado)} · ${Math.round(score.confianca * 100)}%</small></span>
+                                    <select data-scanner-q="${q.numero}" class="border rounded-lg p-2 bg-white min-w-[92px]">
+                                        <option value="">Em branco / revisar</option>
+                                        ${['A','B','C','D','E'].map(l => `<option value="${l}" ${detected === l ? 'selected' : ''}>${l}</option>`).join('')}
+                                    </select>
+                                </label>`;
+                            }).join('')}
+                        </div>
+                        <button onclick="confirmarLeituraOptica('${escapeHtml(prova.studentToken || prova.studentId)}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs p-3 rounded-xl">Confirmar correção e salvar nota</button>
+                        <p class="text-[10px] text-slate-500">A leitura é uma sugestão automática. Confira especialmente respostas marcadas como duplas ou fracas.</p>
+                    </div>`;
+                if (status) status.textContent = 'Leitura concluída. Revise as alternativas antes de confirmar.';
+            } catch (error) {
+                console.error('Falha no leitor OMR:', error);
+                container.innerHTML = `<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                    <strong>Não foi possível ler esta folha.</strong><p class="mt-2">${escapeHtml(error.message || 'Erro desconhecido.')}</p>
+                    <p class="mt-2 text-xs">Use uma folha impressa na versão OMR nova, enquadre os quatro marcadores pretos e evite sombras, dobras ou cortes.</p>
+                    <button onclick="abrirConferenciaManualScanner()" class="mt-3 w-full rounded-lg bg-white border border-rose-200 py-2 text-xs font-bold">Registrar respostas manualmente</button>
+                </div>`;
+                if (status) status.textContent = 'Leitura não concluída. Verifique as instruções.';
+            }
+        }
+
+        function abrirConferenciaManualScanner() {
+            const studentId = document.getElementById('scanner-select-aluno').value;
+            const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === studentId || p.studentId === studentId);
+            if (!prova) return alert('Selecione um estudante.');
+            document.getElementById('resultado-scanner-container').innerHTML = `<div class="space-y-3">
+                <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs">Modo manual de contingência. Registre exatamente as alternativas preenchidas na folha.</div>
+                ${prova.questoes.map(q => `<label class="flex items-center justify-between gap-3 border rounded-lg p-2 text-xs"><span class="font-semibold">Questão ${q.numero}</span><select data-scanner-q="${q.numero}" class="border rounded-lg p-2 bg-white"><option value="">Em branco</option>${['A','B','C','D','E'].map(l => `<option value="${l}">${l}</option>`).join('')}</select></label>`).join('')}
+                <button onclick="confirmarLeituraOptica('${escapeHtml(prova.studentToken || prova.studentId)}')" class="w-full bg-emerald-600 text-white font-bold text-xs p-3 rounded-xl">Corrigir e salvar</button>
             </div>`;
         }
 
@@ -1983,17 +2443,17 @@
                 return { numero: q.numero, enunciado: q.enunciado, marcada, correta: q.letraCorreta, acertou };
             });
             const acertos = detalhes.filter(d => d.acertou).length;
-            const erros = detalhes.filter(d => !d.acertou);
+            const erros = detalhes.filter(d => !d.acertou).length;
             const nota = Number(((acertos / prova.questoes.length) * 10).toFixed(1));
             const registro = {
                 studentToken: prova.studentToken || prova.studentId,
                 aluno: prova.alunoName,
-                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                anoLetivo: String(prova.anoLetivo || document.getElementById('cfg-ano-letivo').value),
                 serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
-                bimestre: prova.bimestre,
-                disciplina: document.getElementById('cfg-disciplina').value,
+                bimestre: prova.bimestre || document.getElementById('cfg-bimestre').value,
+                disciplina: prova.disciplina || document.getElementById('cfg-disciplina').value,
                 acertos: `${acertos}/${prova.questoes.length}`,
-                nota, origem: 'Conferência do gabarito impresso', data: new Date().toLocaleString('pt-BR'), detalhes
+                nota, origem: 'Leitor óptico OMR', data: new Date().toLocaleString('pt-BR'), detalhes
             };
             salvarNotaNoBanco(registro);
             if (supabaseClient && professorLogado) {
@@ -2010,7 +2470,10 @@
                     detalhes: detalhes,
                     tentativas: 1
                 }], { onConflict: 'student_token' });
-                if (error) console.error('Erro ao salvar correção no Supabase:', error);
+                if (error) {
+                    console.error('Erro ao salvar correção no Supabase:', error);
+                    alert('A correção foi calculada, mas não foi sincronizada com o Supabase: ' + error.message);
+                }
             }
             const listaDetalhes = detalhes.map(d => `<div class="rounded-lg border p-3 ${d.acertou ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}">
                 <p class="font-bold text-xs">${d.acertou ? '✓ ACERTO' : (d.marcada ? '✗ ERRO' : '— EM BRANCO')} — Questão ${d.numero}</p>
@@ -2018,7 +2481,7 @@
                 <p class="text-xs mt-1">Marcada: <strong>${d.marcada || 'Em branco'}</strong> • Correta: <strong>${d.correta}</strong></p>
             </div>`).join('');
             document.getElementById('resultado-scanner-container').innerHTML = `<div class="space-y-3">
-                <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-emerald-50 rounded-lg p-3"><strong class="text-xl text-emerald-700">${acertos}</strong><p class="text-[10px]">Acertos</p></div><div class="bg-rose-50 rounded-lg p-3"><strong class="text-xl text-rose-700">${erros.length}</strong><p class="text-[10px]">Erros</p></div><div class="bg-indigo-50 rounded-lg p-3"><strong class="text-xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-[10px]">Nota</p></div></div>
+                <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-emerald-50 rounded-lg p-3"><strong class="text-xl text-emerald-700">${acertos}</strong><p class="text-[10px]">Acertos</p></div><div class="bg-rose-50 rounded-lg p-3"><strong class="text-xl text-rose-700">${erros}</strong><p class="text-[10px]">Erros</p></div><div class="bg-indigo-50 rounded-lg p-3"><strong class="text-xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-[10px]">Nota</p></div></div>
                 <h4 class="font-bold text-sm">Correção questão por questão</h4><div class="space-y-2">${listaDetalhes}</div>
             </div>`;
         }
@@ -2108,10 +2571,11 @@
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="px-6 py-4 font-semibold text-slate-800">${row.aluno}</td>
-                        <td class="px-6 py-4 text-xs text-slate-600">${row.serie}</td>
-                        <td class="px-6 py-4 text-slate-600 text-xs">${row.disciplina}</td>
-                        <td class="px-6 py-4 font-mono text-xs">${row.acertos}</td>
+                        <td class="px-6 py-4 font-semibold text-slate-800">${escapeHtml(row.aluno || '')}</td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${escapeHtml(row.serie || '')}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.disciplina || '')}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.bimestre || '—')}</td>
+                        <td class="px-6 py-4 font-mono text-xs">${escapeHtml(row.acertos || '')}</td>
                         <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
                         <td class="px-6 py-4 text-[11px] text-slate-500">${row.origem} • ${row.data}</td>
                     </tr>
@@ -2125,7 +2589,7 @@
 
         function atualizarTabelaNotasVazia() {
             const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
             document.getElementById('stat-total').textContent = '0';
             document.getElementById('stat-media').textContent = '0.0';
             document.getElementById('stat-maior').textContent = '0.0';
