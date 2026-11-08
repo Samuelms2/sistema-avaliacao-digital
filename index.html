@@ -334,11 +334,11 @@
                         <div class="grid grid-cols-1 gap-4 text-xs">
                             <div>
                                 <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE URL</label>
-                                <input type="text" id="cfg-supabase-url" value="https://xfzizvznmymomxjyfysr.supabase.co" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+                                <input type="text" id="cfg-supabase-url" value="https://abmhfmlttjmwksqhnzwr.supabase.co" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
                             </div>
                             <div>
-                                <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE ANON KEY</label>
-                                <input type="password" id="cfg-supabase-key" value="sb_publishable_1aDng7uHXMA4Bd4DrmATBA_ccxA3onX" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+                                <label class="block font-bold mb-1.5 text-slate-300 uppercase tracking-wider text-[11px]">SUPABASE PUBLISHABLE KEY (PÚBLICA)</label>
+                                <input type="password" id="cfg-supabase-key" value="sb_publishable_QzbibIo1845K1uur6R4V7w_Sjt3b-Jk" class="w-full bg-[#172036] border border-slate-700 rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
                             </div>
                         </div>
                         <button onclick="salvarCredenciaisSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-lg">
@@ -709,11 +709,11 @@
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
         let notaTurmaSelecionada = null;
-        // Configuração pública do projeto Supabase. A chave publishable pode estar no HTML.
+        // Chave Publishable pública do novo projeto Supabase. Pode ficar no HTML publicado.
         // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
-        const CONFIG_SUPABASE_VERSION = '2026-11-08-v4';
-        const SUPABASE_URL_PADRAO = 'https://xfzizvznmymomxjyfysr.supabase.co';
-        const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_1aDng7uHXMA4Bd4DrmATBA_ccxA3onX';
+        const CONFIG_SUPABASE_VERSION = '2026-11-08-v7-abmhfmlttjmwksqhnzwr-storage';
+        const SUPABASE_URL_PADRAO = 'https://abmhfmlttjmwksqhnzwr.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_QzbibIo1845K1uur6R4V7w_Sjt3b-Jk';
 
         let supabaseClient = null;
         let supabaseAuthSubscription = null;
@@ -736,6 +736,74 @@
             d3: '',
             d4: ''
         };
+
+        const STORAGE_BUCKET_AVALIACAO = 'avaliacao-midias';
+        const TIPOS_IMAGEM_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const LIMITE_IMAGEM_BYTES = 10 * 1024 * 1024;
+
+        async function enviarImagemParaStorage(valorImagem, identificador, campo) {
+            if (!valorImagem) return '';
+            // Imagens já hospedadas no Storage ou em outra URL permanecem como URL.
+            if (!/^data:image\//i.test(valorImagem)) return valorImagem;
+            if (!supabaseClient || !professorLogado) {
+                throw new Error('Entre na conta do professor antes de enviar imagens ao Storage.');
+            }
+            const resposta = await fetch(valorImagem);
+            if (!resposta.ok) throw new Error('Não foi possível preparar a imagem para envio.');
+            const blob = await resposta.blob();
+            if (!TIPOS_IMAGEM_PERMITIDOS.includes(blob.type)) {
+                throw new Error('Formato de imagem não permitido. Use JPG, PNG, WEBP ou GIF.');
+            }
+            if (blob.size > LIMITE_IMAGEM_BYTES) {
+                throw new Error('Cada imagem deve ter no máximo 10 MB.');
+            }
+            const extensao = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' })[blob.type];
+            const nomeSeguro = `${identificador}/${campo}-${crypto.randomUUID()}.${extensao}`;
+            const { data, error } = await supabaseClient.storage
+                .from(STORAGE_BUCKET_AVALIACAO)
+                .upload(`questoes/${nomeSeguro}`, blob, {
+                    cacheControl: '3600',
+                    contentType: blob.type,
+                    upsert: false
+                });
+            if (error) throw error;
+            const { data: urlData } = supabaseClient.storage
+                .from(STORAGE_BUCKET_AVALIACAO)
+                .getPublicUrl(data.path);
+            if (!urlData || !urlData.publicUrl) throw new Error('O Storage recebeu a imagem, mas não retornou a URL pública.');
+            return urlData.publicUrl;
+        }
+
+        function caminhoImagemStorage(url) {
+            if (!url || typeof url !== 'string') return null;
+            const marcador = `/storage/v1/object/public/${STORAGE_BUCKET_AVALIACAO}/`;
+            const posicao = url.indexOf(marcador);
+            if (posicao < 0) return null;
+            try { return decodeURIComponent(url.slice(posicao + marcador.length).split('?')[0]); }
+            catch (_) { return url.slice(posicao + marcador.length).split('?')[0]; }
+        }
+
+        async function removerImagensDaQuestaoNoStorage(questao) {
+            if (!supabaseClient || !professorLogado || !questao) return;
+            const urls = [questao.imgEnunciado, questao.correta && questao.correta.img,
+                ...((questao.distratores || []).map(d => d && d.img))].filter(Boolean);
+            const caminhos = [...new Set(urls.map(caminhoImagemStorage).filter(Boolean))];
+            if (!caminhos.length) return;
+            const { error } = await supabaseClient.storage.from(STORAGE_BUCKET_AVALIACAO).remove(caminhos);
+            if (error) console.warn('A questão foi removida, mas uma ou mais imagens não puderam ser excluídas do Storage:', error);
+        }
+
+        async function prepararQuestaoParaNuvem(questao) {
+            const copia = JSON.parse(JSON.stringify(questao));
+            const identificador = String(copia.id);
+            copia.imgEnunciado = await enviarImagemParaStorage(copia.imgEnunciado, identificador, 'enunciado');
+            copia.correta.img = await enviarImagemParaStorage(copia.correta && copia.correta.img, identificador, 'correta');
+            copia.distratores = await Promise.all((copia.distratores || []).map(async (d, i) => ({
+                ...d,
+                img: await enviarImagemParaStorage(d.img, identificador, `alternativa-${i + 1}`)
+            })));
+            return copia;
+        }
 
         // BANCO DE QUESTÕES INICIALMENTE PREENCHIDO COM AS 9 QUESTÕES DE BASQUETE DO PDF
         let bancoQuestoes = [
@@ -982,7 +1050,7 @@
             } catch (error) {
                 const mensagem = error.message || 'verifique e-mail e senha.';
                 status.textContent = /invalid api key/i.test(mensagem)
-                    ? 'A chave Publishable configurada não foi aceita pelo projeto. Atualize a chave pública em Configurações → API Keys.'
+                    ? 'A chave Publishable não foi aceita pelo projeto. Confira se ela pertence ao projeto abmhfmlttjmwksqhnzwr em Settings → API Keys.'
                     : 'Não foi possível entrar: ' + mensagem;
             } finally {
                 button.disabled = false;
@@ -1001,7 +1069,8 @@
         function carregarImagemDispositivo(event, campo) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
-            if (!file.type.startsWith('image/')) return alert('Selecione um arquivo de imagem.');
+            if (!TIPOS_IMAGEM_PERMITIDOS.includes(file.type)) return alert('Use uma imagem JPG, PNG, WEBP ou GIF.');
+            if (file.size > LIMITE_IMAGEM_BYTES) return alert('A imagem deve ter no máximo 10 MB.');
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64 = e.target.result;
@@ -1030,7 +1099,7 @@
         async function salvarCredenciaisSupabase() {
             const url = document.getElementById('cfg-supabase-url').value.trim();
             const key = document.getElementById('cfg-supabase-key').value.trim();
-            if (!url || !key) return alert('Preencha a URL e a chave pública (anon/publishable) do Supabase.');
+            if (!url || !key) return alert('Preencha a URL e a chave Publishable pública do Supabase.');
             localStorage.setItem('sys_supabase_url', url);
             localStorage.setItem('sys_supabase_key', key);
             localStorage.setItem('sys_supabase_config_version', CONFIG_SUPABASE_VERSION);
@@ -1076,20 +1145,58 @@
                 console.error('Erro Supabase:', error);
                 const mensagem = error.message || 'verifique as credenciais.';
                 mostrarGateProfessor(/invalid api key/i.test(mensagem)
-                    ? 'A chave Publishable deste HTML não corresponde a uma chave ativa do projeto. Acesse Configurações → API Keys e confira a chave default.'
+                    ? 'A chave Publishable deste HTML não foi aceita. Confira a Publishable key em Settings → API Keys do projeto abmhfmlttjmwksqhnzwr.'
                     : 'Falha ao conectar ao Supabase: ' + mensagem);
             }
+        }
+
+        async function sincronizarBancoQuestoesComSupabase(linhasRemotas) {
+            const chaveMigracao = 'sys_banco_questoes_migrado_abmhfmlttjmwksqhnzwr';
+            const questoesLocais = Array.isArray(bancoQuestoes) ? bancoQuestoes.slice() : [];
+            const idsPadrao = new Set(['1','2','3','4','5','6','7','8','9']);
+            let mapaRemoto = new Map((linhasRemotas || []).map(l => [String(l.id), l]));
+
+            // Migra uma única vez questões personalizadas que existiam apenas no navegador.
+            // Imagens antigas em Base64 são enviadas ao Storage e substituídas por URLs.
+            if (localStorage.getItem(chaveMigracao) !== '1') {
+                for (const q of questoesLocais.filter(q => !idsPadrao.has(String(q.id)))) {
+                    const existente = mapaRemoto.get(String(q.id));
+                    if (existente) continue; // preserva inclusive exclusões registradas na nuvem
+                    const preparada = await prepararQuestaoParaNuvem(q);
+                    const { error } = await supabaseClient.from('banco_questoes').upsert({
+                        id: String(preparada.id), questao: preparada, excluida: false
+                    }, { onConflict: 'id' });
+                    if (error) throw error;
+                }
+                localStorage.setItem(chaveMigracao, '1');
+                const atualizadas = await supabaseClient.from('banco_questoes').select('id, questao, excluida');
+                if (atualizadas.error) throw atualizadas.error;
+                mapaRemoto = new Map((atualizadas.data || []).map(l => [String(l.id), l]));
+            }
+
+            const padrao = questoesLocais.filter(q => idsPadrao.has(String(q.id)) && !(mapaRemoto.get(String(q.id)) || {}).excluida);
+            const remotas = [...mapaRemoto.values()].filter(l => !l.excluida && l.questao).map(l => l.questao);
+            const mescladas = new Map();
+            [...padrao, ...remotas].forEach(q => mescladas.set(String(q.id), q));
+            bancoQuestoes = [...mescladas.values()];
+            localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
+            renderizarMenuTemas();
+            renderizarQuestoesTema();
+            atualizarBadges();
         }
 
         async function carregarDadosProfessor() {
             if (!supabaseClient || !professorLogado) return;
             try {
-                const [respostas, provas] = await Promise.all([
+                const [respostas, provas, questoes] = await Promise.all([
                     supabaseClient.from('respostas_avaliacoes').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('provas_alunos').select('*').order('created_at', { ascending: false })
+                    supabaseClient.from('provas_alunos').select('*').order('created_at', { ascending: false }),
+                    supabaseClient.from('banco_questoes').select('id, questao, excluida').order('updated_at', { ascending: false })
                 ]);
                 if (respostas.error) throw respostas.error;
                 if (provas.error) throw provas.error;
+                if (questoes.error) throw questoes.error;
+                await sincronizarBancoQuestoesComSupabase(questoes.data || []);
                 bancoNotas = (respostas.data || []).map(n => ({
                     id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
                     anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
@@ -1179,39 +1286,63 @@
             if (bQuestoes) bQuestoes.textContent = bancoQuestoes.length;
         }
 
-        function adicionarQuestaoManual(e) {
+        async function adicionarQuestaoManual(e) {
             e.preventDefault();
-            const tema = document.getElementById('q-tema').value.trim() || "Geral";
-            const assunto = document.getElementById('q-assunto').value.trim() || "Geral";
+            if (!supabaseClient || !professorLogado) {
+                return alert('Entre na área do professor para cadastrar questões e enviar imagens ao Supabase Storage.');
+            }
+            const botao = e.submitter || e.target.querySelector('button[type="submit"]');
+            const textoOriginal = botao ? botao.innerHTML : '';
+            if (botao) { botao.disabled = true; botao.textContent = 'Enviando questão e imagens...'; }
+            try {
+                const tema = document.getElementById('q-tema').value.trim() || 'Geral';
+                const assunto = document.getElementById('q-assunto').value.trim() || 'Geral';
+                const id = Date.now();
+                const questao = {
+                    id,
+                    tema,
+                    assunto,
+                    enunciado: document.getElementById('q-enunciado').value.trim(),
+                    imgEnunciado: imagensForm.enunciado,
+                    correta: { text: document.getElementById('q-correta').value.trim(), img: imagensForm.correta },
+                    distratores: [
+                        { text: document.getElementById('q-d1').value.trim(), img: imagensForm.d1 },
+                        { text: document.getElementById('q-d2').value.trim(), img: imagensForm.d2 },
+                        { text: document.getElementById('q-d3').value.trim(), img: imagensForm.d3 },
+                        { text: document.getElementById('q-d4').value.trim(), img: imagensForm.d4 }
+                    ]
+                };
+                const questaoNuvem = await prepararQuestaoParaNuvem(questao);
+                const { data: usuarioData, error: usuarioErro } = await supabaseClient.auth.getUser();
+                if (usuarioErro) throw usuarioErro;
+                if (!usuarioData.user) throw new Error('A sessão do professor expirou. Entre novamente.');
+                const { error } = await supabaseClient.from('banco_questoes').upsert({
+                    id: String(questaoNuvem.id),
+                    questao: questaoNuvem,
+                    excluida: false,
+                    criado_por: usuarioData.user.id,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                if (error) throw error;
 
-            bancoQuestoes.push({
-                id: Date.now(),
-                tema: tema,
-                assunto: assunto,
-                enunciado: document.getElementById('q-enunciado').value,
-                imgEnunciado: imagensForm.enunciado,
-                correta: { text: document.getElementById('q-correta').value, img: imagensForm.correta },
-                distratores: [
-                    { text: document.getElementById('q-d1').value, img: imagensForm.d1 },
-                    { text: document.getElementById('q-d2').value, img: imagensForm.d2 },
-                    { text: document.getElementById('q-d3').value, img: imagensForm.d3 },
-                    { text: document.getElementById('q-d4').value, img: imagensForm.d4 }
-                ]
-            });
-
-            document.getElementById('q-enunciado').value = '';
-            document.getElementById('q-correta').value = '';
-            document.getElementById('q-d1').value = '';
-            document.getElementById('q-d2').value = '';
-            document.getElementById('q-d3').value = '';
-            document.getElementById('q-d4').value = '';
-
-            ['enunciado', 'correta', 'd1', 'd2', 'd3', 'd4'].forEach(c => removerImagemMidia(c));
-
-            localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
-            atualizarBadges();
-            alert("Questão adicionada com sucesso!");
-            setTab('tab-bank');
+                bancoQuestoes.push(questaoNuvem);
+                localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
+                document.getElementById('q-enunciado').value = '';
+                document.getElementById('q-correta').value = '';
+                document.getElementById('q-d1').value = '';
+                document.getElementById('q-d2').value = '';
+                document.getElementById('q-d3').value = '';
+                document.getElementById('q-d4').value = '';
+                ['enunciado', 'correta', 'd1', 'd2', 'd3', 'd4'].forEach(c => removerImagemMidia(c));
+                atualizarBadges();
+                alert('Questão salva no banco de dados e suas imagens foram enviadas ao Supabase Storage.');
+                setTab('tab-bank');
+            } catch (error) {
+                console.error('Falha ao salvar questão/Storage:', error);
+                alert('Não foi possível salvar a questão. Verifique se executou o SQL do novo projeto e se o bucket avaliacao-midias foi criado. Detalhe: ' + (error.message || error));
+            } finally {
+                if (botao) { botao.disabled = false; botao.innerHTML = textoOriginal; }
+            }
         }
 
         function renderizarMenuTemas() {
@@ -1293,12 +1424,30 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function excluirQuestao(id) {
-            bancoQuestoes = bancoQuestoes.filter(q => q.id !== id);
-            localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
-            renderizarMenuTemas();
-            renderizarQuestoesTema();
-            atualizarBadges();
+        async function excluirQuestao(id) {
+            if (!supabaseClient || !professorLogado) return alert('Entre na área do professor para excluir questões.');
+            if (!confirm('Deseja realmente excluir esta questão do banco compartilhado?')) return;
+            const questao = bancoQuestoes.find(q => String(q.id) === String(id));
+            if (!questao) return;
+            try {
+                const { data: usuarioData, error: usuarioErro } = await supabaseClient.auth.getUser();
+                if (usuarioErro) throw usuarioErro;
+                if (!usuarioData.user) throw new Error('A sessão do professor expirou.');
+                // Exclusão lógica permite impedir que questões iniciais reapareçam após atualizar a página.
+                const { error } = await supabaseClient.from('banco_questoes').upsert({
+                    id: String(questao.id), questao, excluida: true,
+                    criado_por: usuarioData.user.id, updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                if (error) throw error;
+                await removerImagensDaQuestaoNoStorage(questao);
+                bancoQuestoes = bancoQuestoes.filter(q => String(q.id) !== String(id));
+                localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
+                renderizarMenuTemas();
+                renderizarQuestoesTema();
+                atualizarBadges();
+            } catch (error) {
+                alert('Não foi possível excluir a questão na nuvem: ' + (error.message || error));
+            }
         }
 
         function gerarProvasSelecionadas() {
