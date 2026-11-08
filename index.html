@@ -75,7 +75,7 @@
 
         .gabarito-modelo-table {
             border-collapse: collapse;
-            margin: 15px 0 0 0; /* Alinhado à esquerda abaixo das questões */
+            margin: 15px 0 0 0;
             background: #fff;
             color: #000;
             font-family: 'Times New Roman', Times, serif;
@@ -156,7 +156,7 @@
                 </button>
                 <button onclick="setTab('tab-scanner')" id="btn-tab-scanner" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                    <span>5. Leitor Óptico (Câmera)</span>
+                    <span>5. Leitor Óptico / Correção Física</span>
                 </button>
                 <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
@@ -221,23 +221,6 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Professor(a)</label>
                                 <input type="text" id="cfg-professor" value="Prof. Samuel Sousa" class="w-full border rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            </div>
-
-                            <div class="md:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 space-y-3">
-                                <div class="flex items-center space-x-2 text-amber-900">
-                                    <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
-                                    <label class="text-xs font-bold uppercase tracking-wider">Agendamento de Abertura do Link Digital</label>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Início</label>
-                                        <input type="datetime-local" id="cfg-data-inicio" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Encerramento</label>
-                                        <input type="datetime-local" id="cfg-data-fim" class="w-full border rounded-lg p-2 text-xs bg-white outline-none">
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -460,13 +443,13 @@
             </div>
         </section>
 
-        <!-- TAB 4: PROVAS & LINKS -->
+        <!-- TAB 4: PROVAS & LINKS (COM PRÉ-VISUALIZAÇÃO DA PROVA) -->
         <section id="tab-generate" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Anos de Estudo e Turmas</h3>
-                        <p class="text-xs text-slate-500">Imprima, salve em PDF ou envie os links individuais</p>
+                        <h3 class="font-bold text-slate-800 text-lg">Provas, Links e Pré-visualização por Aluno</h3>
+                        <p class="text-xs text-slate-500">Copie o link, visualize a prova gerada para o aluno, imprima ou salve em PDF</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
@@ -488,55 +471,40 @@
                     <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
                 </div>
 
-                <div id="grid-provas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="grid-provas" class="space-y-6"></div>
             </div>
         </section>
 
-        <!-- TAB 5: SCANNER -->
+        <!-- TAB 5: LEITOR ÓPTICO E CORREÇÃO DE GABARITO FÍSICO -->
         <section id="tab-scanner" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
                     <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
                         <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
-                            <i data-lucide="camera" class="w-5 h-5"></i>
+                            <i data-lucide="check-square" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <h3 class="font-bold text-slate-800 text-base">Leitor Óptico de Gabarito</h3>
-                            <p class="text-xs text-slate-500">Correção instantânea via Câmera</p>
+                            <h3 class="font-bold text-slate-800 text-base">Correção de Gabarito Físico (Leitor Óptico)</h3>
+                            <p class="text-xs text-slate-500">Selecione o aluno e marque as alternativas assinaladas na prova de papel</p>
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o Estudante</label>
-                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
+                        <select id="scanner-select-aluno" onchange="carregarCartelaGabaritoFisico()" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
                     </div>
 
-                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-800 shadow-inner">
-                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
-                        <div id="webcam-placeholder" class="text-center p-6 space-y-3">
-                            <i data-lucide="smartphone" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
-                            <p class="text-xs text-slate-300">Ative a câmera para leitura.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex space-x-3">
-                        <button onclick="alternarCamera()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                            <span id="btn-camera-text">Ligar Câmera</span>
-                        </button>
-                        <button onclick="processarLeituraOptica()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i>
-                            <span>Efetuar Leitura Óptica</span>
-                        </button>
+                    <div id="cartela-resposta-fisica" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                        <p class="text-xs text-slate-400 text-center py-6">Selecione um estudante acima para carregar a cartela de correção.</p>
                     </div>
                 </div>
 
                 <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Leitura Óptica</h3>
+                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da Correção Física</h3>
                     <div id="resultado-scanner-container">
                         <div class="text-center py-16 text-slate-400">
                             <i data-lucide="award" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
-                            <p class="text-sm font-medium">Nenhum gabarito lido no momento.</p>
+                            <p class="text-sm font-medium">Nenhum gabarito corrigido ainda.</p>
                         </div>
                     </div>
                 </div>
@@ -624,7 +592,6 @@
     <div id="area-impressao-provas" class="print-only"></div>
 
     <script>
-        let cameraStream = null;
         let turmaFiltroSelecionada = 'todas';
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
@@ -1052,23 +1019,59 @@
             const titulo = document.getElementById('cfg-titulo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
 
+            const baseHref = window.location.href.split('?')[0];
             const provasExibidas = turmaFiltroSelecionada === 'todas' ? provasGeradas : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
 
             provasExibidas.forEach(prova => {
-                const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${prova.studentId}`;
+                const linkAluno = `${baseHref}?studentId=${prova.studentId}`;
+                
+                // Renderização do cartão com link e pré-visualização na Aba 4
                 grid.innerHTML += `
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
                         <div class="flex justify-between items-start border-b border-slate-100 pb-3">
                             <div>
-                                <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${prova.code}</span>
-                                <h4 class="font-bold text-slate-900 text-sm mt-1">${prova.alunoName}</h4>
+                                <span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded">${prova.code}</span>
+                                <h4 class="font-bold text-slate-900 text-base mt-1.5">${prova.alunoName}</h4>
                             </div>
-                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border">${prova.alunoSerie} • ${prova.alunoTurma}</span>
+                            <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-3 py-1 rounded-full border border-cyan-200">${prova.alunoSerie} • ${prova.alunoTurma}</span>
                         </div>
-                        <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
+
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase">Link de Resposta do Aluno:</label>
+                            <div class="flex space-x-2">
+                                <input type="text" readonly value="${linkAluno}" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-mono text-slate-600 select-all" />
+                                <button onclick="copiarLinkAluno('${linkAluno}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition whitespace-nowrap">Copiar</button>
+                            </div>
+                        </div>
+
+                        <!-- PRÉ-VISUALIZAÇÃO DA PROVA DO ALUNO -->
+                        <div class="mt-4 border-t pt-4 space-y-3">
+                            <details class="group bg-slate-50 rounded-xl border border-slate-200 p-3">
+                                <summary class="cursor-pointer font-bold text-xs text-indigo-700 flex items-center justify-between">
+                                    <span>👁️ Pré-visualizar Prova Sorteada para este Aluno</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Clique para expandir</span>
+                                </summary>
+                                <div class="mt-3 space-y-3 pt-3 border-t border-slate-200 text-xs">
+                                    ${prova.questoes.map(q => `
+                                        <div class="bg-white p-3 rounded-lg border space-y-1.5">
+                                            <p class="font-bold text-slate-900">${q.numero}. ${q.enunciado}</p>
+                                            ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-24 rounded border mx-auto my-1">` : ''}
+                                            <div class="pl-2 space-y-1">
+                                                ${q.alternativas.map(a => `
+                                                    <div class="${a.isCorrect ? 'text-emerald-700 font-bold bg-emerald-50 p-1 rounded' : 'text-slate-600'}">
+                                                        (${a.letter}) ${a.text} ${a.isCorrect ? ' ✓ (Correta)' : ''}
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        </div>
                     </div>
                 `;
 
+                // Renderização para Impressão PDF
                 areaImpressao.innerHTML += `
                     <div class="page-break">
                         <div class="prova-impressa-container">
@@ -1097,7 +1100,6 @@
                                 `).join('')}
                             </div>
 
-                            <!-- Gabarito posicionado logo abaixo da última questão, sem centralização -->
                             <div style="margin-top: 15px; border-top: 1px solid #000; padding-top: 10px;">
                                 <table class="gabarito-modelo-table">
                                     <thead><tr><th colspan="6">GABARITO DA PROVA</th></tr></thead>
@@ -1120,6 +1122,112 @@
                 `;
             });
             if (window.lucide) lucide.createIcons();
+        }
+
+        // CORREÇÃO DE GABARITO FÍSICO / LEITOR ÓPTICO INTERATIVO
+        function atualizarSelectScanner() {
+            const select = document.getElementById('scanner-select-aluno');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Selecione o Estudante --</option>';
+            provasGeradas.forEach(p => {
+                select.innerHTML += `<option value="${p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}]</option>`;
+            });
+        }
+
+        function carregarCartelaGabaritoFisico() {
+            const studentId = document.getElementById('scanner-select-aluno').value;
+            const container = document.getElementById('cartela-resposta-fisica');
+            if (!studentId) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Selecione um estudante acima para carregar a cartela de correção.</p>`;
+                return;
+            }
+
+            const prova = provasGeradas.find(p => p.studentId === studentId);
+            if (!prova) return;
+
+            let html = `
+                <div class="space-y-4">
+                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center text-xs">
+                        <span class="font-bold text-indigo-900">${prova.alunoName} (${prova.code})</span>
+                        <span class="text-indigo-700 font-medium">${prova.questoes.length} Questões</span>
+                    </div>
+                    <p class="text-xs text-slate-600 font-medium">Marque abaixo as alternativas que o aluno assinalou na prova de papel:</p>
+                    <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+            `;
+
+            prova.questoes.forEach(q => {
+                html += `
+                    <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
+                        <span class="font-bold text-xs text-slate-700 w-12">Questão ${q.numero}</span>
+                        <div class="flex space-x-3">
+                `;
+                ['A', 'B', 'C', 'D', 'E'].forEach(letra => {
+                    html += `
+                        <label class="cursor-pointer flex items-center space-x-1 text-xs font-medium text-slate-600">
+                            <input type="radio" name="fisico_q_${q.numero}" value="${letra}" class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="w-5 h-5 rounded-full border flex items-center justify-center font-bold bg-slate-50">${letra}</span>
+                        </label>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            html += `
+                    </div>
+                    <button onclick="processarCorrecaoFisica('${prova.studentId}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow transition">
+                        Corrigir e Salvar Gabarito Físico
+                    </button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function processarCorrecaoFisica(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId);
+            if (!prova) return;
+
+            let acertos = 0;
+            let respondidas = 0;
+
+            prova.questoes.forEach(q => {
+                const selecionado = document.querySelector(`input[name="fisico_q_${q.numero}"]:checked`);
+                if (selecionado) {
+                    respondidas++;
+                    if (selecionado.value === q.letraCorreta) {
+                        acertos++;
+                    }
+                }
+            });
+
+            if (respondidas < prova.questoes.length) {
+                if (!confirm(`Atenção: Apenas ${respondidas} de ${prova.questoes.length} questões foram marcadas. Deseja prosseguir com a correção?`)) return;
+            }
+
+            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+            const registro = {
+                aluno: prova.alunoName,
+                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                bimestre: prova.bimestre,
+                disciplina: document.getElementById('cfg-disciplina').value,
+                acertos: `${acertos}/${prova.questoes.length}`,
+                nota: nota,
+                origem: 'Correção Gabarito Físico',
+                data: new Date().toLocaleTimeString()
+            };
+
+            salvarNotaNoBanco(registro);
+
+            document.getElementById('resultado-scanner-container').innerHTML = `
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center space-y-2">
+                    <span class="text-xs font-bold uppercase text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">Correção Concluída</span>
+                    <h4 class="text-xl font-bold text-emerald-900">${prova.alunoName}</h4>
+                    <p class="text-xs text-slate-600">Acertos: <strong>${acertos} / ${prova.questoes.length}</strong></p>
+                    <div class="text-3xl font-extrabold text-emerald-600 pt-2">Nota: ${nota.toFixed(1)}</div>
+                </div>
+            `;
+            alert(`Correção efetuada com sucesso! Nota: ${nota}`);
+            setTab('tab-database');
         }
 
         function exportarProvasWord() {
@@ -1149,50 +1257,181 @@
 
         function copiarLinkAluno(link) {
             navigator.clipboard.writeText(link);
-            alert("Link copiado!");
-        }
-
-        function atualizarSelectScanner() {
-            const select = document.getElementById('scanner-select-aluno');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Selecione --</option>';
-            provasGeradas.forEach(p => select.innerHTML += `<option value="${p.studentId}">${p.alunoName}</option>`);
-        }
-
-        async function alternarCamera() {
-            const video = document.getElementById('webcam-video');
-            const placeholder = document.getElementById('webcam-placeholder');
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = null;
-                video.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-            } else {
-                try {
-                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                    video.srcObject = cameraStream;
-                    video.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                } catch (e) { alert("Câmera indisponível."); }
-            }
-        }
-
-        function processarLeituraOptica() {
-            alert("Leitura efetuada com sucesso!");
+            alert("Link copiado para a área de transferência!");
         }
 
         function salvarNotaNoBanco(reg) {
             bancoNotas = bancoNotas.filter(n => n.aluno !== reg.aluno);
             bancoNotas.push(reg);
             localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
+            renderizarBancoNotas();
         }
 
         function limparBancoNotas() {
             bancoNotas = [];
             localStorage.removeItem('sys_avalia_notas');
+            renderizarBancoNotas();
         }
 
-        function verificarLinkAlunoParam() {}
+        function renderizarBancoNotas() {
+            const containerAnos = document.getElementById('container-botoes-anos-notas');
+            const containerTurmas = document.getElementById('container-abas-turmas-notas');
+            const tbody = document.getElementById('tabela-notas-body');
+            if (!containerAnos || !containerTurmas || !tbody) return;
+
+            const anos = [...new Set(bancoNotas.map(n => n.anoLetivo))].sort().reverse();
+            if (!notaAnoSelecionado && anos.length > 0) notaAnoSelecionado = anos[0];
+
+            containerAnos.innerHTML = '';
+            if (anos.length === 0) {
+                containerAnos.innerHTML = '<span class="text-xs text-slate-400">Nenhuma nota registrada.</span>';
+                containerTurmas.classList.add('hidden');
+                atualizarTabelaNotasVazia();
+                return;
+            }
+
+            anos.forEach(ano => {
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${notaAnoSelecionado === ano ? 'bg-amber-500 text-slate-900 shadow' : 'bg-slate-800 text-slate-300'}`;
+                btn.textContent = ano;
+                btn.onclick = () => { notaAnoSelecionado = ano; notaTurmaSelecionada = null; renderizarBancoNotas(); };
+                containerAnos.appendChild(btn);
+            });
+
+            const notasDoAno = bancoNotas.filter(n => n.anoLetivo === notaAnoSelecionado);
+            const turmas = [...new Set(notasDoAno.map(n => n.serie))].sort();
+            if (!notaTurmaSelecionada && turmas.length > 0) notaTurmaSelecionada = turmas[0];
+
+            containerTurmas.innerHTML = '';
+            if (turmas.length > 0) {
+                containerTurmas.classList.remove('hidden');
+                turmas.forEach(turma => {
+                    const btn = document.createElement('button');
+                    btn.className = `whitespace-nowrap px-5 py-3 font-bold text-sm border-b-2 transition ${notaTurmaSelecionada === turma ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500'}`;
+                    btn.textContent = turma;
+                    btn.onclick = () => { notaTurmaSelecionada = turma; renderizarBancoNotas(); };
+                    containerTurmas.appendChild(btn);
+                });
+            } else {
+                containerTurmas.classList.add('hidden');
+            }
+
+            atualizarTabelaNotas(notasDoAno.filter(n => n.serie === notaTurmaSelecionada));
+        }
+
+        function atualizarTabelaNotas(notasFiltradas) {
+            const tbody = document.getElementById('tabela-notas-body');
+            tbody.innerHTML = '';
+
+            if (!notasFiltradas || notasFiltradas.length === 0) {
+                atualizarTabelaNotasVazia();
+                return;
+            }
+
+            let soma = 0, maior = 0;
+            notasFiltradas.forEach(row => {
+                soma += row.nota;
+                if (row.nota > maior) maior = row.nota;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 font-semibold text-slate-800">${row.aluno}</td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${row.serie}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${row.disciplina}</td>
+                        <td class="px-6 py-4 font-mono text-xs">${row.acertos}</td>
+                        <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
+                        <td class="px-6 py-4 text-[11px] text-slate-500">${row.origem} • ${row.data}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('stat-total').textContent = notasFiltradas.length;
+            document.getElementById('stat-media').textContent = (soma / notasFiltradas.length).toFixed(1);
+            document.getElementById('stat-maior').textContent = maior.toFixed(1);
+        }
+
+        function atualizarTabelaNotasVazia() {
+            const tbody = document.getElementById('tabela-notas-body');
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
+            document.getElementById('stat-total').textContent = '0';
+            document.getElementById('stat-media').textContent = '0.0';
+            document.getElementById('stat-maior').textContent = '0.0';
+        }
+
+        function verificarLinkAlunoParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentId = urlParams.get('studentId');
+            if (studentId) {
+                if (provasGeradas.length === 0) gerarProvasComLista(bancoQuestoes);
+                abrirProvaDigital(studentId);
+            }
+        }
+
+        function abrirProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
+            if (!prova) return;
+
+            const escola = document.getElementById('cfg-escola').value;
+            const container = document.getElementById('conteudo-prova-online');
+
+            container.innerHTML = `
+                <div class="border-b pb-4">
+                    <span class="text-xs text-indigo-600 font-bold uppercase">${escola} • ${prova.alunoSerie} [${prova.alunoTurma}]</span>
+                    <h2 class="text-xl font-bold text-slate-900">${prova.alunoName}</h2>
+                </div>
+                <form id="form-digital-exam" class="space-y-6">
+                    ${prova.questoes.map(q => `
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
+                            <p class="font-bold text-sm text-slate-800">${q.numero}. ${q.enunciado}</p>
+                            ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-48 rounded border mx-auto">` : ''}
+                            <div class="space-y-2 pl-2">
+                                ${q.alternativas.map(alt => `
+                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                                        <input type="radio" name="q_${q.numero}" value="${alt.letter}" class="text-indigo-600" required>
+                                        <span><strong>(${alt.letter})</strong> ${alt.text}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="document.getElementById('modal-prova-online').classList.add('hidden')" class="text-slate-500 text-xs font-bold">Fechar</button>
+                        <button type="button" onclick="submeterProvaDigital('${prova.studentId}')" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow hover:bg-emerald-700">Enviar Respostas</button>
+                    </div>
+                </form>
+            `;
+            document.getElementById('modal-prova-online').classList.remove('hidden');
+        }
+
+        async function submeterProvaDigital(studentId) {
+            const prova = provasGeradas.find(p => p.studentId === studentId) || provasGeradas[0];
+            if (!prova) return;
+
+            let acertos = 0;
+            const form = document.getElementById('form-digital-exam');
+
+            prova.questoes.forEach(q => {
+                const checked = form.querySelector(`input[name="q_${q.numero}"]:checked`);
+                if (checked && checked.value === q.letraCorreta) acertos++;
+            });
+
+            const nota = parseFloat(((acertos / prova.questoes.length) * 10).toFixed(1));
+            const registro = {
+                aluno: prova.alunoName,
+                anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
+                bimestre: prova.bimestre,
+                disciplina: document.getElementById('cfg-disciplina').value,
+                acertos: `${acertos}/${prova.questoes.length}`,
+                nota: nota,
+                origem: 'Link Digital Online',
+                data: new Date().toLocaleTimeString()
+            };
+
+            salvarNotaNoBanco(registro);
+            document.getElementById('modal-prova-online').classList.add('hidden');
+            alert(`Avaliação enviada com sucesso! Nota: ${nota}`);
+        }
     </script>
 </body>
 </html>
