@@ -1,0 +1,17 @@
+CORREÇÃO DA CONEXÃO SUPABASE
+
+Foi corrigida a inicialização do cliente Supabase. O HTML anterior chamava as funções carregarCredenciaisSupabase() e salvarCredenciaisSupabase(), mas elas não estavam definidas no arquivo, impedindo a inicialização do cliente e causando a mensagem "Supabase não conectado".
+
+ATUALIZAÇÃO NO GITHUB
+1. Extraia este pacote.
+2. Abra o repositório GitHub Pages.
+3. Substitua o index.html pelo arquivo deste pacote.
+4. Envie também manifest.webmanifest, sw.js e a pasta icons (caso ainda não estejam no repositório).
+5. Faça Commit changes.
+6. Aguarde a publicação e atualize o site com Ctrl+F5.
+
+O arquivo utiliza a URL e a chave Publishable pública configuradas para o projeto atual. Não coloque chaves Secret/service_role nem senhas no HTML.
+
+Após atualizar, abra o site, faça login com o e-mail e a senha cadastrados no Supabase. Se o erro persistir, verifique se o navegador permite carregar https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 e se o domínio do projeto está correto.
+
+Não é necessário executar novamente a migração SQL apenas por causa desta correção de inicialização.
