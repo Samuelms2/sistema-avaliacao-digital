@@ -168,8 +168,8 @@
             .omr-table {
                 position: absolute !important;
                 top: 16mm !important;
-                left: 8mm !important;
-                width: 144mm !important;
+                left: 44mm !important;
+                width: 72mm !important;
                 border-collapse: collapse !important;
                 table-layout: fixed !important;
                 margin: 0 !important;
@@ -249,7 +249,7 @@
         .omr-qr img, .omr-qr canvas { width: 14mm !important; height: 14mm !important; display: block; }
         .omr-token-fallback { position: absolute; top: 3mm; right: 9mm; width: 12mm; font-size: 5pt; word-break: break-all; }
         .omr-table {
-            position: absolute; top: 16mm; left: 8mm; width: 144mm;
+            position: absolute; top: 16mm; left: 44mm; width: 72mm;
             border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;
             color: #000; background: #fff; font-family: "Times New Roman", Times, serif; font-size: 11pt;
         }
@@ -660,8 +660,8 @@
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Anos de Estudo e Turmas</h3>
-                        <p class="text-xs text-slate-500">Imprima, salve em PDF ou envie os links individuais</p>
+                        <h3 class="font-bold text-slate-800 text-lg">Provas & Links por Ano, Série, Turma e Aluno</h3>
+                        <p class="text-xs text-slate-500">Escolha o ano, depois a série e a turma para visualizar as avaliações digitais de cada aluno.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="exportarProvasWord()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
@@ -675,15 +675,33 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
-                    <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
-                        <i data-lucide="filter" class="w-3.5 h-3.5 text-cyan-400"></i>
-                        <span>Selecione a Turma para Visualizar:</span>
-                    </span>
-                    <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-4">
+                    <div class="space-y-2">
+                        <span class="text-xs uppercase font-bold tracking-wider text-amber-300 flex items-center space-x-2">
+                            <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                            <span>1. Selecione o ano letivo:</span>
+                        </span>
+                        <div id="container-botoes-anos" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                    <div id="painel-selecao-turmas" class="hidden border-t border-slate-700 pt-3 space-y-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span id="titulo-selecao-turmas" class="text-xs uppercase font-bold tracking-wider text-cyan-300">2. Selecione a série e a turma:</span>
+                            <button type="button" onclick="voltarSelecaoAnoProvas()" class="text-[11px] font-bold text-slate-200 underline hover:text-white">Voltar aos anos</button>
+                        </div>
+                        <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
                 </div>
 
-                <div id="grid-provas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="painel-provas-digitais" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h4 id="titulo-provas-digitais" class="font-bold text-slate-900 text-sm">Avaliações digitais</h4>
+                            <p class="text-xs text-slate-500">Selecione o aluno para copiar o link individual da avaliação.</p>
+                        </div>
+                        <button type="button" onclick="voltarSelecaoTurmaProvas()" class="text-xs font-bold text-indigo-700 hover:underline">Voltar às séries e turmas</button>
+                    </div>
+                </div>
+                <div id="grid-provas" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </section>
 
@@ -827,7 +845,8 @@
     <script>
         let cameraStream = null;
         let scannerImageAtual = null;
-        let turmaFiltroSelecionada = 'todas';
+        let anoFiltroProvasSelecionado = null;
+        let turmaFiltroSelecionada = null;
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
         let notaTurmaSelecionada = null;
@@ -1085,6 +1104,9 @@
                 renderizarMenuTemas();
                 renderizarQuestoesTema();
             }
+            if (tabId === 'tab-generate') {
+                renderizarBotoesFiltroTurmas();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1330,7 +1352,15 @@
                 localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
                 const provasBanco = (provas.data || []).map(r => {
                     const prova = r.prova || {};
-                    return { ...prova, studentToken: r.student_token, studentId: r.student_token };
+                    return {
+                        ...prova,
+                        anoLetivo: String(prova.anoLetivo || r.ano_letivo || ''),
+                        bimestre: prova.bimestre || r.bimestre || '',
+                        alunoSerie: prova.alunoSerie || String(r.serie || '').split(' - ')[0] || '',
+                        alunoTurma: prova.alunoTurma || String(r.serie || '').split(' - ').slice(1).join(' - ') || '',
+                        studentToken: r.student_token,
+                        studentId: r.student_token
+                    };
                 }).filter(p => p.questoes && p.questoes.length);
                 if (provasBanco.length) provasGeradas = provasBanco;
                 else {
@@ -1693,35 +1723,116 @@
             alert('Provas publicadas no Supabase. Os links individuais já podem ser enviados aos alunos.');
         }
 
+        function voltarSelecaoAnoProvas() {
+            anoFiltroProvasSelecionado = null;
+            turmaFiltroSelecionada = null;
+            renderizarBotoesFiltroTurmas();
+        }
+
+        function voltarSelecaoTurmaProvas() {
+            turmaFiltroSelecionada = null;
+            renderizarBotoesFiltroTurmas();
+        }
+
         function renderizarBotoesFiltroTurmas() {
-            const container = document.getElementById('container-botoes-turmas');
-            if (!container) return;
+            const anosContainer = document.getElementById('container-botoes-anos');
+            const turmasContainer = document.getElementById('container-botoes-turmas');
+            const painelTurmas = document.getElementById('painel-selecao-turmas');
+            const painelProvas = document.getElementById('painel-provas-digitais');
+            const grid = document.getElementById('grid-provas');
+            const areaImpressao = document.getElementById('area-impressao-provas');
+            if (!anosContainer || !turmasContainer || !painelTurmas || !painelProvas || !grid) return;
 
-            const turmasExistentes = [...new Set(provasGeradas.map(p => `${p.alunoSerie} - ${p.alunoTurma}`))];
-            container.innerHTML = '';
+            const anoDaProva = p => String(p.anoLetivo || document.getElementById('cfg-ano-letivo')?.value || 'Ano não informado');
+            const anos = [...new Set(provasGeradas.map(anoDaProva))]
+                .sort((a, b) => Number(b) - Number(a) || b.localeCompare(a, 'pt-BR', { numeric: true }));
 
-            const btnTodas = document.createElement('button');
-            btnTodas.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === 'todas' ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
-            btnTodas.textContent = `Todas as Turmas (${provasGeradas.length})`;
-            btnTodas.onclick = () => {
-                turmaFiltroSelecionada = 'todas';
-                renderizarBotoesFiltroTurmas();
-                renderizarGridProvas();
-            };
-            container.appendChild(btnTodas);
+            if (!anos.includes(String(anoFiltroProvasSelecionado))) {
+                anoFiltroProvasSelecionado = null;
+                turmaFiltroSelecionada = null;
+            }
 
-            turmasExistentes.forEach(tKey => {
-                const qtd = provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === tKey).length;
+            anosContainer.innerHTML = '';
+            anos.forEach(ano => {
+                const qtd = provasGeradas.filter(p => anoDaProva(p) === ano).length;
                 const btn = document.createElement('button');
-                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${turmaFiltroSelecionada === tKey ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
-                btn.textContent = `${tKey} (${qtd})`;
+                btn.type = 'button';
+                btn.className = `px-4 py-2 rounded-lg text-xs font-bold transition border ${String(anoFiltroProvasSelecionado) === ano ? 'bg-amber-400 text-slate-950 border-amber-300 shadow' : 'bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700'}`;
+                btn.textContent = `${ano} (${qtd} avaliações)`;
+                btn.setAttribute('aria-pressed', String(String(anoFiltroProvasSelecionado) === ano));
                 btn.onclick = () => {
-                    turmaFiltroSelecionada = tKey;
+                    anoFiltroProvasSelecionado = ano;
+                    turmaFiltroSelecionada = null;
                     renderizarBotoesFiltroTurmas();
-                    renderizarGridProvas();
                 };
-                container.appendChild(btn);
+                anosContainer.appendChild(btn);
             });
+
+            turmasContainer.innerHTML = '';
+            if (!anoFiltroProvasSelecionado) {
+                painelTurmas.classList.add('hidden');
+                painelProvas.classList.add('hidden');
+                grid.classList.add('hidden');
+                grid.innerHTML = '';
+                if (areaImpressao) areaImpressao.innerHTML = '';
+                if (!anos.length) {
+                    const vazio = document.createElement('p');
+                    vazio.className = 'text-xs text-slate-300';
+                    vazio.textContent = 'Ainda não existem avaliações digitais publicadas.';
+                    anosContainer.appendChild(vazio);
+                }
+                return;
+            }
+
+            painelTurmas.classList.remove('hidden');
+            const tituloTurmas = document.getElementById('titulo-selecao-turmas');
+            if (tituloTurmas) tituloTurmas.textContent = `2. Selecione a série e a turma do ano ${anoFiltroProvasSelecionado}:`;
+
+            const provasDoAno = provasGeradas.filter(p => anoDaProva(p) === String(anoFiltroProvasSelecionado));
+            const gruposMap = new Map();
+            provasDoAno.forEach(p => {
+                const serie = String(p.alunoSerie || 'Série não informada');
+                const turma = String(p.alunoTurma || 'Turma não informada');
+                const chave = `${serie}|||${turma}`;
+                if (!gruposMap.has(chave)) gruposMap.set(chave, { chave, serie, turma, quantidade: 0 });
+                gruposMap.get(chave).quantidade++;
+            });
+            const grupos = [...gruposMap.values()].sort((a, b) =>
+                a.serie.localeCompare(b.serie, 'pt-BR', { numeric: true }) ||
+                a.turma.localeCompare(b.turma, 'pt-BR', { numeric: true })
+            );
+
+            if (!grupos.some(g => g.chave === turmaFiltroSelecionada)) turmaFiltroSelecionada = null;
+            grupos.forEach(grupo => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const ativo = turmaFiltroSelecionada === grupo.chave;
+                btn.className = `px-4 py-2 rounded-lg text-xs font-bold transition border ${ativo ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow' : 'bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700'}`;
+                btn.textContent = `${grupo.serie} — ${grupo.turma} (${grupo.quantidade} alunos)`;
+                btn.setAttribute('aria-pressed', String(ativo));
+                btn.onclick = () => {
+                    turmaFiltroSelecionada = grupo.chave;
+                    renderizarBotoesFiltroTurmas();
+                };
+                turmasContainer.appendChild(btn);
+            });
+
+            if (!turmaFiltroSelecionada) {
+                painelProvas.classList.add('hidden');
+                grid.classList.add('hidden');
+                grid.innerHTML = '';
+                if (areaImpressao) areaImpressao.innerHTML = '';
+                return;
+            }
+
+            const grupoSelecionado = grupos.find(g => g.chave === turmaFiltroSelecionada);
+            painelProvas.classList.remove('hidden');
+            const tituloProvas = document.getElementById('titulo-provas-digitais');
+            if (tituloProvas && grupoSelecionado) {
+                tituloProvas.textContent = `3. Avaliações digitais — ${grupoSelecionado.serie} / ${grupoSelecionado.turma} • ${anoFiltroProvasSelecionado}`;
+            }
+            grid.classList.remove('hidden');
+            renderizarGridProvas();
         }
 
         function renderizarGridProvas() {
@@ -1736,9 +1847,20 @@
             const titulo = document.getElementById('cfg-titulo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
             const professor = document.getElementById('cfg-professor').value;
-            const provasExibidas = turmaFiltroSelecionada === 'todas'
-                ? provasGeradas
-                : provasGeradas.filter(p => `${p.alunoSerie} - ${p.alunoTurma}` === turmaFiltroSelecionada);
+            if (!anoFiltroProvasSelecionado || !turmaFiltroSelecionada) {
+                grid.classList.add('hidden');
+                areaImpressao.innerHTML = '';
+                return;
+            }
+            const provasExibidas = provasGeradas.filter(p =>
+                String(p.anoLetivo || document.getElementById('cfg-ano-letivo')?.value || 'Ano não informado') === String(anoFiltroProvasSelecionado) &&
+                `${p.alunoSerie || 'Série não informada'}|||${p.alunoTurma || 'Turma não informada'}` === turmaFiltroSelecionada
+            );
+            grid.classList.remove('hidden');
+            if (!provasExibidas.length) {
+                grid.innerHTML = '<div class="col-span-full rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">Nenhuma avaliação digital encontrada para esta turma.</div>';
+                return;
+            }
 
             provasExibidas.forEach(prova => {
                 const token = prova.studentToken || prova.studentId;
@@ -1746,8 +1868,7 @@
                 const qrId = `omr-qr-${String(token).replace(/[^a-z0-9]/gi, '')}`;
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${encodeURIComponent(token)}`;
                 const bimestre = prova.bimestre || document.getElementById('cfg-bimestre').value || '—';
-                const metadeOmr = Math.ceil(prova.questoes.length / 2);
-                const alturaOmrMm = (26.5 + metadeOmr * 6.5).toFixed(1);
+                const alturaOmrMm = (26.5 + prova.questoes.length * 6.5).toFixed(1);
 
                 grid.innerHTML += `
                     <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
@@ -1770,14 +1891,9 @@
                         </div>
                     </article>`).join('');
 
-                const linhasOmr = Array.from({ length: metadeOmr }, (_, i) => {
-                    const esquerda = prova.questoes[i];
-                    const direita = prova.questoes[i + metadeOmr];
-                    const celulas = q => q
-                        ? `<td class="omr-question-number">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="omr-bubble" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}`
-                        : '<td></td><td></td><td></td><td></td><td></td><td></td>';
-                    return `<tr>${celulas(esquerda)}${celulas(direita)}</tr>`;
-                }).join('');
+                const linhasOmr = prova.questoes.map(q =>
+                    `<tr><td class="omr-question-number">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="omr-bubble" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}</tr>`
+                ).join('');
 
                 areaImpressao.innerHTML += `
                     <div class="page-break">
@@ -1807,8 +1923,8 @@
                                     </div>
                                     <div id="${qrId}" class="omr-qr" data-omr-qr="${escapeHtml(prova.code || '')}"></div>
                                     <table class="omr-table">
-                                        <colgroup>${Array.from({length:2}, () => '<col style="width:10mm;">' + Array.from({length:5}, () => '<col style="width:12.4mm;">').join('')).join('')}</colgroup>
-                                        <thead><tr><th>Qº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>Qº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+                                        <colgroup><col style="width:10mm;">${Array.from({length:5}, () => '<col style="width:12.4mm;">').join('')}</colgroup>
+                                        <thead><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
                                         <tbody>${linhasOmr}</tbody>
                                     </table>
                                 </div>
@@ -2283,8 +2399,7 @@
         function lerBolhasOMR(cv, imagemCanvas, quantidadeQuestoes) {
             const marcadores = detectarMarcadoresOMR(cv, imagemCanvas);
             const larguraPadrao = 1600;
-            const metade = Math.ceil(quantidadeQuestoes / 2);
-            const alturaMm = 26.5 + metade * 6.5;
+            const alturaMm = 26.5 + quantidadeQuestoes * 6.5;
             const alturaPadrao = Math.round(larguraPadrao * alturaMm / 160);
             const src = cv.imread(imagemCanvas);
             const warped = new cv.Mat();
@@ -2312,34 +2427,30 @@
                 const scores = {};
                 const letras = ['A','B','C','D','E'];
 
-                for (let row = 0; row < metade; row++) {
+                for (let row = 0; row < quantidadeQuestoes; row++) {
+                    const numeroQuestao = row + 1;
                     const yMm = 16 + 5.5 + (row + 0.5) * 6.5;
                     const y = yMm * 10;
-                    for (let bloco = 0; bloco < 2; bloco++) {
-                        const indiceQuestao = bloco === 0 ? row : row + metade;
-                        if (indiceQuestao >= quantidadeQuestoes) continue;
-                        const numeroQuestao = indiceQuestao + 1;
-                        const linha = {};
-                        letras.forEach((letra, k) => {
-                            // Cada bloco mede 72 mm: número (10 mm) + cinco alternativas (12,4 mm).
-                            const xMm = 8 + bloco * 72 + 10 + (k + 0.5) * 12.4;
-                            linha[letra] = calcularEscuridaoBolha(data, aligned.width, xMm * 10, y);
-                        });
-                        const ordenadas = letras.map(letra => ({ letra, ...linha[letra] })).sort((a,b) => b.ratio-a.ratio);
-                        const primeira = ordenadas[0], segunda = ordenadas[1];
-                        let resposta = '';
-                        let estado = 'em branco';
-                        if (primeira.ratio >= 0.17 && segunda.ratio >= 0.13 && (primeira.ratio - segunda.ratio) < 0.045) {
-                            estado = 'dupla/ambígua';
-                        } else if (primeira.ratio >= 0.17 && (primeira.ratio - segunda.ratio) >= 0.035) {
-                            resposta = primeira.letra;
-                            estado = 'detectada';
-                        } else if (primeira.ratio >= 0.12) {
-                            estado = 'marca fraca — conferir';
-                        }
-                        answers[String(numeroQuestao)] = resposta;
-                        scores[String(numeroQuestao)] = { estado, confianca: primeira.ratio, alternativa: primeira.letra, segunda: segunda.ratio, linha };
+                    const linha = {};
+                    letras.forEach((letra, k) => {
+                        // Grade vertical: tabela centralizada em 72 mm; coluna Nº (10 mm) + 5 bolhas (12,4 mm cada).
+                        const xMm = 44 + 10 + (k + 0.5) * 12.4;
+                        linha[letra] = calcularEscuridaoBolha(data, aligned.width, xMm * 10, y);
+                    });
+                    const ordenadas = letras.map(letra => ({ letra, ...linha[letra] })).sort((a,b) => b.ratio-a.ratio);
+                    const primeira = ordenadas[0], segunda = ordenadas[1];
+                    let resposta = '';
+                    let estado = 'em branco';
+                    if (primeira.ratio >= 0.17 && segunda.ratio >= 0.13 && (primeira.ratio - segunda.ratio) < 0.045) {
+                        estado = 'dupla/ambígua';
+                    } else if (primeira.ratio >= 0.17 && (primeira.ratio - segunda.ratio) >= 0.035) {
+                        resposta = primeira.letra;
+                        estado = 'detectada';
+                    } else if (primeira.ratio >= 0.12) {
+                        estado = 'marca fraca — conferir';
                     }
+                    answers[String(numeroQuestao)] = resposta;
+                    scores[String(numeroQuestao)] = { estado, confianca: primeira.ratio, alternativa: primeira.letra, segunda: segunda.ratio, linha };
                 }
 
                 return { answers, scores, alignedCanvas: aligned, qrToken };
