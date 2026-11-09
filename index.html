@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE AVALIAÇÃO DIGITAL</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SISTEMA%20DE%20AVALIA%C3%87%C3%83O%20DIGITAL%22%2C%22short_name%22%3A%22AvaliaDigital%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%231e293b%22%7D">
+    <!-- PWA: arquivos separados são necessários para instalação e service worker no GitHub Pages -->
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
     <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -311,6 +315,10 @@
                     <span>Alunos: </span><span id="badge-total-alunos" class="font-semibold text-emerald-300">0</span> • 
                     <span>Questões: </span><span id="badge-total-questoes" class="font-semibold text-yellow-300">0</span>
                 </div>
+                <span id="sync-status" class="bg-white/10 px-2 py-1.5 rounded-lg text-[11px] text-emerald-200" title="Estado de sincronização">Nuvem conectada</span>
+                <button id="btn-instalar-app" onclick="instalarAplicativo()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1 shadow transition">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i><span>Instalar app</span>
+                </button>
                 <button onclick="exportarPerguntasEAlunos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1 shadow transition">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span>Exportar Dados</span>
@@ -668,6 +676,9 @@
                             <i data-lucide="file-text" class="w-4 h-4"></i>
                             <span>Exportar Word (.doc)</span>
                         </button>
+                        <button onclick="abrirLixeiraProvas()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold px-4 py-2.5 rounded-xl border border-amber-300 shadow-sm flex items-center space-x-1.5 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i><span>Lixeira (<span id="contador-lixeira-provas">0</span>)</span>
+                        </button>
                         <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow flex items-center space-x-1.5 transition">
                             <i data-lucide="printer" class="w-4 h-4"></i>
                             <span>Imprimir / Salvar PDF</span>
@@ -702,6 +713,13 @@
                     </div>
                 </div>
                 <div id="grid-provas" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <section id="painel-lixeira-provas" class="hidden bg-white rounded-2xl border border-amber-200 p-5 shadow-sm space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2">
+                        <div><h4 class="font-bold text-slate-900">Lixeira de avaliações</h4><p class="text-xs text-slate-500">As avaliações ficam aqui por 15 dias. Depois são removidas automaticamente.</p></div>
+                        <button type="button" onclick="fecharLixeiraProvas()" class="text-xs font-bold text-indigo-700 hover:underline">Voltar às avaliações</button>
+                    </div>
+                    <div id="lista-lixeira-provas" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </section>
             </div>
         </section>
 
@@ -769,8 +787,8 @@
                         <h3 class="font-bold text-slate-800 text-lg">Notas Atribuídas em Tempo Real</h3>
                         <p class="text-xs text-slate-500">Sincronizado automaticamente</p>
                     </div>
-                    <button onclick="limparBancoNotas()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-4 py-2.5 rounded-xl border border-red-200 transition">
-                        Limpar Histórico Local
+                    <button onclick="abrirConfirmacaoZerarBanco()" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold px-4 py-2.5 rounded-xl border border-red-300 transition">
+                        <i data-lucide="database-zap" class="w-4 h-4 inline mr-1"></i>Zerar banco de dados
                     </button>
                 </div>
 
@@ -831,6 +849,16 @@
             </div>
         </section>
 
+        <!-- CONFIRMAÇÃO DE LIMPEZA DOS DADOS DE TESTE -->
+        <div id="modal-zerar-banco" class="hidden fixed inset-0 bg-slate-950/80 z-[70] p-4 flex items-center justify-center no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-zerar-banco">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+                <div class="flex items-center gap-3"><div class="bg-red-100 text-red-700 rounded-xl p-3"><i data-lucide="database-zap" class="w-6 h-6"></i></div><div><h3 id="titulo-zerar-banco" class="text-lg font-bold text-slate-900">Deseja realmente zerar o banco de dados?</h3><p class="text-xs text-red-700 font-semibold">Esta ação não poderá ser desfeita.</p></div></div>
+                <p class="text-sm text-slate-700">Serão removidos definitivamente os resultados, os links individuais de avaliações já geradas (inclusive os que estiverem na lixeira) e os cadastros de alunos/turmas usados nos testes.</p>
+                <p class="text-sm text-slate-700"><strong>Serão preservados:</strong> o banco de questões, as imagens das questões no Storage, as configurações da escola e a conta do professor. As avaliações on-line fixadas como conteúdo-base não serão alteradas.</p>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="fecharConfirmacaoZerarBanco()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm">Não</button><button id="btn-confirmar-zerar" type="button" onclick="executarZerarBancoDados()" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm">Sim, zerar banco de dados</button></div>
+            </div>
+        </div>
+
         <!-- MODAL PROVA DIGITAL DO ALUNO -->
         <div id="modal-prova-online" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 overflow-y-auto p-4 sm:p-6 flex justify-center">
             <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl p-6 space-y-6 my-auto">
@@ -852,7 +880,7 @@
         let notaTurmaSelecionada = null;
         // Chave Publishable pública do novo projeto Supabase. Pode ficar no HTML publicado.
         // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
-        const CONFIG_SUPABASE_VERSION = '2026-11-08-v7-abmhfmlttjmwksqhnzwr-storage';
+        const CONFIG_SUPABASE_VERSION = '2026-11-09-v10-sync-session-pwa-omr-trash';
         const SUPABASE_URL_PADRAO = 'https://abmhfmlttjmwksqhnzwr.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_QzbibIo1845K1uur6R4V7w_Sjt3b-Jk';
 
@@ -1082,7 +1110,20 @@
         };
 
         let provasGeradas = [];
+        let provasLixeira = [];
         let bancoNotas = JSON.parse(localStorage.getItem('sys_avalia_notas') || '[]');
+        let painelProfessorEmCarregamento = null;
+        let professorUidAtual = null;
+        let timerSyncProfessor = null;
+        let timerRefreshRealtime = null;
+        let timerPollingNuvem = null;
+        let carregandoDadosRemotos = false;
+        let recarregarDadosRemotosPendente = false;
+        let ultimaGravacaoDadosNuvem = 0;
+        let exibindoLixeiraProvas = false;
+        let eventoInstalacaoPWA = null;
+        let dadosProfessorRemotosDisponiveis = false;
+        const CONFIG_CAMPOS_IDS = ['cfg-escola','cfg-ano-letivo','cfg-bimestre','cfg-titulo','cfg-disciplina','cfg-professor','cfg-data-inicio','cfg-data-fim','cfg-qtd-questoes'];
 
         function setTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -1090,23 +1131,17 @@
                 btn.classList.remove('bg-indigo-600', 'text-white');
                 btn.classList.add('text-slate-300');
             });
-
             const content = document.getElementById(tabId);
             if (content) content.classList.remove('hidden');
-
             const btn = document.getElementById('btn-' + tabId);
-            if (btn) {
-                btn.classList.add('bg-indigo-600', 'text-white');
-                btn.classList.remove('text-slate-300');
-            }
-
-            if (tabId === 'tab-bank') {
-                renderizarMenuTemas();
-                renderizarQuestoesTema();
-            }
+            if (btn) { btn.classList.add('bg-indigo-600', 'text-white'); btn.classList.remove('text-slate-300'); }
+            if (!studentMode && professorLogado) localStorage.setItem('sys_aba_ativa', tabId);
+            if (tabId === 'tab-bank') { renderizarMenuTemas(); renderizarQuestoesTema(); }
             if (tabId === 'tab-generate') {
-                renderizarBotoesFiltroTurmas();
+                if (exibindoLixeiraProvas) renderizarLixeiraProvas();
+                else renderizarBotoesFiltroTurmas();
             }
+            if (tabId === 'tab-database') renderizarBancoNotas();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1116,28 +1151,48 @@
             document.getElementById('cfg-data-inicio').value = dataHoraLocal(agora);
             document.getElementById('cfg-data-fim').value = dataHoraLocal(amanha);
 
-            // Migra a configuração: descarta URL/chave antigas gravadas por versões anteriores.
-            // Isso evita que uma chave antiga continue sendo usada mesmo após atualizar o GitHub Pages.
             if (localStorage.getItem('sys_supabase_config_version') !== CONFIG_SUPABASE_VERSION) {
                 localStorage.removeItem('sys_supabase_url');
                 localStorage.removeItem('sys_supabase_key');
                 localStorage.setItem('sys_supabase_config_version', CONFIG_SUPABASE_VERSION);
             }
-            document.getElementById('cfg-supabase-url').value =
-                localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO;
-            document.getElementById('cfg-supabase-key').value =
-                localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO;
+            document.getElementById('cfg-supabase-url').value = localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO;
+            document.getElementById('cfg-supabase-key').value = localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO;
             document.getElementById('teacher-email').value = 'samuelmsousa2@gmail.com';
 
-            try { cadastroTurmas = { ...cadastroTurmas, ...JSON.parse(localStorage.getItem('sys_cadastro_turmas') || '{}') }; } catch (_) {}
+            try { cadastroTurmas = JSON.parse(localStorage.getItem('sys_cadastro_turmas') || 'null') || cadastroTurmas; } catch (_) {}
             try { bancoQuestoes = JSON.parse(localStorage.getItem('sys_banco_questoes') || 'null') || bancoQuestoes; } catch (_) {}
+            try { provasGeradas = JSON.parse(localStorage.getItem('sys_provas_geradas') || '[]'); } catch (_) { provasGeradas = []; }
+            restaurarConfiguracoesLocais();
+            CONFIG_CAMPOS_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.addEventListener('input', salvarConfiguracoesLocais); el.addEventListener('change', salvarConfiguracoesLocais); }
+            });
+
             const tokenDaUrl = new URLSearchParams(window.location.search).get('studentId') || new URLSearchParams(window.location.search).get('token');
             if (tokenDaUrl) studentMode = true;
+            registrarPWA();
             await carregarCredenciaisSupabase();
             alternarTurmaAluno();
             atualizarBadges();
             renderizarBancoNotas();
             await verificarLinkAlunoParam();
+            window.addEventListener('online', async () => {
+                if (!professorLogado) return;
+                atualizarStatusSync('Reconectando…', 'pendente');
+                try {
+                    if (localStorage.getItem('sys_dados_professor_sync_pendente') === '1') await sincronizarDadosProfessorNuvem();
+                    await carregarDadosProfessor();
+                } catch (error) { atualizarStatusSync('Falha ao reconectar', 'erro'); console.warn(error); }
+            });
+            document.addEventListener('visibilitychange', async () => {
+                if (document.hidden || !professorLogado) return;
+                try {
+                    await supabaseClient?.auth.refreshSession();
+                    if (localStorage.getItem('sys_dados_professor_sync_pendente') === '1') await sincronizarDadosProfessorNuvem();
+                    await carregarDadosProfessor();
+                } catch (_) {}
+            });
         });
 
         function dataHoraLocal(data) {
@@ -1145,9 +1200,17 @@
             return new Date(data.getTime() - ajuste).toISOString().slice(0, 16);
         }
 
+        function atualizarStatusSync(texto, estado = 'ok') {
+            const el = document.getElementById('sync-status');
+            if (!el) return;
+            el.textContent = texto;
+            el.className = `px-2 py-1.5 rounded-lg text-[11px] ${estado === 'erro' ? 'bg-rose-600/30 text-rose-100' : estado === 'pendente' ? 'bg-amber-500/20 text-amber-100' : 'bg-white/10 text-emerald-200'}`;
+        }
+
         function mostrarGateProfessor(mensagem = '') {
             if (studentMode) return;
             professorLogado = false;
+            professorUidAtual = null;
             document.getElementById('teacher-header').classList.add('hidden');
             document.getElementById('teacher-main').classList.add('hidden');
             document.getElementById('teacher-auth-gate').classList.remove('hidden');
@@ -1157,23 +1220,52 @@
         }
 
         async function mostrarPainelProfessor(session) {
-            if (studentMode || !session || !supabaseClient) return;
-            const autorizacao = await supabaseClient.rpc('usuario_e_professor');
-            if (autorizacao.error || autorizacao.data !== true) {
-                professorLogado = false;
-                await supabaseClient.auth.signOut();
-                mostrarGateProfessor('Esta conta não está autorizada como professor. Cadastre o UID em professores_permitidos no Supabase.');
+            if (studentMode || !session?.user || !supabaseClient) return;
+            const uid = session.user.id;
+            if (professorLogado && professorUidAtual === uid) {
+                document.getElementById('teacher-auth-gate').classList.add('hidden');
+                document.getElementById('teacher-header').classList.remove('hidden');
+                document.getElementById('teacher-main').classList.remove('hidden');
                 return;
             }
-            professorLogado = true;
-            document.getElementById('teacher-auth-gate').classList.add('hidden');
-            document.getElementById('student-shell').classList.add('hidden');
-            document.getElementById('teacher-header').classList.remove('hidden');
-            document.getElementById('teacher-main').classList.remove('hidden');
-            await carregarDadosProfessor();
-            inscreverTempoReal();
-            renderizarBancoNotas();
-            atualizarBadges();
+            if (painelProfessorEmCarregamento) return painelProfessorEmCarregamento;
+            painelProfessorEmCarregamento = (async () => {
+                const autorizacao = await supabaseClient.rpc('usuario_e_professor');
+                if (autorizacao.error) {
+                    const status = document.getElementById('teacher-auth-status');
+                    if (status) status.textContent = 'A sessão foi restaurada, mas não foi possível validar a autorização agora. Verifique a conexão e tente atualizar.';
+                    throw autorizacao.error;
+                }
+                if (autorizacao.data !== true && autorizacao.data !== 'true') {
+                    professorLogado = false;
+                    await supabaseClient.auth.signOut();
+                    mostrarGateProfessor('Esta conta não está autorizada como professor. Verifique professores_permitidos no Supabase.');
+                    return;
+                }
+                professorLogado = true;
+                professorUidAtual = uid;
+                localStorage.setItem('sys_professor_ultimo_uid', uid);
+                document.getElementById('teacher-auth-gate').classList.add('hidden');
+                document.getElementById('student-shell').classList.add('hidden');
+                document.getElementById('teacher-header').classList.remove('hidden');
+                document.getElementById('teacher-main').classList.remove('hidden');
+                await carregarDadosProfessor();
+                await expurgarLixeiraExpirada();
+                inscreverTempoReal();
+                if (timerPollingNuvem) clearInterval(timerPollingNuvem);
+                timerPollingNuvem = setInterval(() => {
+                    if (professorLogado && navigator.onLine && !document.hidden) carregarDadosProfessor();
+                }, 25000);
+                renderizarBancoNotas();
+                atualizarBadges();
+                const abaSalva = localStorage.getItem('sys_aba_ativa');
+                const abasPermitidas = ['tab-header','tab-questions','tab-bank','tab-generate','tab-scanner','tab-database'];
+                setTab(abasPermitidas.includes(abaSalva) ? abaSalva : 'tab-header');
+                atualizarStatusSync(navigator.onLine ? 'Sincronizado' : 'Offline', navigator.onLine ? 'ok' : 'pendente');
+            })();
+            try { await painelProfessorEmCarregamento; }
+            catch (error) { console.error('Falha ao restaurar painel:', error); }
+            finally { painelProfessorEmCarregamento = null; }
         }
 
         async function entrarProfessor(event) {
@@ -1181,8 +1273,7 @@
             const status = document.getElementById('teacher-auth-status');
             const button = document.getElementById('teacher-login-button');
             if (!supabaseClient) return status.textContent = 'Supabase não conectado. Confira a URL e a chave nas configurações do sistema.';
-            button.disabled = true;
-            status.textContent = 'Validando acesso...';
+            button.disabled = true; status.textContent = 'Validando acesso...';
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: document.getElementById('teacher-email').value.trim(),
@@ -1194,70 +1285,19 @@
             } catch (error) {
                 const mensagem = error.message || 'verifique e-mail e senha.';
                 status.textContent = /invalid api key/i.test(mensagem)
-                    ? 'A chave Publishable não foi aceita pelo projeto. Confira se ela pertence ao projeto abmhfmlttjmwksqhnzwr em Settings → API Keys.'
+                    ? 'A chave pública não foi aceita. Confira a chave Publishable deste projeto.'
                     : 'Não foi possível entrar: ' + mensagem;
-            } finally {
-                button.disabled = false;
-            }
+            } finally { button.disabled = false; }
         }
 
         async function sairProfessor() {
-            if (realtimeChannel && supabaseClient) {
-                await supabaseClient.removeChannel(realtimeChannel);
-                realtimeChannel = null;
-            }
+            if (timerPollingNuvem) { clearInterval(timerPollingNuvem); timerPollingNuvem = null; }
+            if (timerSyncProfessor) { clearTimeout(timerSyncProfessor); timerSyncProfessor = null; }
+            if (realtimeChannel && supabaseClient) { await supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
             if (supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.removeItem('sys_aba_ativa');
+            localStorage.removeItem('sys_professor_ultimo_uid');
             mostrarGateProfessor('Sessão encerrada. Entre novamente para acessar o painel.');
-        }
-
-        function carregarImagemDispositivo(event, campo) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            if (!TIPOS_IMAGEM_PERMITIDOS.includes(file.type)) return alert('Use uma imagem JPG, PNG, WEBP ou GIF.');
-            if (file.size > LIMITE_IMAGEM_BYTES) return alert('A imagem deve ter no máximo 10 MB.');
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64 = e.target.result;
-                imagensForm[campo] = base64;
-                const prevDiv = document.getElementById(`preview-img-${campo}`);
-                const imgTag = document.getElementById(`img-${campo}-tag`);
-                if (prevDiv && imgTag) {
-                    imgTag.src = base64;
-                    prevDiv.classList.remove('hidden');
-                }
-            };
-            reader.onerror = () => alert('Não foi possível carregar a imagem selecionada.');
-            reader.readAsDataURL(file);
-        }
-
-        function removerImagemMidia(campo) {
-            imagensForm[campo] = '';
-            const prevDiv = document.getElementById(`preview-img-${campo}`);
-            const inputTag = document.getElementById(`q-file-upload-${campo}`);
-            const imgTag = document.getElementById(`img-${campo}-tag`);
-            if (prevDiv) prevDiv.classList.add('hidden');
-            if (imgTag) imgTag.src = '';
-            if (inputTag) inputTag.value = '';
-        }
-
-        async function salvarCredenciaisSupabase() {
-            const url = document.getElementById('cfg-supabase-url').value.trim();
-            const key = document.getElementById('cfg-supabase-key').value.trim();
-            if (!url || !key) return alert('Preencha a URL e a chave Publishable pública do Supabase.');
-            localStorage.setItem('sys_supabase_url', url);
-            localStorage.setItem('sys_supabase_key', key);
-            localStorage.setItem('sys_supabase_config_version', CONFIG_SUPABASE_VERSION);
-            await iniciarSupabase(url, key);
-            alert('Configuração do Supabase salva. Entre com a conta cadastrada do professor.');
-        }
-
-        async function carregarCredenciaisSupabase() {
-            const url = (localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO).trim();
-            const key = (localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO).trim();
-            document.getElementById('cfg-supabase-url').value = url;
-            document.getElementById('cfg-supabase-key').value = key;
-            if (url && key) await iniciarSupabase(url, key);
-            else mostrarGateProfessor('A configuração pública do Supabase está incompleta.');
         }
 
         async function iniciarSupabase(url, key) {
@@ -1267,23 +1307,32 @@
                     if (realtimeChannel) await supabaseClient.removeChannel(realtimeChannel);
                     if (supabaseAuthSubscription) supabaseAuthSubscription.unsubscribe();
                 }
+                // Supabase mantém a sessão no localStorage do navegador, permitindo restaurá-la após F5.
                 supabaseClient = window.supabase.createClient(url, key, {
-                    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true,
+                        flowType: 'pkce',
+                        storage: window.localStorage
+                    },
+                    realtime: { params: { eventsPerSecond: 10 } }
                 });
-                const authState = await supabaseClient.auth.getSession();
-                if (authState.error) throw authState.error;
-                if (supabaseAuthSubscription) supabaseAuthSubscription.unsubscribe();
+                const { data: authData, error: authError } = await supabaseClient.auth.getSession();
+                if (authError) throw authError;
+
                 const { data } = supabaseClient.auth.onAuthStateChange((event, session) => {
                     if (studentMode) return;
-                    // Deixa o callback de autenticação terminar antes de fazer novas chamadas Supabase.
+                    // O callback não deve iniciar chamadas Supabase dentro do próprio callback.
                     window.setTimeout(() => {
                         if (studentMode) return;
                         if (session) mostrarPainelProfessor(session);
-                        else mostrarGateProfessor();
+                        else if (event === 'SIGNED_OUT') mostrarGateProfessor('Sessão encerrada. Entre novamente para acessar o painel.');
                     }, 0);
                 });
                 supabaseAuthSubscription = data.subscription;
-                if (authState.data.session && !studentMode) await mostrarPainelProfessor(authState.data.session);
+
+                if (authData.session && !studentMode) await mostrarPainelProfessor(authData.session);
                 else if (!studentMode) mostrarGateProfessor('Conectado ao Supabase. Entre com seu e-mail e senha de professor.');
             } catch (error) {
                 console.error('Erro Supabase:', error);
@@ -1329,8 +1378,74 @@
             atualizarBadges();
         }
 
+        function obterConfiguracoesLocais() {
+            const valores = {};
+            CONFIG_CAMPOS_IDS.forEach(id => { const el = document.getElementById(id); if (el) valores[id] = el.value; });
+            return valores;
+        }
+
+        function restaurarConfiguracoesLocais() {
+            try {
+                const cfg = JSON.parse(localStorage.getItem('sys_configuracoes_professor') || '{}');
+                Object.entries(cfg).forEach(([id, valor]) => { const el = document.getElementById(id); if (el && valor !== undefined && valor !== null) el.value = valor; });
+            } catch (_) {}
+        }
+
+        function salvarConfiguracoesLocais() {
+            localStorage.setItem('sys_configuracoes_professor', JSON.stringify(obterConfiguracoesLocais()));
+            if (professorLogado) agendarSincronizacaoDadosProfessor();
+        }
+
+        function aplicarDadosProfessorNuvem(registro) {
+            if (!registro) return;
+            if (registro.cadastro_turmas && typeof registro.cadastro_turmas === 'object') {
+                cadastroTurmas = registro.cadastro_turmas;
+                localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+                const serieEl = document.getElementById('sel-serie-aluno');
+                const turmaEl = document.getElementById('sel-turma-aluno');
+                if (serieEl && turmaEl) alternarTurmaAluno();
+            }
+            if (registro.configuracoes && typeof registro.configuracoes === 'object') {
+                Object.entries(registro.configuracoes).forEach(([id, valor]) => { const el = document.getElementById(id); if (el && valor !== undefined && valor !== null) el.value = valor; });
+                localStorage.setItem('sys_configuracoes_professor', JSON.stringify(registro.configuracoes));
+            }
+            atualizarBadges();
+        }
+
+        function agendarSincronizacaoDadosProfessor() {
+            if (!professorLogado || !professorUidAtual) return;
+            localStorage.setItem('sys_dados_professor_sync_pendente', '1');
+            if (timerSyncProfessor) clearTimeout(timerSyncProfessor);
+            atualizarStatusSync('Salvando…', 'pendente');
+            timerSyncProfessor = setTimeout(() => sincronizarDadosProfessorNuvem().catch(error => {
+                console.error('Falha ao sincronizar dados do professor:', error);
+                atualizarStatusSync('Alterações pendentes — aguardando conexão', 'erro');
+            }), 500);
+        }
+
+        async function sincronizarDadosProfessorNuvem() {
+            if (!supabaseClient || !professorLogado || !professorUidAtual) return;
+            const registro = {
+                user_id: professorUidAtual,
+                cadastro_turmas: cadastroTurmas,
+                configuracoes: obterConfiguracoesLocais(),
+                updated_at: new Date().toISOString()
+            };
+            localStorage.setItem('sys_dados_professor_sync_pendente', '1');
+            const { error } = await supabaseClient.from('dados_professor').upsert(registro, { onConflict: 'user_id' });
+            if (error) throw error;
+            ultimaGravacaoDadosNuvem = Date.now();
+            localStorage.removeItem('sys_dados_professor_sync_pendente');
+            localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+            localStorage.setItem('sys_configuracoes_professor', JSON.stringify(registro.configuracoes));
+            dadosProfessorRemotosDisponiveis = true;
+            atualizarStatusSync('Sincronizado em todos os dispositivos', 'ok');
+        }
+
         async function carregarDadosProfessor() {
             if (!supabaseClient || !professorLogado) return;
+            if (carregandoDadosRemotos) { recarregarDadosRemotosPendente = true; return; }
+            carregandoDadosRemotos = true;
             try {
                 const [respostas, provas, questoes] = await Promise.all([
                     supabaseClient.from('respostas_avaliacoes').select('*').order('created_at', { ascending: false }),
@@ -1341,16 +1456,33 @@
                 if (provas.error) throw provas.error;
                 if (questoes.error) throw questoes.error;
                 await sincronizarBancoQuestoesComSupabase(questoes.data || []);
+
+                const perfil = await supabaseClient.from('dados_professor').select('*').eq('user_id', professorUidAtual).maybeSingle();
+                if (perfil.error) throw perfil.error;
+                const perfilExistiaNaNuvem = Boolean(perfil.data);
+                const possuiGravacaoLocalPendente = localStorage.getItem('sys_dados_professor_sync_pendente') === '1';
+                if (possuiGravacaoLocalPendente) {
+                    // Não sobrescreve um cadastro feito offline com uma versão remota mais antiga.
+                    await sincronizarDadosProfessorNuvem();
+                } else if (perfil.data) {
+                    dadosProfessorRemotosDisponiveis = true;
+                    aplicarDadosProfessorNuvem(perfil.data);
+                } else {
+                    // Primeira entrada neste projeto: envia os cadastros locais para a conta na nuvem.
+                    await sincronizarDadosProfessorNuvem();
+                }
+
                 bancoNotas = (respostas.data || []).map(n => ({
                     id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
                     anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
-                    disciplina: n.disciplina || '', acertos: n.acertos || `${n.acertos_num || 0}/${n.total_questoes || 0}`,
-                    nota: Number(n.nota || 0), origem: n.origem || 'Avaliação online',
+                    disciplina: n.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
+                    origem: n.origem || 'Avaliação online',
                     data: n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : '',
                     detalhes: n.detalhes || n.erros || []
                 }));
                 localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
-                const provasBanco = (provas.data || []).map(r => {
+
+                const todasProvasBanco = (provas.data || []).map(r => {
                     const prova = r.prova || {};
                     return {
                         ...prova,
@@ -1358,36 +1490,60 @@
                         bimestre: prova.bimestre || r.bimestre || '',
                         alunoSerie: prova.alunoSerie || String(r.serie || '').split(' - ')[0] || '',
                         alunoTurma: prova.alunoTurma || String(r.serie || '').split(' - ').slice(1).join(' - ') || '',
-                        studentToken: r.student_token,
-                        studentId: r.student_token
+                        studentToken: r.student_token, studentId: r.student_token,
+                        excluidaEm: r.excluida_em || null, expiraEm: r.expira_em || null
                     };
                 }).filter(p => p.questoes && p.questoes.length);
-                if (provasBanco.length) provasGeradas = provasBanco;
-                else {
+
+                // Se existe perfil ou prova remota, o estado remoto é a fonte de verdade (inclusive lista vazia após reset).
+                if (todasProvasBanco.length || perfilExistiaNaNuvem) {
+                    provasGeradas = todasProvasBanco.filter(p => !p.excluidaEm);
+                    provasLixeira = todasProvasBanco.filter(p => !!p.excluidaEm);
+                } else {
                     try {
                         provasGeradas = JSON.parse(localStorage.getItem('sys_provas_geradas') || '[]')
                             .filter(p => p.studentToken || /^[a-f0-9]{64}$/i.test(p.studentId || ''));
+                        if (provasGeradas.length) await persistirProvasNoSupabase();
                     } catch (_) { provasGeradas = []; }
                 }
-                if (provasGeradas.length) {
-                    renderizarBotoesFiltroTurmas();
-                    renderizarGridProvas();
-                    atualizarSelectScanner();
-                }
+                localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas));
+                renderizarBotoesFiltroTurmas();
+                renderizarGridProvas();
+                renderizarLixeiraProvas();
+                atualizarSelectScanner();
+                renderizarBancoNotas();
+                atualizarBadges();
+                atualizarStatusSync('Sincronizado em todos os dispositivos', 'ok');
             } catch (error) {
                 console.error('Falha ao carregar dados do Supabase:', error);
+                atualizarStatusSync('Falha ao sincronizar', 'erro');
                 const status = document.getElementById('teacher-auth-status');
-                if (status) status.textContent = 'Login realizado, mas houve falha ao carregar tabelas. Confira o SQL de configuração.';
-                try { bancoNotas = JSON.parse(localStorage.getItem('sys_avalia_notas') || '[]'); } catch (_) { bancoNotas = []; }
-                try { provasGeradas = JSON.parse(localStorage.getItem('sys_provas_geradas') || '[]'); } catch (_) { provasGeradas = []; }
+                if (status) status.textContent = 'Sessão ativa. A sincronização será retomada quando houver conexão. Detalhe: ' + (error.message || error);
+            } finally {
+                carregandoDadosRemotos = false;
+                if (recarregarDadosRemotosPendente) {
+                    recarregarDadosRemotosPendente = false;
+                    window.setTimeout(() => carregarDadosProfessor(), 500);
+                }
             }
+        }
+
+        function agendarAtualizacaoRemota() {
+            if (timerRefreshRealtime) clearTimeout(timerRefreshRealtime);
+            timerRefreshRealtime = setTimeout(() => carregarDadosProfessor(), 450);
         }
 
         function inscreverTempoReal() {
             if (!supabaseClient || !professorLogado) return;
             if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
-            realtimeChannel = supabaseClient.channel('realtime_respostas_professor')
+            realtimeChannel = supabaseClient.channel('sistema_avaliacao_sync_global')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'respostas_avaliacoes' }, payload => {
+                    if (payload.eventType === 'DELETE') {
+                        // Em DELETE o Realtime pode enviar apenas a chave primária; recarrega a tabela
+                        // para refletir corretamente exclusões individuais e o botão Zerar banco.
+                        agendarAtualizacaoRemota();
+                        return;
+                    }
                     const n = payload.new || {};
                     const registro = {
                         id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
@@ -1395,11 +1551,21 @@
                         disciplina: n.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
                         origem: n.origem || 'Supabase Realtime',
                         data: n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR'),
-                        detalhes: n.detalhes || n.erros || []
+                        detalhes: n.detalhes || []
                     };
                     salvarNotaNoBanco(registro);
+                    atualizarStatusSync('Notas sincronizadas', 'ok');
                 })
-                .subscribe();
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'provas_alunos' }, () => agendarAtualizacaoRemota())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'banco_questoes' }, () => agendarAtualizacaoRemota())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'dados_professor' }, payload => {
+                    if (localStorage.getItem('sys_dados_professor_sync_pendente') === '1') return;
+                    if (payload.new && payload.new.user_id === professorUidAtual) aplicarDadosProfessorNuvem(payload.new);
+                })
+                .subscribe(status => {
+                    if (status === 'SUBSCRIBED') atualizarStatusSync('Sincronização ativa', 'ok');
+                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') atualizarStatusSync('Reconectando nuvem…', 'pendente');
+                });
         }
 
         function alternarTurmaAluno() {
@@ -1426,6 +1592,7 @@
             localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
             document.getElementById('label-num-alunos-turma').textContent = `${lista.length} alunos`;
             atualizarBadges();
+            agendarSincronizacaoDadosProfessor();
         }
 
         function atualizarBadges() {
@@ -1633,12 +1800,14 @@
                 student_token: p.studentToken,
                 student_id: p.studentId,
                 aluno_nome: p.alunoName,
-                ano_letivo: anoLetivo,
+                ano_letivo: Number(p.anoLetivo || anoLetivo),
                 serie: `${p.alunoSerie} - ${p.alunoTurma}`,
                 bimestre: p.bimestre,
-                disciplina,
+                disciplina: p.disciplina || disciplina,
                 prova: p,
-                concluida: false
+                concluida: false,
+                excluida_em: null,
+                expira_em: null
             }));
             const { error } = await supabaseClient.from('provas_alunos').upsert(rows, { onConflict: 'student_token' });
             if (error) throw error;
@@ -1724,12 +1893,16 @@
         }
 
         function voltarSelecaoAnoProvas() {
+            exibindoLixeiraProvas = false;
+            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
             anoFiltroProvasSelecionado = null;
             turmaFiltroSelecionada = null;
             renderizarBotoesFiltroTurmas();
         }
 
         function voltarSelecaoTurmaProvas() {
+            exibindoLixeiraProvas = false;
+            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
             turmaFiltroSelecionada = null;
             renderizarBotoesFiltroTurmas();
         }
@@ -1841,6 +2014,8 @@
             if (!grid || !areaImpressao) return;
             grid.innerHTML = '';
             areaImpressao.innerHTML = '';
+            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
+            exibindoLixeiraProvas = false;
 
             const escola = document.getElementById('cfg-escola').value;
             const anoLetivo = document.getElementById('cfg-ano-letivo').value;
@@ -1879,6 +2054,7 @@
                         <div class="pt-2 space-y-2">
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link da avaliação</button>
+                            <button onclick="moverProvaParaLixeira('${safeToken}')" class="w-full bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold py-2 rounded-xl border border-amber-200"><i data-lucide="trash-2" class="w-3 h-3 inline mr-1"></i>Enviar avaliação para lixeira</button>
                         </div>
                     </div>`;
 
@@ -1952,6 +2128,96 @@
                 });
             }
             if (window.lucide) lucide.createIcons();
+        }
+
+        function abrirLixeiraProvas() {
+            exibindoLixeiraProvas = true;
+            document.getElementById('painel-selecao-turmas')?.classList.add('hidden');
+            document.getElementById('painel-provas-digitais')?.classList.add('hidden');
+            document.getElementById('grid-provas')?.classList.add('hidden');
+            document.getElementById('painel-lixeira-provas')?.classList.remove('hidden');
+            renderizarLixeiraProvas();
+        }
+
+        function fecharLixeiraProvas() {
+            exibindoLixeiraProvas = false;
+            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
+            document.getElementById('painel-selecao-turmas')?.classList.remove('hidden');
+            renderizarBotoesFiltroTurmas();
+        }
+
+        function renderizarLixeiraProvas() {
+            const lista = document.getElementById('lista-lixeira-provas');
+            const contador = document.getElementById('contador-lixeira-provas');
+            if (!lista) return;
+            const agora = Date.now();
+            provasLixeira = provasLixeira.filter(p => !p.expiraEm || new Date(p.expiraEm).getTime() > agora);
+            if (contador) contador.textContent = String(provasLixeira.length);
+            if (!provasLixeira.length) {
+                lista.innerHTML = '<p class="col-span-full text-sm text-slate-500 text-center py-8">A lixeira está vazia.</p>';
+                return;
+            }
+            lista.innerHTML = provasLixeira.map(p => {
+                const token = escapeHtml(p.studentToken || p.studentId || '');
+                const expira = p.expiraEm ? new Date(p.expiraEm).toLocaleString('pt-BR') : 'em até 15 dias';
+                const excluida = p.excluidaEm ? new Date(p.excluidaEm).toLocaleString('pt-BR') : '';
+                return `<article class="border border-amber-200 rounded-xl p-4 space-y-2 bg-amber-50/50">
+                    <div class="flex justify-between gap-2"><strong class="text-sm text-slate-900">${escapeHtml(p.alunoName || 'Aluno')}</strong><span class="text-[10px] text-amber-800">${escapeHtml(p.code || '')}</span></div>
+                    <p class="text-xs text-slate-600">${escapeHtml(p.alunoSerie || '')} • ${escapeHtml(p.alunoTurma || '')} • ${escapeHtml(p.bimestre || '')}</p>
+                    <p class="text-[11px] text-slate-500">Enviada à lixeira: ${escapeHtml(excluida)}<br>Exclusão automática após: ${escapeHtml(expira)}</p>
+                    <div class="grid grid-cols-2 gap-2"><button onclick="restaurarProvaDaLixeira('${token}')" class="rounded-lg bg-emerald-600 text-white text-xs font-bold py-2">Restaurar</button><button onclick="excluirProvaDefinitivamente('${token}')" class="rounded-lg bg-rose-700 text-white text-xs font-bold py-2">Excluir agora</button></div>
+                </article>`;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function moverProvaParaLixeira(token) {
+            if (!professorLogado || !supabaseClient) return alert('Entre como professor para enviar avaliações à lixeira.');
+            const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === token);
+            if (!prova) return;
+            if (!confirm(`Enviar a avaliação de ${prova.alunoName} para a lixeira? Ela poderá ser restaurada durante 15 dias.`)) return;
+            const excluidaEm = new Date();
+            const expiraEm = new Date(excluidaEm.getTime() + 15 * 24 * 60 * 60 * 1000);
+            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: excluidaEm.toISOString(), expira_em: expiraEm.toISOString() }).eq('student_token', token).is('excluida_em', null);
+            if (error) return alert('Não foi possível mover a avaliação: ' + error.message);
+            prova.excluidaEm = excluidaEm.toISOString(); prova.expiraEm = expiraEm.toISOString();
+            provasGeradas = provasGeradas.filter(p => (p.studentToken || p.studentId) !== token);
+            provasLixeira.push(prova);
+            localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas));
+            renderizarBotoesFiltroTurmas(); renderizarGridProvas(); atualizarSelectScanner();
+            abrirLixeiraProvas();
+            renderizarLixeiraProvas();
+            atualizarStatusSync('Avaliação arquivada', 'ok');
+        }
+
+        async function restaurarProvaDaLixeira(token) {
+            if (!professorLogado || !supabaseClient) return;
+            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: null, expira_em: null }).eq('student_token', token);
+            if (error) return alert('Não foi possível restaurar a avaliação: ' + error.message);
+            const prova = provasLixeira.find(p => (p.studentToken || p.studentId) === token);
+            if (prova) { prova.excluidaEm = null; prova.expiraEm = null; provasGeradas.push(prova); }
+            provasLixeira = provasLixeira.filter(p => (p.studentToken || p.studentId) !== token);
+            localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas));
+            renderizarLixeiraProvas(); renderizarBotoesFiltroTurmas(); atualizarSelectScanner();
+            atualizarStatusSync('Avaliação restaurada', 'ok');
+        }
+
+        async function excluirProvaDefinitivamente(token) {
+            if (!professorLogado || !supabaseClient) return;
+            if (!confirm('Excluir definitivamente esta avaliação? Esta ação não poderá ser desfeita.')) return;
+            const { error } = await supabaseClient.from('provas_alunos').delete().eq('student_token', token);
+            if (error) return alert('Não foi possível excluir: ' + error.message);
+            provasLixeira = provasLixeira.filter(p => (p.studentToken || p.studentId) !== token);
+            renderizarLixeiraProvas(); atualizarStatusSync('Avaliação excluída', 'ok');
+        }
+
+        async function expurgarLixeiraExpirada() {
+            if (!supabaseClient || !professorLogado) return;
+            const agora = new Date().toISOString();
+            const { error } = await supabaseClient.from('provas_alunos').delete().not('excluida_em', 'is', null).lte('expira_em', agora);
+            if (error) console.warn('A limpeza agendada da lixeira será executada pelo Supabase Cron:', error.message);
+            provasLixeira = provasLixeira.filter(p => !p.expiraEm || new Date(p.expiraEm).getTime() > Date.now());
+            renderizarLixeiraProvas();
         }
 
         function exportarProvasWord() {
@@ -2281,13 +2547,29 @@
             image.src = URL.createObjectURL(file);
         }
 
-        function aguardarOpenCV(timeoutMs = 25000) {
+        function aguardarOpenCV(timeoutMs = 45000) {
             return new Promise((resolve, reject) => {
                 const inicio = Date.now();
+                let resolvendoPromise = false;
                 const verificar = () => {
-                    if (window.cv && window.cv.Mat && window.cv.findContours) return resolve(window.cv);
-                    if (Date.now() - inicio > timeoutMs) return reject(new Error('O módulo de visão computacional ainda não carregou. Verifique a conexão com a internet ou use a conferência manual.'));
-                    window.setTimeout(verificar, 150);
+                    let instancia = window.cv;
+                    if (instancia && typeof instancia.then === 'function') {
+                        if (!resolvendoPromise) {
+                            resolvendoPromise = true;
+                            instancia.then(cvPronto => {
+                                window.cv = cvPronto;
+                                verificar();
+                            }).catch(reject);
+                        }
+                        return;
+                    }
+                    if (instancia && instancia.Mat && instancia.findContours && instancia.getPerspectiveTransform && instancia.warpPerspective) {
+                        return resolve(instancia);
+                    }
+                    if (Date.now() - inicio > timeoutMs) {
+                        return reject(new Error('O leitor de imagem não terminou de carregar. Atualize a página com internet ativa e tente novamente.'));
+                    }
+                    window.setTimeout(verificar, 200);
                 };
                 verificar();
             });
@@ -2321,39 +2603,49 @@
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
                 cv.threshold(gray, bin, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-                cv.findContours(bin, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                cv.findContours(bin, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-                const minArea = Math.max(90, src.cols * src.rows * 0.000035); // filtra ruído pequeno e contornos das letras
+                const minArea = Math.max(70, src.cols * src.rows * 0.000012);
+                // Marcadores do impresso medem 7 mm. Na foto, ocupam aproximadamente 1,5%–10%
+                // da largura; o retângulo externo da tabela é muito maior e deve ser ignorado.
+                const ladoMinimoMarcador = Math.max(12, src.cols * 0.012);
+                const ladoMaximoMarcador = src.cols * 0.10;
                 for (let i = 0; i < contours.size(); i++) {
                     const contour = contours.get(i);
                     const area = Math.abs(cv.contourArea(contour));
                     if (area < minArea) { contour.delete(); continue; }
-                    const perimetro = cv.arcLength(contour, true);
-                    const approx = new cv.Mat();
-                    cv.approxPolyDP(contour, approx, Math.max(2, perimetro * 0.035), true);
-                    if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                        const rect = cv.boundingRect(approx);
-                        const razao = rect.width / Math.max(1, rect.height);
-                        const preenchimento = area / Math.max(1, rect.width * rect.height);
-                        if (rect.width >= 12 && rect.height >= 12 && razao >= 0.62 && razao <= 1.15 && preenchimento >= 0.86) {
-                            const pontos = [];
-                            for (let j = 0; j < approx.data32S.length; j += 2) {
-                                pontos.push({ x: approx.data32S[j], y: approx.data32S[j + 1] });
-                            }
-                            candidatos.push({
-                                area, cx: rect.x + rect.width / 2, cy: rect.y + rect.height / 2,
-                                pontos
-                            });
-                        }
+                    const rect = cv.boundingRect(contour);
+                    const razao = rect.width / Math.max(1, rect.height);
+                    const preenchimento = area / Math.max(1, rect.width * rect.height);
+                    const ladoMedio = (rect.width + rect.height) / 2;
+                    // Rejeita a moldura externa da tabela, linhas de texto, círculos e blocos grandes.
+                    // Os quatro marcadores de canto são quadrados sólidos, pequenos e de tamanho semelhante.
+                    if (rect.width >= ladoMinimoMarcador && rect.height >= ladoMinimoMarcador &&
+                        ladoMedio <= ladoMaximoMarcador && razao >= 0.78 && razao <= 1.22 && preenchimento >= 0.76) {
+                        candidatos.push({
+                            area, cx: rect.x + rect.width / 2, cy: rect.y + rect.height / 2,
+                            rect, lado: ladoMedio, pontos: [
+                                { x: rect.x, y: rect.y },
+                                { x: rect.x + rect.width, y: rect.y },
+                                { x: rect.x + rect.width, y: rect.y + rect.height },
+                                { x: rect.x, y: rect.y + rect.height }
+                            ]
+                        });
                     }
-                    approx.delete();
                     contour.delete();
                 }
 
-                // Seleciona os quatro quadrados sólidos de maior área. Como o quadro OMR
-                // fica abaixo das questões, seus marcadores podem estar todos na metade inferior
-                // da foto A4; por isso não usamos os quadrantes da fotografia inteira.
-                const maiores = candidatos.sort((a,b) => b.area-a.area).slice(0, 4);
+                // Descarta objetos pequenos (ex.: bolhas totalmente preenchidas) e escolhe quatro
+                // quadrados de tamanho próximo ao padrão dos marcadores de 7 mm.
+                candidatos.sort((a,b) => b.area-a.area);
+                const maiores = candidatos.slice(0, 4);
+                if (maiores.length === 4) {
+                    const ladoMediano = maiores.map(c => c.lado).sort((a,b) => a-b)[2];
+                    const consistentes = maiores.filter(c => c.lado >= ladoMediano * 0.55 && c.lado <= ladoMediano * 1.55);
+                    if (consistentes.length < 4) {
+                        throw new Error('Os quatro marcadores não foram reconhecidos com tamanho semelhante. Enquadre toda a folha e evite cortes.');
+                    }
+                }
                 if (maiores.length !== 4) {
                     throw new Error('Não encontrei quatro marcadores. Reimprima a folha no modelo OMR novo e enquadre os quatro quadrados pretos.');
                 }
@@ -2380,6 +2672,7 @@
         }
 
         function calcularEscuridaoBolha(imageData, largura, xCentro, yCentro) {
+            // A amostra fica no interior da bolha (4,4 mm); a borda impressa fica fora do raio.
             const raio = 12;
             let pixels = 0, escuros = 0, soma = 0;
             for (let y = Math.max(0, Math.floor(yCentro - raio)); y < Math.min(imageData.height, Math.ceil(yCentro + raio)); y++) {
@@ -2389,11 +2682,12 @@
                     const idx = (y * largura + x) * 4;
                     const cinza = (imageData.data[idx] * 0.299) + (imageData.data[idx + 1] * 0.587) + (imageData.data[idx + 2] * 0.114);
                     soma += cinza;
-                    if (cinza < 170) escuros++;
+                    if (cinza < 205) escuros++;
                     pixels++;
                 }
             }
-            return pixels ? { ratio: escuros / pixels, media: soma / pixels } : { ratio: 0, media: 255 };
+            const media = pixels ? soma / pixels : 255;
+            return { ratio: pixels ? escuros / pixels : 0, media };
         }
 
         function lerBolhasOMR(cv, imagemCanvas, quantidadeQuestoes) {
@@ -2441,12 +2735,12 @@
                     const primeira = ordenadas[0], segunda = ordenadas[1];
                     let resposta = '';
                     let estado = 'em branco';
-                    if (primeira.ratio >= 0.17 && segunda.ratio >= 0.13 && (primeira.ratio - segunda.ratio) < 0.045) {
+                    if (primeira.ratio >= 0.15 && segunda.ratio >= 0.11 && (primeira.ratio - segunda.ratio) < 0.045) {
                         estado = 'dupla/ambígua';
-                    } else if (primeira.ratio >= 0.17 && (primeira.ratio - segunda.ratio) >= 0.035) {
+                    } else if (primeira.ratio >= 0.15 && (primeira.ratio - segunda.ratio) >= 0.04) {
                         resposta = primeira.letra;
                         estado = 'detectada';
-                    } else if (primeira.ratio >= 0.12) {
+                    } else if (primeira.ratio >= 0.08) {
                         estado = 'marca fraca — conferir';
                     }
                     answers[String(numeroQuestao)] = resposta;
@@ -2605,11 +2899,44 @@
             renderizarBancoNotas();
         }
 
-        function limparBancoNotas() {
-            if (confirm("Deseja apagar o histórico local?")) {
+        function abrirConfirmacaoZerarBanco() {
+            if (!professorLogado) return alert('Entre como professor para zerar os dados de teste.');
+            document.getElementById('modal-zerar-banco').classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function fecharConfirmacaoZerarBanco() {
+            document.getElementById('modal-zerar-banco').classList.add('hidden');
+        }
+
+        async function executarZerarBancoDados() {
+            if (!professorLogado || !supabaseClient) return alert('A sessão do professor não está ativa.');
+            const botao = document.getElementById('btn-confirmar-zerar');
+            botao.disabled = true; botao.textContent = 'Limpando dados…';
+            try {
+                const { data, error } = await supabaseClient.rpc('zerar_dados_teste_avaliacao');
+                if (error) throw error;
+                if (data && data.erro) throw new Error(data.erro);
                 bancoNotas = [];
-                localStorage.removeItem('sys_avalia_notas');
-                renderizarBancoNotas();
+                provasGeradas = [];
+                provasLixeira = [];
+                cadastroTurmas = {};
+                localStorage.setItem('sys_avalia_notas', '[]');
+                localStorage.setItem('sys_provas_geradas', '[]');
+                localStorage.setItem('sys_cadastro_turmas', '{}');
+                localStorage.removeItem('sys_dados_professor_sync_pendente');
+                localStorage.setItem('sys_provas_migradas_v1', '1');
+                const campoLista = document.getElementById('lista-alunos-input');
+                if (campoLista) campoLista.value = '';
+                fecharConfirmacaoZerarBanco();
+                alternarTurmaAluno();
+                renderizarBancoNotas(); renderizarBotoesFiltroTurmas(); renderizarGridProvas(); renderizarLixeiraProvas(); atualizarSelectScanner(); atualizarBadges();
+                atualizarStatusSync('Dados de teste zerados', 'ok');
+                alert('Dados de teste removidos com sucesso. O banco de questões e as imagens foram preservados.');
+            } catch (error) {
+                alert('Não foi possível zerar os dados na nuvem: ' + (error.message || error) + '\nConfira se executou a migração SQL atualizada.');
+            } finally {
+                botao.disabled = false; botao.textContent = 'Sim, zerar banco de dados';
             }
         }
 
@@ -2719,12 +3046,51 @@
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('studentId') || urlParams.get('token');
             if (token) {
+                studentMode = true;
                 await entrarModoAluno(token);
                 return;
             }
-            // Sem token, o acesso administrativo permanece atrás do login do Supabase.
-            mostrarGateProfessor();
+            // Sem token de aluno, restaura a sessão existente; não chama a tela de login por cima do painel.
+            if (supabaseClient) {
+                const { data, error } = await supabaseClient.auth.getSession();
+                if (!error && data.session) {
+                    await mostrarPainelProfessor(data.session);
+                    return;
+                }
+            }
+            mostrarGateProfessor('Entre com sua conta de professor. A sessão será mantida após atualizar a página.');
         }
+
+        // PWA: instala como aplicativo quando o navegador oferece suporte.
+        function registrarPWA() {
+            if ('serviceWorker' in navigator && location.protocol === 'https:') {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(() => console.info('Aplicativo pronto para instalação.'))
+                    .catch(err => console.warn('Não foi possível registrar o modo offline:', err));
+            }
+            window.addEventListener('beforeinstallprompt', event => {
+                event.preventDefault();
+                eventoInstalacaoPWA = event;
+                const btn = document.getElementById('btn-instalar-app');
+                if (btn) { btn.classList.remove('hidden'); btn.querySelector('span').textContent = 'Instalar app'; }
+            });
+            window.addEventListener('appinstalled', () => {
+                eventoInstalacaoPWA = null;
+                const btn = document.getElementById('btn-instalar-app');
+                if (btn) btn.querySelector('span').textContent = 'App instalado';
+            });
+        }
+
+        async function instalarAplicativo() {
+            if (eventoInstalacaoPWA) {
+                eventoInstalacaoPWA.prompt();
+                await eventoInstalacaoPWA.userChoice;
+                eventoInstalacaoPWA = null;
+                return;
+            }
+            alert('Para instalar no Android: abra o menu ⋮ do Chrome e escolha “Instalar app” ou “Adicionar à tela inicial”. O Chrome oferece “Instalar app” ou “Adicionar à tela inicial”. Em aparelhos compatíveis, o Android cria um WebAPK; o site não pode inserir um botão personalizado chamado “Criar APK” no menu do navegador.');
+        }
+
     </script>
 </body>
 </html>
