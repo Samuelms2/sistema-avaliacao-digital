@@ -1,0 +1,48 @@
+{
+  "id": "https://samuelms2.github.io/sistema-avaliacao-digital/",
+  "name": "Sistema de Avaliação Digital",
+  "short_name": "AvaliaDigital",
+  "description": "Sistema de avaliações, provas, notas e correção óptica para professores.",
+  "start_url": "https://samuelms2.github.io/sistema-avaliacao-digital/",
+  "scope": "https://samuelms2.github.io/sistema-avaliacao-digital/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "lang": "pt-BR",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
