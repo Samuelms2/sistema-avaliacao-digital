@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE AVALIAÇÃO DIGITAL</title>
-    <!-- V16: resultado final de avaliação também exibido no link do aluno após a conclusão. -->
+    <!-- V18: avaliação adaptada PCD e controle de saídas da página do aluno; recursos anteriores preservados. -->
     
     <!-- PWA: arquivos separados são necessários para instalação e service worker no GitHub Pages -->
     <link rel="manifest" href="./manifest.webmanifest">
@@ -23,22 +23,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FileSaver.js para Download de Arquivos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- Leitor OMR: alinhamento de folha, leitura de bolhas e QR do aluno -->
-    <script>
-        // OpenCV.js consulta Module durante a carga do WebAssembly.
-        window.__opencvRuntimeReady = false;
-        window.__opencvLoadError = null;
-        window.Module = window.Module || {};
-        window.Module.onRuntimeInitialized = function () {
-            window.__opencvRuntimeReady = true;
-            console.info('OpenCV.js pronto para leitura OMR.');
-        };
-    </script>
-    <script async src="https://docs.opencv.org/4.x/opencv.js"
-        onload="window.__opencvScriptLoaded = true"
-        onerror="window.__opencvLoadError = 'Não foi possível baixar a biblioteca OpenCV.js. Verifique a internet ou tente novamente.'"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
     <style>
         @page {
@@ -46,7 +30,7 @@
             margin: 8mm;
         }
 
-        /* Impressão: Times New Roman 11, questões em duas colunas e OMR abaixo. */
+        /* Impressão: Times New Roman 11, questões em duas colunas e gabarito manual abaixo. */
         @media print {
             html, body {
                 background: #fff !important;
@@ -124,36 +108,7 @@
                 break-inside: avoid !important;
                 clear: both !important;
             }
-            .omr-scan-region {
-                position: relative !important;
-                display: block !important;
-                width: 160mm !important;
-                max-width: 160mm !important;
-                box-sizing: border-box !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #fff !important;
-                color: #000 !important;
-                border: 0 !important;
-                overflow: visible !important;
-                font-family: "Times New Roman", Times, serif !important;
-                print-color-adjust: exact !important;
-                -webkit-print-color-adjust: exact !important;
-            }
-            .omr-marker {
-                position: absolute !important;
-                display: block !important;
-                width: 7mm !important;
-                height: 7mm !important;
-                background: transparent !important;
-                border: 0 !important;
-                overflow: visible !important;
-            }
-            .omr-tl { top: 0 !important; left: 0 !important; }
-            .omr-tr { top: 0 !important; right: 0 !important; }
-            .omr-bl { bottom: 0 !important; left: 0 !important; }
-            .omr-br { bottom: 0 !important; right: 0 !important; }
-            .omr-sheet-heading {
+            .gabarito-sheet-heading {
                 position: absolute !important;
                 top: 1.4mm !important;
                 left: 9mm !important;
@@ -163,31 +118,8 @@
                 font-size: 8.5pt !important;
                 line-height: 1.12 !important;
             }
-            .omr-qr {
-                position: absolute !important;
-                top: 1mm !important;
-                right: 8mm !important;
-                width: 21mm !important;
-                height: 21mm !important;
-                box-sizing: border-box !important;
-                padding: 1mm !important;
-                background: #fff !important;
-            }
-            .omr-qr canvas, .omr-qr img {
-                display: block !important;
-                width: 19mm !important;
-                height: 19mm !important;
-                image-rendering: pixelated !important;
-            }
-            .omr-token-fallback {
-                position: absolute !important;
-                top: 3mm !important;
-                right: 9mm !important;
-                width: 12mm !important;
-                font-size: 5pt !important;
-                word-break: break-all !important;
-            }
-            .omr-table {
+            .folha-respostas-manual { position: relative; border: 1px solid #111; padding: 4mm; margin-top: 3mm; page-break-inside: avoid; }
+        .gabarito-marcacao-table {
                 position: absolute !important;
                 top: 16mm !important;
                 left: 44mm !important;
@@ -201,7 +133,7 @@
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
             }
-            .omr-table th, .omr-table td {
+            .gabarito-marcacao-table th, .gabarito-marcacao-table td {
                 height: 6.5mm !important;
                 padding: 0 !important;
                 margin: 0 !important;
@@ -212,8 +144,8 @@
                 font-size: 11pt !important;
                 line-height: 1 !important;
             }
-            .omr-table thead th { height: 5.5mm !important; font-weight: bold !important; }
-            .omr-bubble {
+            .gabarito-marcacao-table thead th { height: 5.5mm !important; font-weight: bold !important; }
+            .gabarito-bolha {
                 display: inline-block !important;
                 box-sizing: border-box !important;
                 width: 4.4mm !important;
@@ -222,7 +154,7 @@
                 border-radius: 50% !important;
                 background: #fff !important;
             }
-            .omr-question-number { font-weight: bold !important; }
+            .gabarito-numero { font-weight: bold !important; }
             img { max-width: 100% !important; }
         }
 
@@ -247,52 +179,42 @@
             break-inside: avoid;
         }
         .folha-gabarito { margin-top: 4mm; }
-        .omr-scan-region {
-            position: relative;
-            width: 160mm;
-            max-width: 100%;
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            background: #fff;
-            color: #000;
-            font-family: "Times New Roman", Times, serif;
-        }
-        .omr-marker { position: absolute; width: 7mm; height: 7mm; background: transparent; }
-        .omr-tl { top: 0; left: 0; }
-        .omr-tr { top: 0; right: 0; }
-        .omr-bl { bottom: 0; left: 0; }
-        .omr-br { bottom: 0; right: 0; }
-        .omr-sheet-heading {
+        .gabarito-sheet-heading {
             position: absolute; top: 1.4mm; left: 9mm; right: 32mm;
             height: 9mm; overflow: hidden; font-size: 8.5pt; line-height: 1.12;
         }
-        .omr-qr {
-            position: absolute; top: 1mm; right: 8mm; width: 21mm; height: 21mm;
-            box-sizing: border-box; padding: 1mm; background: #fff; overflow: hidden;
-        }
-        .omr-qr canvas, .omr-qr img {
-            width: 19mm !important; height: 19mm !important; display: block !important;
-            image-rendering: pixelated; background: #fff;
-        }
-        .omr-token-fallback { position: absolute; top: 3mm; right: 9mm; width: 12mm; font-size: 5pt; word-break: break-all; }
-        .omr-table {
+        .gabarito-marcacao-table {
             position: absolute; top: 16mm; left: 44mm; width: 72mm;
             border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;
             color: #000; background: #fff; font-family: "Times New Roman", Times, serif; font-size: 11pt;
         }
-        .omr-table th, .omr-table td {
+        .gabarito-marcacao-table th, .gabarito-marcacao-table td {
             height: 6.5mm; padding: 0; margin: 0; border: .35pt solid #000;
             text-align: center; vertical-align: middle; font-size: 11pt; line-height: 1;
         }
-        .omr-table thead th { height: 5.5mm; font-weight: bold; }
-        .omr-bubble { display: inline-block; box-sizing: border-box; width: 4.4mm; height: 4.4mm; border: .45pt solid #000; border-radius: 50%; background: #fff; }
-        .omr-question-number { font-weight: bold; }
+        .gabarito-marcacao-table thead th { height: 5.5mm; font-weight: bold; }
+        .gabarito-bolha { display: inline-block; box-sizing: border-box; width: 4.4mm; height: 4.4mm; border: .45pt solid #000; border-radius: 50%; background: #fff; }
+        .gabarito-numero { font-weight: bold; }
         .student-mode { background: #f8fafc; min-height: 100vh; }
         .student-question { border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 14px; background: #fff; }
         .student-option { display: flex; align-items: flex-start; gap: 9px; padding: 8px; border-radius: 8px; cursor: pointer; }
         .student-option:hover { background: #f1f5f9; }
         .teacher-auth-card { width: min(460px, calc(100% - 32px)); }
+        /* Preferências de acessibilidade aplicadas somente às avaliações adaptadas. */
+        body.pcd-fonte-grande #student-exam-content { font-size: 1.15rem; }
+        body.pcd-fonte-muito-grande #student-exam-content { font-size: 1.32rem; }
+        body.pcd-fonte-grande .student-question, body.pcd-fonte-muito-grande .student-question { line-height: 1.65; }
+        body.pcd-alto-contraste { background: #000 !important; color: #fff !important; }
+        body.pcd-alto-contraste #student-exam-content { background: #000 !important; color: #fff !important; border: 2px solid #fff !important; }
+        body.pcd-alto-contraste .student-question { background: #050505 !important; color: #fff !important; border: 2px solid #fff !important; }
+        body.pcd-alto-contraste .student-question p, body.pcd-alto-contraste .student-option, body.pcd-alto-contraste h1 { color: #fff !important; }
+        body.pcd-alto-contraste .student-option:hover { background: #333 !important; }
+        body.pcd-espacamento .student-question { padding: 1.5rem !important; margin-bottom: 1.35rem !important; }
+        body.pcd-espacamento .student-option { padding: 0.85rem !important; gap: 1rem !important; line-height: 1.7 !important; }
+        .student-accessibility-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .6rem; border-radius:999px; background:#e0e7ff; color:#3730a3; font-size:.72rem; font-weight:700; }
+        .pcd-student-check { display:flex; align-items:center; gap:.6rem; border:1px solid #e2e8f0; border-radius:.65rem; padding:.65rem; background:#fff; }
+        .pcd-student-check:has(input:checked) { border-color:#4f46e5; background:#eef2ff; }
+        .student-option:focus-within { outline:3px solid #2563eb; outline-offset:2px; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen pb-12">
@@ -311,7 +233,17 @@
                 <button id="teacher-login-button" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl p-3 text-sm">Entrar no sistema</button>
             </form>
             <p id="teacher-auth-status" class="text-xs text-center text-slate-500" role="status">Configure e conecte o Supabase para acessar o painel.</p>
-            <p class="text-[11px] leading-relaxed text-slate-400">A conta do professor deve ser criada previamente em Authentication → Users, no painel do Supabase. O link individual do aluno não exige login e não exibe esta área administrativa.</p>
+            <details class="border border-slate-200 rounded-xl p-3">
+                <summary class="cursor-pointer text-xs font-bold text-indigo-700">Sou colega e preciso criar meu acesso</summary>
+                <form id="teacher-signup-form" onsubmit="cadastrarContaProfessor(event)" class="space-y-2 mt-3">
+                    <input id="teacher-signup-name" type="text" required maxlength="120" placeholder="Nome completo" class="w-full border rounded-lg p-2.5 text-sm">
+                    <input id="teacher-signup-email" type="email" required autocomplete="email" placeholder="E-mail profissional" class="w-full border rounded-lg p-2.5 text-sm">
+                    <input id="teacher-signup-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Crie sua senha (mínimo 8 caracteres)" class="w-full border rounded-lg p-2.5 text-sm">
+                    <button class="w-full bg-slate-800 text-white font-bold rounded-lg p-2.5 text-xs" type="submit">Criar conta e solicitar aprovação</button>
+                </form>
+                <p class="text-[10px] text-slate-500 mt-2">Cada colega usa seu próprio e-mail e senha. O administrador aprova o pedido antes do primeiro acesso ao painel.</p>
+            </details>
+            <p class="text-[11px] leading-relaxed text-slate-400">O acesso dos alunos continua sendo feito pelo link individual da avaliação. As contas de professores são individuais e não compartilham senhas.</p>
         </div>
     </section>
 
@@ -331,7 +263,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight">SISTEMA DE AVALIAÇÃO DIGITAL</h1>
-                    <p class="text-xs text-indigo-200">Turmas Separadas • Banco por Temas • Correção Digital</p>
+                    <p class="text-xs text-indigo-200">Ambiente colaborativo • Espaços individuais • Avaliação Digital</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 text-xs mt-2 sm:mt-0">
@@ -370,13 +302,17 @@
                     <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
                     <span>4. Provas & Links por Turma</span>
                 </button>
-                <button onclick="setTab('tab-scanner')" id="btn-tab-scanner" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
-                    <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
-                    <span>5. Leitor Óptico (Câmera)</span>
-                </button>
                 <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
-                    <span>6. Notas em Tempo Real</span>
+                    <span>5. Notas em Tempo Real</span>
+                </button>
+                <button onclick="setTab('tab-sharing')" id="btn-tab-sharing" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="share-2" class="w-4 h-4 text-cyan-300"></i>
+                    <span>6. Meus Compartilhamentos</span>
+                </button>
+                <button onclick="setTab('tab-team')" id="btn-tab-team" class="tab-btn hidden flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
+                    <i data-lucide="users-round" class="w-4 h-4 text-amber-300"></i>
+                    <span>7. Administração da Equipe</span>
                 </button>
             </div>
         </nav>
@@ -527,9 +463,9 @@
                             </div>
                         </div>
 
-                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center text-xs">
-                            <span class="font-bold text-indigo-900" id="label-turma-ativa">2º Ano Médio - Turma A</span>
-                            <span id="label-num-alunos-turma" class="bg-indigo-600 text-white font-semibold px-2.5 py-0.5 rounded-full text-[11px]">0 alunos</span>
+                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex flex-wrap gap-2 justify-between items-center text-xs">
+                            <div class="flex flex-wrap gap-2 items-center"><span class="font-bold text-indigo-900" id="label-turma-ativa">2º Ano Médio - Turma A</span><span id="label-num-alunos-turma" class="bg-indigo-600 text-white font-semibold px-2.5 py-0.5 rounded-full text-[11px]">0 alunos</span></div>
+                            <button type="button" id="btn-compartilhar-turma" onclick="compartilharTurmaAtiva()" class="px-3 py-1.5 rounded-lg bg-indigo-700 text-white font-bold text-[11px] hover:bg-indigo-800">Compartilhar turma</button>
                         </div>
 
                         <p class="text-xs text-slate-500">Nome dos alunos (um por linha):</p>
@@ -669,10 +605,16 @@
                         <h3 class="font-bold text-slate-800 text-lg">Banco de Questões por Temas</h3>
                         <p class="text-xs text-slate-500">Selecione o tema desejado ou marque questões específicas para montar a avaliação</p>
                     </div>
-                    <button onclick="gerarProvasSelecionadas()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl shadow flex items-center space-x-2 transition">
-                        <i data-lucide="sparkles" class="w-4 h-4"></i>
-                        <span>Gerar Prova com Questões Selecionadas</span>
-                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="gerarProvasSelecionadas()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl shadow flex items-center space-x-2 transition">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Gerar Prova com Questões Selecionadas</span>
+                        </button>
+                        <button type="button" onclick="abrirModalAvaliacaoPCD()" class="bg-violet-700 hover:bg-violet-800 text-white text-xs font-bold px-5 py-3 rounded-xl shadow flex items-center space-x-2 transition">
+                            <i data-lucide="accessibility" class="w-4 h-4"></i>
+                            <span>Criar avaliação adaptada para PCD</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
@@ -747,63 +689,7 @@
             </div>
         </section>
 
-        <!-- TAB 5: LEITOR ÓPTICO OMR POR CÂMERA -->
-        <section id="tab-scanner" class="tab-content hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
-                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
-                        <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl"><i data-lucide="scan-line" class="w-5 h-5"></i></div>
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-base">Leitor Óptico OMR — câmera do celular</h3>
-                            <p class="text-xs text-slate-500">Alinhamento por quatro marcadores, leitura das bolhas e conferência automática.</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Selecione o estudante</label>
-                        <select id="scanner-select-aluno" class="w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none"></select>
-                    </div>
-
-                    <div class="relative bg-slate-950 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center border-4 border-slate-800 shadow-inner">
-                        <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-contain hidden"></video>
-                        <div id="webcam-placeholder" class="text-center p-6 space-y-3">
-                            <i data-lucide="scan" class="w-10 h-10 text-emerald-400 mx-auto opacity-80"></i>
-                            <p class="text-sm text-slate-200 font-semibold">Enquadre a folha de respostas inteira</p>
-                            <p class="text-xs text-slate-400">Os quatro quadrados pretos ao redor da grade devem aparecer na imagem. Use a folha OMR impressa por esta versão do sistema.</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button onclick="alternarCamera()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i><span id="btn-camera-text">Ligar câmera traseira</span>
-                        </button>
-                        <label class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold py-3 rounded-xl shadow-sm flex items-center justify-center space-x-2 cursor-pointer">
-                            <i data-lucide="image" class="w-4 h-4"></i><span>Enviar foto da galeria</span>
-                            <input id="scanner-photo-input" type="file" accept="image/*" capture="environment" class="hidden" onchange="carregarFotoScanner(event)">
-                        </label>
-                    </div>
-
-                    <button onclick="processarLeituraOptica()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2 transition">
-                        <i data-lucide="scan-eye" class="w-4 h-4"></i><span>Capturar e ler gabarito</span>
-                    </button>
-                    <p id="scanner-status" class="text-xs text-slate-500 text-center" aria-live="polite">Leitor OMR: reimprima a folha nesta versão, enquadre a folha inteira e aguarde o OpenCV carregar. Até 20 questões por folha.</p>
-                    <canvas id="scanner-work-canvas" class="hidden"></canvas>
-                </div>
-
-                <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3 mb-4">Resultado da leitura OMR</h3>
-                    <div id="resultado-scanner-container">
-                        <div class="text-center py-16 text-slate-400">
-                            <i data-lucide="scan-line" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
-                            <p class="text-sm font-medium">Nenhuma folha processada ainda.</p>
-                            <p class="text-xs mt-2">Após a leitura, confira respostas duplas ou de baixa confiança antes de salvar a nota.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 6: NOTAS EM TEMPO REAL E HISTÓRICO -->
+        <!-- TAB 5: NOTAS EM TEMPO REAL E HISTÓRICO -->
         <section id="tab-database" class="tab-content hidden">
             <div class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex justify-between items-center">
@@ -864,6 +750,7 @@
                                     <th class="px-6 py-3.5">Acertos</th>
                                     <th class="px-6 py-3.5">Nota Final</th>
                                     <th class="px-6 py-3.5">Origem / Hora</th>
+                                    <th class="px-6 py-3.5">Compartilhar</th>
                                 </tr>
                             </thead>
                             <tbody id="tabela-notas-body" class="divide-y divide-slate-100"></tbody>
@@ -872,6 +759,103 @@
                 </div>
             </div>
         </section>
+
+        <!-- TAB 6: EQUIPE E COMPARTILHAMENTO INTELIGENTE -->
+        <section id="tab-team" class="tab-content hidden">
+            <div class="space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><h2 class="text-lg font-bold text-slate-900">Equipe de professores</h2><p class="text-xs text-slate-500">Aprove solicitações, gerencie papéis e mantenha contas individuais.</p></div>
+                        <button type="button" onclick="carregarEquipeAdmin()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">Atualizar equipe</button>
+                    </div>
+                    <div id="admin-conta-resumo" class="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-sm text-indigo-900">Samuel Martins de Sousa — Administrador e Professor</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
+                    <h3 class="font-bold text-slate-900">Solicitações pendentes</h3>
+                    <div id="admin-solicitacoes-lista" class="grid grid-cols-1 md:grid-cols-2 gap-3"><p class="text-xs text-slate-500">Carregando solicitações…</p></div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
+                    <h3 class="font-bold text-slate-900">Professores autorizados</h3>
+                    <div id="admin-professores-lista" class="grid grid-cols-1 md:grid-cols-2 gap-3"><p class="text-xs text-slate-500">Carregando equipe…</p></div>
+                </div>
+                <div class="bg-slate-900 rounded-2xl p-5 text-white space-y-2">
+                    <h3 class="font-bold">Como funciona o compartilhamento</h3>
+                    <p class="text-xs text-slate-300">Cada professor possui suas próprias turmas, questões, avaliações e notas. O proprietário pode compartilhar uma questão, uma turma, uma avaliação ou um resultado com um colega específico, escolhendo acesso de visualização ou edição quando permitido.</p>
+                    <p class="text-xs text-slate-300">Os dados não ficam públicos para toda a equipe. Somente os professores selecionados recebem acesso ao item compartilhado.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 7: COMPARTILHAMENTOS DO PROFESSOR -->
+        <section id="tab-sharing" class="tab-content hidden">
+            <div class="space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Meus compartilhamentos</h2>
+                            <p class="text-xs text-slate-500">Consulte o que você compartilhou e os recursos que seus colegas compartilharam com você.</p>
+                        </div>
+                        <button type="button" onclick="carregarCompartilhamentos()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">Atualizar lista</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+                        <h3 class="font-bold text-slate-900">Compartilhados por mim</h3>
+                        <div id="lista-compartilhamentos-enviados" class="space-y-2"><p class="text-xs text-slate-500">Carregando…</p></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+                        <h3 class="font-bold text-slate-900">Compartilhados comigo</h3>
+                        <div id="lista-compartilhamentos-recebidos" class="space-y-2"><p class="text-xs text-slate-500">Carregando…</p></div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500">Você pode revogar um compartilhamento enviado ou deixar de receber um recurso. A revogação não apaga o recurso original nem os dados do proprietário.</p>
+            </div>
+        </section>
+
+        <!-- MODAL DE COMPARTILHAMENTO -->
+        <div id="modal-compartilhar-recurso" class="hidden fixed inset-0 bg-slate-950/80 z-[90] p-4 flex items-center justify-center no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-compartilhar-recurso">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+                <div><h3 id="titulo-compartilhar-recurso" class="text-lg font-bold text-slate-900">Compartilhar recurso</h3><p id="descricao-compartilhar-recurso" class="text-xs text-slate-500">Escolha o colega que receberá acesso.</p></div>
+                <label class="block text-xs font-bold text-slate-700">Professor destinatário<select id="share-professor-destino" class="mt-1 w-full border rounded-lg p-2.5 text-sm"></select></label>
+                <label class="block text-xs font-bold text-slate-700">Permissão<select id="share-permissao" class="mt-1 w-full border rounded-lg p-2.5 text-sm"><option value="false">Somente visualizar</option><option value="true">Visualizar e editar</option></select></label>
+                <p id="share-status" class="text-xs text-slate-500"></p>
+                <div class="flex justify-end gap-2"><button type="button" onclick="fecharModalCompartilhar()" class="px-4 py-2 border rounded-lg text-sm">Cancelar</button><button type="button" onclick="confirmarCompartilhamento()" id="btn-confirmar-compartilhamento" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold">Compartilhar</button></div>
+            </div>
+        </div>
+
+        <!-- MODAL: CRIAR AVALIAÇÃO ADAPTADA PARA PCD -->
+        <div id="modal-avaliacao-pcd" class="hidden fixed inset-0 bg-slate-950/80 z-[95] p-3 sm:p-6 overflow-y-auto no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-avaliacao-pcd">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-auto my-4 p-5 sm:p-7 space-y-5">
+                <div class="flex items-start justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div><h2 id="titulo-modal-avaliacao-pcd" class="text-lg font-bold text-slate-900">Criar avaliação adaptada para PCD</h2><p class="text-xs text-slate-500 mt-1">Selecione os alunos que receberão uma versão com os recursos de acessibilidade escolhidos.</p></div>
+                    <button type="button" onclick="fecharModalAvaliacaoPCD()" class="px-3 py-2 rounded-lg border text-sm font-semibold">Fechar</button>
+                </div>
+                <section class="space-y-2">
+                    <div class="flex flex-wrap justify-between items-center gap-2"><h3 class="font-bold text-sm text-slate-800">1. Alunos destinatários</h3><div class="flex gap-2"><button type="button" onclick="marcarTodosAlunosPCD(true)" class="text-xs font-bold text-indigo-700">Marcar todos</button><button type="button" onclick="marcarTodosAlunosPCD(false)" class="text-xs font-bold text-slate-500">Limpar seleção</button></div></div>
+                    <div id="pcd-lista-alunos" class="max-h-56 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3"><p class="text-xs text-slate-500">Carregando alunos…</p></div>
+                </section>
+                <section class="space-y-3">
+                    <h3 class="font-bold text-sm text-slate-800">2. Recursos de acessibilidade</h3>
+                    <p class="text-xs text-slate-500">Escolha os recursos de acordo com as necessidades específicas de cada aluno. A avaliação não presume um tipo único de deficiência.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="block text-xs font-bold text-slate-700">Tamanho do texto
+                            <select id="pcd-tamanho-fonte" class="mt-1 w-full border rounded-lg p-2.5 text-sm font-normal"><option value="normal">Padrão</option><option value="grande" selected>Ampliado</option><option value="muito-grande">Muito ampliado</option></select>
+                        </label>
+                        <label class="pcd-student-check text-xs"><input id="pcd-alto-contraste" type="checkbox" class="w-4 h-4"><span><strong>Alto contraste</strong><span class="block text-slate-500 font-normal">Fundo escuro e texto claro</span></span></label>
+                        <label class="pcd-student-check text-xs"><input id="pcd-espacamento" type="checkbox" checked class="w-4 h-4"><span><strong>Maior espaçamento</strong><span class="block text-slate-500 font-normal">Mais espaço entre perguntas e alternativas</span></span></label>
+                        <label class="pcd-student-check text-xs"><input id="pcd-leitura-voz" type="checkbox" class="w-4 h-4"><span><strong>Leitura em voz alta</strong><span class="block text-slate-500 font-normal">Botão para ouvir enunciado e alternativas</span></span></label>
+                    </div>
+                    <label class="block text-xs font-bold text-slate-700">Instruções adaptadas para esta avaliação
+                        <textarea id="pcd-instrucoes" rows="3" maxlength="1200" class="mt-1 w-full border rounded-lg p-3 text-sm font-normal" placeholder="Escreva orientações adicionais, por exemplo: leia uma questão por vez, utilize o recurso de áudio quando disponível..."></textarea>
+                    </label>
+                    <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">Observação: estes recursos ajustam a apresentação e oferecem leitura em voz alta. A adaptação do conteúdo, do enunciado, do tempo ou do formato de resposta deve ser planejada pelo professor conforme a necessidade individual e as regras da escola.</p>
+                </section>
+                <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
+                    <button type="button" onclick="fecharModalAvaliacaoPCD()" class="px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+                    <button type="button" onclick="gerarAvaliacaoPCD()" class="px-4 py-2 bg-violet-700 hover:bg-violet-800 text-white rounded-lg text-sm font-bold"><i data-lucide="accessibility" class="w-4 h-4 inline mr-1"></i>Gerar avaliação PCD</button>
+                </div>
+            </div>
+        </div>
 
         <!-- CONFIRMAÇÃO DE LIMPEZA DOS DADOS DE TESTE -->
         <div id="modal-zerar-banco" class="hidden fixed inset-0 bg-slate-950/80 z-[70] p-4 flex items-center justify-center no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-zerar-banco">
@@ -906,8 +890,6 @@
     <div id="area-impressao-provas" class="print-only"></div>
 
     <script>
-        let cameraStream = null;
-        let scannerImageAtual = null;
         let anoFiltroProvasSelecionado = null;
         let turmaFiltroSelecionada = null;
         let temaMenuSelecionado = 'todos';
@@ -915,7 +897,7 @@
         let notaTurmaSelecionada = null;
         // Chave Publishable pública do novo projeto Supabase. Pode ficar no HTML publicado.
         // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
-        const CONFIG_SUPABASE_VERSION = '2026-11-10-v15-reset-feedback-omr-pwa';
+        const CONFIG_SUPABASE_VERSION = '2026-11-12-v18-pcd-saidas';
         const SUPABASE_URL_PADRAO = 'https://abmhfmlttjmwksqhnzwr.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_QzbibIo1845K1uur6R4V7w_Sjt3b-Jk';
 
@@ -932,6 +914,13 @@
         let filaSalvamentoRascunho = Promise.resolve();
         let versaoRascunhoAtual = 0;
         let respostaAlunoAtual = null;
+        // Controle das saídas da página da avaliação: duas advertências; na terceira, limpa o rascunho da tentativa atual.
+        let saidasPaginaAluno = 0;
+        let cicloSaidaAlunoRegistrado = false;
+        let ultimaSaidaAlunoMs = 0;
+        let avisoSaidaAlunoPendente = null;
+        let filaSaidaAluno = Promise.resolve();
+        let alunosPCDDisponiveis = [];
 
         let imagensForm = {
             enunciado: '',
@@ -1159,6 +1148,13 @@
         let exibindoLixeiraProvas = false;
         let eventoInstalacaoPWA = null;
         let dadosProfessorRemotosDisponiveis = false;
+        let adminLogado = false;
+        let turmasCompartilhadasKeys = new Set();
+        let turmasCompartilhadasEditaveis = new Set();
+        let turmasCompartilhadasOwners = new Map();
+        let timerSyncTurmaCompartilhada = null;
+        let questoesCompartilhadasIds = new Set();
+        let recursoCompartilharAtual = null;
         const CONFIG_CAMPOS_IDS = ['cfg-escola','cfg-ano-letivo','cfg-bimestre','cfg-titulo','cfg-disciplina','cfg-professor','cfg-data-inicio','cfg-data-fim','cfg-qtd-questoes'];
 
         function setTab(tabId) {
@@ -1178,9 +1174,15 @@
                 else renderizarBotoesFiltroTurmas();
             }
             if (tabId === 'tab-database') renderizarBancoNotas();
+            if (tabId === 'tab-sharing') carregarCompartilhamentos();
+            if (tabId === 'tab-team') {
+                if (!adminLogado) { alert('Somente o administrador pode gerenciar a equipe.'); setTab('tab-header'); return; }
+                carregarEquipeAdmin();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            configurarMonitoramentoSaidasAluno();
             if (window.lucide) lucide.createIcons();
             const agora = new Date();
             const amanha = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
@@ -1247,7 +1249,9 @@
         function mostrarGateProfessor(mensagem = '') {
             if (studentMode) return;
             professorLogado = false;
+            adminLogado = false;
             professorUidAtual = null;
+            document.getElementById('btn-tab-team')?.classList.add('hidden');
             document.getElementById('teacher-header').classList.add('hidden');
             document.getElementById('teacher-main').classList.add('hidden');
             document.getElementById('teacher-auth-gate').classList.remove('hidden');
@@ -1259,6 +1263,13 @@
         async function mostrarPainelProfessor(session) {
             if (studentMode || !session?.user || !supabaseClient) return;
             const uid = session.user.id;
+            const uidAnterior = localStorage.getItem('sys_professor_ultimo_uid');
+            if (uidAnterior && uidAnterior !== uid) {
+                // Evita que dados locais de um professor apareçam no espaço de outro usuário no mesmo aparelho.
+                ['sys_cadastro_turmas','sys_provas_geradas','sys_avalia_notas','sys_configuracoes_professor','sys_dados_professor_sync_pendente'].forEach(chave => localStorage.removeItem(chave));
+                bancoNotas = []; provasGeradas = []; provasLixeira = []; cadastroTurmas = {};
+                try { bancoQuestoes = bancoQuestoes.filter(q => [1,2,3,4,5,6,7,8,9].includes(Number(q.id))); } catch (_) {}
+            }
             if (professorLogado && professorUidAtual === uid) {
                 document.getElementById('teacher-auth-gate').classList.add('hidden');
                 document.getElementById('teacher-header').classList.remove('hidden');
@@ -1275,12 +1286,18 @@
                 }
                 if (autorizacao.data !== true && autorizacao.data !== 'true') {
                     professorLogado = false;
-                    await supabaseClient.auth.signOut();
-                    mostrarGateProfessor('Esta conta não está autorizada como professor. Verifique professores_permitidos no Supabase.');
+                    adminLogado = false;
+                    // Mantém a sessão Auth e registra a solicitação para o administrador aprovar.
+                    try { await supabaseClient.rpc('solicitar_acesso_professor', { p_nome: session.user.user_metadata?.nome_completo || '' }); } catch (_) {}
+                    mostrarGateProfessor('Sua conta foi identificada, mas ainda aguarda aprovação do administrador. Peça a Samuel para aprovar sua solicitação na aba Equipe & Compartilhamento.');
                     return;
                 }
+                const adminCheck = await supabaseClient.rpc('usuario_e_admin');
+                if (adminCheck.error) throw adminCheck.error;
+                adminLogado = adminCheck.data === true || adminCheck.data === 'true';
                 professorLogado = true;
                 professorUidAtual = uid;
+                document.getElementById('btn-tab-team')?.classList.toggle('hidden', !adminLogado);
                 localStorage.setItem('sys_professor_ultimo_uid', uid);
                 document.getElementById('teacher-auth-gate').classList.add('hidden');
                 document.getElementById('student-shell').classList.add('hidden');
@@ -1296,7 +1313,7 @@
                 renderizarBancoNotas();
                 atualizarBadges();
                 const abaSalva = localStorage.getItem('sys_aba_ativa');
-                const abasPermitidas = ['tab-header','tab-questions','tab-bank','tab-generate','tab-scanner','tab-database'];
+                const abasPermitidas = ['tab-header','tab-questions','tab-bank','tab-generate','tab-database','tab-sharing','tab-team'];
                 setTab(abasPermitidas.includes(abaSalva) ? abaSalva : 'tab-header');
                 atualizarStatusSync(navigator.onLine ? 'Sincronizado' : 'Offline', navigator.onLine ? 'ok' : 'pendente');
             })();
@@ -1325,6 +1342,35 @@
                     ? 'A chave pública não foi aceita. Confira a chave Publishable deste projeto.'
                     : 'Não foi possível entrar: ' + mensagem;
             } finally { button.disabled = false; }
+        }
+
+        async function cadastrarContaProfessor(event) {
+            event.preventDefault();
+            const status = document.getElementById('teacher-auth-status');
+            if (!supabaseClient) return status.textContent = 'Supabase não conectado. Atualize a página e tente novamente.';
+            const nome = document.getElementById('teacher-signup-name').value.trim();
+            const email = document.getElementById('teacher-signup-email').value.trim();
+            const senha = document.getElementById('teacher-signup-password').value;
+            if (senha.length < 8) return status.textContent = 'A senha deve ter pelo menos 8 caracteres.';
+            const botao = event.submitter;
+            if (botao) { botao.disabled = true; botao.textContent = 'Criando conta…'; }
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({ email, password: senha, options: { data: { nome_completo: nome } } });
+                if (error) throw error;
+                if (data.session) {
+                    const pedido = await supabaseClient.rpc('solicitar_acesso_professor', { p_nome: nome });
+                    if (pedido.error) throw pedido.error;
+                    await supabaseClient.auth.signOut();
+                    status.textContent = 'Conta criada e solicitação enviada. Aguarde a aprovação do administrador.';
+                } else {
+                    status.textContent = 'Conta criada. Confirme o e-mail recebido; depois entre no sistema para registrar sua solicitação de acesso.';
+                }
+                document.getElementById('teacher-signup-form').reset();
+            } catch (error) {
+                status.textContent = 'Não foi possível criar a conta: ' + (error.message || error);
+            } finally {
+                if (botao) { botao.disabled = false; botao.textContent = 'Criar conta e solicitar aprovação'; }
+            }
         }
 
         async function sairProfessor() {
@@ -1432,6 +1478,7 @@
             const questoesLocais = Array.isArray(bancoQuestoes) ? bancoQuestoes.slice() : [];
             const idsPadrao = new Set(['1','2','3','4','5','6','7','8','9']);
             let mapaRemoto = new Map((linhasRemotas || []).map(l => [String(l.id), l]));
+            questoesCompartilhadasIds = new Set((linhasRemotas || []).filter(l => l.owner_id && l.owner_id !== professorUidAtual).map(l => String(l.id)));
 
             // Migra uma única vez questões personalizadas que existiam apenas no navegador.
             // Imagens antigas em Base64 são enviadas ao Storage e substituídas por URLs.
@@ -1441,12 +1488,13 @@
                     if (existente) continue; // preserva inclusive exclusões registradas na nuvem
                     const preparada = await prepararQuestaoParaNuvem(q);
                     const { error } = await supabaseClient.from('banco_questoes').upsert({
-                        id: String(preparada.id), questao: preparada, excluida: false
+                        id: String(preparada.id), questao: preparada, excluida: false,
+                        criado_por: professorUidAtual, owner_id: professorUidAtual
                     }, { onConflict: 'id' });
                     if (error) throw error;
                 }
                 localStorage.setItem(chaveMigracao, '1');
-                const atualizadas = await supabaseClient.from('banco_questoes').select('id, questao, excluida');
+                const atualizadas = await supabaseClient.from('banco_questoes').select('id, questao, excluida, owner_id');
                 if (atualizadas.error) throw atualizadas.error;
                 mapaRemoto = new Map((atualizadas.data || []).map(l => [String(l.id), l]));
             }
@@ -1509,18 +1557,29 @@
 
         async function sincronizarDadosProfessorNuvem() {
             if (!supabaseClient || !professorLogado || !professorUidAtual) return;
+            const turmasProprias = Object.fromEntries(Object.entries(cadastroTurmas).filter(([chave]) => !turmasCompartilhadasKeys.has(chave)));
             const registro = {
                 user_id: professorUidAtual,
-                cadastro_turmas: cadastroTurmas,
+                cadastro_turmas: turmasProprias,
                 configuracoes: obterConfiguracoesLocais(),
                 updated_at: new Date().toISOString()
             };
             localStorage.setItem('sys_dados_professor_sync_pendente', '1');
             const { error } = await supabaseClient.from('dados_professor').upsert(registro, { onConflict: 'user_id' });
             if (error) throw error;
+            const linhasTurmas = Object.entries(turmasProprias).map(([turma_key, alunos]) => {
+                const idx = turma_key.lastIndexOf('_');
+                const serie = idx >= 0 ? turma_key.slice(0, idx) : turma_key;
+                const turma = idx >= 0 ? turma_key.slice(idx + 1) : 'Turma A';
+                return { owner_id: professorUidAtual, turma_key, serie, turma, ano_letivo: Number(document.getElementById('cfg-ano-letivo')?.value || new Date().getFullYear()), alunos: Array.isArray(alunos) ? alunos : [], updated_at: new Date().toISOString() };
+            });
+            if (linhasTurmas.length) {
+                const turmasSync = await supabaseClient.from('turmas_professor').upsert(linhasTurmas, { onConflict: 'owner_id,turma_key' });
+                if (turmasSync.error) throw turmasSync.error;
+            }
             ultimaGravacaoDadosNuvem = Date.now();
             localStorage.removeItem('sys_dados_professor_sync_pendente');
-            localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+            localStorage.setItem('sys_cadastro_turmas', JSON.stringify(turmasProprias));
             localStorage.setItem('sys_configuracoes_professor', JSON.stringify(registro.configuracoes));
             dadosProfessorRemotosDisponiveis = true;
             atualizarStatusSync('Sincronizado em todos os dispositivos', 'ok');
@@ -1534,7 +1593,7 @@
                 const [respostas, provas, questoes] = await Promise.all([
                     supabaseClient.from('respostas_avaliacoes').select('*').order('created_at', { ascending: false }),
                     supabaseClient.from('provas_alunos').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('banco_questoes').select('id, questao, excluida').order('updated_at', { ascending: false })
+                    supabaseClient.from('banco_questoes').select('id, questao, excluida, owner_id').order('updated_at', { ascending: false })
                 ]);
                 if (respostas.error) throw respostas.error;
                 if (provas.error) throw provas.error;
@@ -1556,8 +1615,33 @@
                     await sincronizarDadosProfessorNuvem();
                 }
 
+                turmasCompartilhadasKeys = new Set();
+                turmasCompartilhadasEditaveis = new Set();
+                turmasCompartilhadasOwners = new Map();
+                const [turmasNuvem, sharesNuvem] = await Promise.all([
+                    supabaseClient.from('turmas_professor').select('*').order('updated_at', { ascending: false }),
+                    supabaseClient.from('compartilhamentos_professor').select('owner_id,destinatario_id,tipo,chave,pode_editar')
+                ]);
+                if (turmasNuvem.error) throw turmasNuvem.error;
+                if (sharesNuvem.error) throw sharesNuvem.error;
+                const sharesTurma = new Map((sharesNuvem.data || []).filter(sh => sh.destinatario_id === professorUidAtual && sh.tipo === 'turma').map(sh => [String(sh.chave), sh]));
+                (turmasNuvem.data || []).forEach(t => {
+                    const chaveBase = t.turma_key || `${t.serie}_${t.turma}`;
+                    const chave = chaveBase;
+                    if (t.owner_id !== professorUidAtual) {
+                        cadastroTurmas[chave] = Array.isArray(t.alunos) ? t.alunos : [];
+                        turmasCompartilhadasKeys.add(chave);
+                        turmasCompartilhadasOwners.set(chave, { owner_id: t.owner_id, turma_key: chaveBase });
+                        const share = sharesTurma.get(String(chaveBase));
+                        if (share?.pode_editar) turmasCompartilhadasEditaveis.add(chave);
+                    } else if (!Array.isArray(cadastroTurmas[chave])) {
+                        cadastroTurmas[chave] = Array.isArray(t.alunos) ? t.alunos : [];
+                    }
+                });
+                alternarTurmaAluno();
+
                 bancoNotas = (respostas.data || []).map(n => ({
-                    id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
+                    id: n.id, ownerId: n.owner_id || null, studentToken: n.student_token || '', aluno: n.aluno_nome,
                     anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
                     disciplina: n.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
                     origem: n.origem || 'Avaliação online',
@@ -1579,7 +1663,7 @@
                         bimestre: prova.bimestre || r.bimestre || '',
                         alunoSerie: prova.alunoSerie || String(r.serie || '').split(' - ')[0] || '',
                         alunoTurma: prova.alunoTurma || String(r.serie || '').split(' - ').slice(1).join(' - ') || '',
-                        studentToken: r.student_token, studentId: r.student_token,
+                        studentToken: r.student_token, studentId: r.student_token, ownerId: r.owner_id || null,
                         excluidaEm: r.excluida_em || null, expiraEm: r.expira_em || null,
                         lastAnswers: r.last_answers || {},
                         lastDetails: Array.isArray(r.last_details) ? r.last_details : [],
@@ -1604,7 +1688,6 @@
                 renderizarBotoesFiltroTurmas();
                 renderizarGridProvas();
                 renderizarLixeiraProvas();
-                atualizarSelectScanner();
                 renderizarBancoNotas();
                 atualizarBadges();
                 atualizarStatusSync('Sincronizado em todos os dispositivos', 'ok');
@@ -1657,6 +1740,8 @@
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'provas_alunos' }, () => agendarAtualizacaoRemota())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'banco_questoes' }, () => agendarAtualizacaoRemota())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas_professor' }, () => agendarAtualizacaoRemota())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'compartilhamentos_professor' }, () => agendarAtualizacaoRemota())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'dados_professor' }, payload => {
                     if (localStorage.getItem('sys_dados_professor_sync_pendente') === '1') return;
                     if (payload.new && payload.new.user_id === professorUidAtual) aplicarDadosProfessorNuvem(payload.new);
@@ -1667,22 +1752,218 @@
                 });
         }
 
+        async function carregarCompartilhamentos() {
+            const enviados = document.getElementById('lista-compartilhamentos-enviados');
+            const recebidos = document.getElementById('lista-compartilhamentos-recebidos');
+            if (!professorLogado || !supabaseClient) {
+                if (enviados) enviados.innerHTML = '<p class="text-xs text-slate-500">Entre como professor para consultar.</p>';
+                if (recebidos) recebidos.innerHTML = '<p class="text-xs text-slate-500">Entre como professor para consultar.</p>';
+                return;
+            }
+            if (enviados) enviados.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
+            if (recebidos) recebidos.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
+            try {
+                const { data, error } = await supabaseClient.rpc('listar_compartilhamentos_proprios');
+                if (error) throw error;
+                const itens = Array.isArray(data?.itens) ? data.itens : [];
+                const montar = (item, enviado) => {
+                    const permissao = item.pode_editar ? 'Visualizar e editar' : 'Somente visualizar';
+                    const direcao = enviado ? `Com ${item.nome_colega || item.email_colega || 'colega'}` : `De ${item.nome_colega || item.email_colega || 'colega'}`;
+                    const quando = item.criado_em ? new Date(item.criado_em).toLocaleString('pt-BR') : '';
+                    const tipoLabel = ({ questao: 'Questão', turma: 'Turma', avaliacao: 'Avaliação', resultado: 'Resultado' })[item.tipo] || item.tipo;
+                    return `<article class="border rounded-xl p-3 space-y-2">
+                        <div class="flex justify-between items-start gap-2"><div><strong class="text-sm text-slate-900">${escapeHtml(item.recurso || tipoLabel)}</strong><p class="text-[11px] text-slate-500">${tipoLabel} • ${direcao}</p></div><span class="text-[10px] rounded-full px-2 py-1 ${item.pode_editar ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-700'}">${permissao}</span></div>
+                        <p class="text-[10px] text-slate-400">Desde ${escapeHtml(quando)}</p>
+                        <button type="button" onclick="revogarCompartilhamento('${escapeHtml(item.id)}')" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 text-xs font-bold">${enviado ? 'Revogar acesso' : 'Deixar de receber'}</button>
+                    </article>`;
+                };
+                const saida = itens.filter(i => i.sou_proprietario);
+                const entrada = itens.filter(i => !i.sou_proprietario);
+                if (enviados) enviados.innerHTML = saida.length ? saida.map(i => montar(i, true)).join('') : '<p class="text-xs text-slate-500">Você ainda não compartilhou recursos.</p>';
+                if (recebidos) recebidos.innerHTML = entrada.length ? entrada.map(i => montar(i, false)).join('') : '<p class="text-xs text-slate-500">Nenhum colega compartilhou recursos com você.</p>';
+            } catch (error) {
+                const mensagem = `<p class="text-xs text-rose-700">Não foi possível carregar os compartilhamentos: ${escapeHtml(error.message || error)}. Execute a migração V17 atualizada.</p>`;
+                if (enviados) enviados.innerHTML = mensagem;
+                if (recebidos) recebidos.innerHTML = mensagem;
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function revogarCompartilhamento(id) {
+            if (!professorLogado || !supabaseClient) return;
+            if (!confirm('Deseja realmente revogar este compartilhamento? O recurso original não será apagado.')) return;
+            try {
+                const { data, error } = await supabaseClient.rpc('revogar_compartilhamento', { p_id: id });
+                if (error) throw error;
+                if (data?.erro) throw new Error(data.erro);
+                await carregarCompartilhamentos();
+                await carregarDadosProfessor();
+                alert('Compartilhamento revogado. O recurso continua no espaço do proprietário.');
+            } catch (error) {
+                alert('Não foi possível revogar o compartilhamento: ' + (error.message || error) + '. Execute a migração V17 atualizada.');
+            }
+        }
+
+        async function carregarEquipeAdmin() {
+            if (!adminLogado || !supabaseClient) return;
+            const pendentes = document.getElementById('admin-solicitacoes-lista');
+            const professores = document.getElementById('admin-professores-lista');
+            if (pendentes) pendentes.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
+            if (professores) professores.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
+            try {
+                const { data, error } = await supabaseClient.rpc('listar_equipe_professores');
+                if (error) throw error;
+                const equipe = data || {};
+                const pedidos = Array.isArray(equipe.solicitacoes) ? equipe.solicitacoes : [];
+                const lista = Array.isArray(equipe.professores) ? equipe.professores : [];
+                if (pendentes) pendentes.innerHTML = pedidos.length ? pedidos.map(p => `<article class="border rounded-xl p-3 space-y-2"><div><strong class="text-sm">${escapeHtml(p.nome_completo || 'Professor')}</strong><p class="text-xs text-slate-500">${escapeHtml(p.email || '')}</p></div><div class="flex gap-2"><button onclick="aprovarSolicitacaoProfessor('${escapeHtml(p.user_id)}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold">Aprovar</button><button onclick="recusarSolicitacaoProfessor('${escapeHtml(p.user_id)}')" class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold">Recusar</button></div></article>`).join('') : '<p class="text-xs text-slate-500">Não há solicitações pendentes.</p>';
+                if (professores) professores.innerHTML = lista.map(p => {
+                    const papeis = `<div class="flex flex-wrap gap-1"><span class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-[10px]">${p.is_admin ? 'Administrador' : 'Professor'}</span>${p.is_professor && p.is_admin ? '<span class="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-[10px]">Também professor</span>' : ''}<span class="px-2 py-1 rounded ${p.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'} text-[10px]">${p.ativo ? 'Ativo' : 'Suspenso'}</span></div>`;
+                    const acoes = p.user_id === professorUidAtual
+                        ? '<p class="text-[10px] text-slate-400">Sua conta administrativa principal.</p>'
+                        : `<div class="flex flex-wrap gap-2"><button onclick="alterarPapelProfessor('${escapeHtml(p.user_id)}',${!p.is_admin})" class="px-3 py-1.5 rounded-lg border text-xs font-bold">${p.is_admin ? 'Retirar administrador' : 'Promover a administrador'}</button><button onclick="suspenderProfessor('${escapeHtml(p.user_id)}',${!p.ativo})" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 text-xs font-bold">${p.ativo ? 'Suspender acesso' : 'Reativar acesso'}</button></div>`;
+                    return `<article class="border rounded-xl p-3 space-y-2"><div><strong class="text-sm">${escapeHtml(p.nome_completo || 'Professor')}</strong><p class="text-xs text-slate-500">${escapeHtml(p.email || '')}</p></div>${papeis}${acoes}</article>`;
+                }).join('');
+            } catch (error) {
+                if (pendentes) pendentes.innerHTML = `<p class="text-xs text-rose-700">${escapeHtml(error.message || error)}</p>`;
+                if (professores) professores.innerHTML = '';
+            }
+        }
+
+        async function aprovarSolicitacaoProfessor(uid) {
+            if (!adminLogado) return;
+            const { data, error } = await supabaseClient.rpc('aprovar_solicitacao_professor', { p_user_id: uid });
+            if (error) return alert('Não foi possível aprovar: ' + error.message);
+            if (data?.erro) return alert(data.erro);
+            await carregarEquipeAdmin();
+        }
+        async function recusarSolicitacaoProfessor(uid) {
+            if (!adminLogado || !confirm('Deseja recusar esta solicitação?')) return;
+            const { error } = await supabaseClient.rpc('recusar_solicitacao_professor', { p_user_id: uid });
+            if (error) return alert('Não foi possível recusar: ' + error.message);
+            await carregarEquipeAdmin();
+        }
+        async function alterarPapelProfessor(uid, promover) {
+            if (!adminLogado) return;
+            const { error } = await supabaseClient.rpc('definir_papel_professor', { p_user_id: uid, p_is_admin: Boolean(promover), p_is_professor: true, p_ativo: true });
+            if (error) return alert('Não foi possível alterar o papel: ' + error.message);
+            await carregarEquipeAdmin();
+        }
+        async function suspenderProfessor(uid, suspender) {
+            if (!adminLogado) return;
+            const { error } = await supabaseClient.rpc('definir_papel_professor', { p_user_id: uid, p_is_admin: false, p_is_professor: true, p_ativo: !suspender });
+            if (error) return alert('Não foi possível alterar o acesso: ' + error.message);
+            await carregarEquipeAdmin();
+        }
+
+        async function abrirModalCompartilhar(tipo, chave, titulo) {
+            if (!professorLogado || !supabaseClient) return alert('Entre no sistema para compartilhar recursos.');
+            recursoCompartilharAtual = { tipo, chave: String(chave), titulo: titulo || tipo };
+            const modal = document.getElementById('modal-compartilhar-recurso');
+            const select = document.getElementById('share-professor-destino');
+            const status = document.getElementById('share-status');
+            document.getElementById('titulo-compartilhar-recurso').textContent = `Compartilhar ${titulo || 'recurso'}`;
+            document.getElementById('descricao-compartilhar-recurso').textContent = 'Escolha um colega autorizado. O recurso não ficará público para os demais professores.';
+            status.textContent = 'Buscando professores autorizados…';
+            select.innerHTML = '';
+            modal.classList.remove('hidden');
+            try {
+                const { data, error } = await supabaseClient.rpc('listar_colegas_compartilhamento');
+                if (error) throw error;
+                const colegas = data || [];
+                if (!colegas.length) {
+                    status.textContent = 'Ainda não há outros professores aprovados. Peça ao colega para criar uma conta e solicite aprovação na tela de login.';
+                    document.getElementById('btn-confirmar-compartilhamento').disabled = true;
+                    return;
+                }
+                select.innerHTML = colegas.map(c => `<option value="${escapeHtml(c.user_id)}">${escapeHtml(c.nome_completo)} — ${escapeHtml(c.email)}</option>`).join('');
+                status.textContent = `${colegas.length} colega(s) disponível(is) para compartilhar.`;
+                document.getElementById('btn-confirmar-compartilhamento').disabled = false;
+            } catch (error) {
+                status.textContent = 'Não foi possível carregar a equipe: ' + (error.message || error);
+                document.getElementById('btn-confirmar-compartilhamento').disabled = true;
+            }
+        }
+        function fecharModalCompartilhar() {
+            document.getElementById('modal-compartilhar-recurso')?.classList.add('hidden');
+            recursoCompartilharAtual = null;
+        }
+        async function confirmarCompartilhamento() {
+            if (!recursoCompartilharAtual || !supabaseClient || !professorLogado) return;
+            const botao = document.getElementById('btn-confirmar-compartilhamento');
+            const destino = document.getElementById('share-professor-destino').value;
+            const editar = document.getElementById('share-permissao').value === 'true';
+            if (!destino) return alert('Selecione um professor.');
+            botao.disabled = true; botao.textContent = 'Compartilhando…';
+            try {
+                if (recursoCompartilharAtual.tipo === 'turma') await sincronizarDadosProfessorNuvem();
+                const { data, error } = await supabaseClient.rpc('compartilhar_recurso', {
+                    p_tipo: recursoCompartilharAtual.tipo,
+                    p_chave: recursoCompartilharAtual.chave,
+                    p_destino: destino,
+                    p_pode_editar: editar
+                });
+                if (error) throw error;
+                if (data?.erro) throw new Error(data.erro);
+                fecharModalCompartilhar();
+                alert('Compartilhamento realizado. O colega verá o recurso na próxima sincronização.');
+            } catch (error) {
+                alert('Não foi possível compartilhar: ' + (error.message || error));
+            } finally { botao.disabled = false; botao.textContent = 'Compartilhar'; }
+        }
+        async function compartilharTurmaAtiva() {
+            const serie = document.getElementById('sel-serie-aluno').value;
+            const turma = document.getElementById('sel-turma-aluno').value;
+            const chave = `${serie}_${turma}`;
+            if (turmasCompartilhadasKeys.has(chave)) return alert('Esta turma foi compartilhada por outro professor. Somente o proprietário pode compartilhar novamente.');
+            await abrirModalCompartilhar('turma', chave, `${serie} — ${turma}`);
+        }
+
         function alternarTurmaAluno() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
 
-            document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
+            const compartilhada = turmasCompartilhadasKeys.has(chave);
+            document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}${compartilhada ? ' • compartilhada' : ''}`;
             const alunos = cadastroTurmas[chave] || [];
             document.getElementById('lista-alunos-input').value = alunos.join('\n');
+            const permiteEditarTurmaCompartilhada = compartilhada && turmasCompartilhadasEditaveis.has(chave);
+            document.getElementById('lista-alunos-input').disabled = compartilhada && !permiteEditarTurmaCompartilhada;
+            const botaoShare = document.getElementById('btn-compartilhar-turma');
+            if (botaoShare) { botaoShare.disabled = compartilhada; botaoShare.title = compartilhada ? 'Somente o professor proprietário pode compartilhar esta turma.' : 'Compartilhar esta turma com um colega'; botaoShare.classList.toggle('opacity-50',compartilhada); }
             document.getElementById('label-num-alunos-turma').textContent = `${alunos.length} alunos`;
             atualizarBadges();
         }
 
-        function salvarAlunosTurmaAtiva() {
+        async function salvarAlunosTurmaAtiva() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
+            if (turmasCompartilhadasKeys.has(chave)) {
+                if (!turmasCompartilhadasEditaveis.has(chave)) {
+                    alert('Esta turma foi compartilhada em modo de leitura. Solicite ao proprietário que permita edição.');
+                    alternarTurmaAluno();
+                    return;
+                }
+                const meta = turmasCompartilhadasOwners.get(chave);
+                const alunosEditados = document.getElementById('lista-alunos-input').value.split('\n').map(a => a.trim()).filter(Boolean);
+                cadastroTurmas[chave] = alunosEditados;
+                document.getElementById('label-num-alunos-turma').textContent = `${alunosEditados.length} alunos`;
+                atualizarBadges();
+                if (timerSyncTurmaCompartilhada) clearTimeout(timerSyncTurmaCompartilhada);
+                timerSyncTurmaCompartilhada = setTimeout(async () => {
+                    try {
+                        const atualizacao = await supabaseClient.from('turmas_professor').update({ alunos: alunosEditados, updated_at: new Date().toISOString() }).eq('owner_id', meta.owner_id).eq('turma_key', meta.turma_key);
+                        if (atualizacao.error) throw atualizacao.error;
+                        atualizarStatusSync('Turma compartilhada sincronizada', 'ok');
+                    } catch (error) {
+                        atualizarStatusSync('Falha ao atualizar turma compartilhada', 'erro');
+                        alert('Não foi possível atualizar a turma compartilhada: ' + (error.message || error));
+                    }
+                }, 650);
+                return;
+            }
 
             const text = document.getElementById('lista-alunos-input').value;
             const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
@@ -1702,6 +1983,43 @@
             const bQuestoes = document.getElementById('badge-total-questoes');
             if (bAlunos) bAlunos.textContent = totalAlunos;
             if (bQuestoes) bQuestoes.textContent = bancoQuestoes.length;
+        }
+
+        function carregarImagemDispositivo(event, campo) {
+            const arquivo = event.target.files && event.target.files[0];
+            if (!arquivo) return;
+            if (!arquivo.type || !arquivo.type.startsWith('image/')) {
+                alert('Selecione um arquivo de imagem válido.');
+                event.target.value = '';
+                return;
+            }
+            if (arquivo.size > LIMITE_IMAGEM_BYTES) {
+                alert('A imagem deve ter no máximo 10 MB.');
+                event.target.value = '';
+                return;
+            }
+            const leitor = new FileReader();
+            leitor.onload = ev => {
+                imagensForm[campo] = String(ev.target.result || '');
+                const preview = document.getElementById(`preview-img-${campo}`);
+                const imagem = document.getElementById(`img-${campo}-tag`);
+                if (preview && imagem) {
+                    imagem.src = imagensForm[campo];
+                    preview.classList.remove('hidden');
+                }
+            };
+            leitor.onerror = () => alert('Não foi possível carregar a imagem selecionada.');
+            leitor.readAsDataURL(arquivo);
+        }
+
+        function removerImagemMidia(campo) {
+            imagensForm[campo] = '';
+            const preview = document.getElementById(`preview-img-${campo}`);
+            const imagem = document.getElementById(`img-${campo}-tag`);
+            const input = document.getElementById(`q-file-upload-${campo}`);
+            if (preview) preview.classList.add('hidden');
+            if (imagem) imagem.removeAttribute('src');
+            if (input) input.value = '';
         }
 
         async function adicionarQuestaoManual(e) {
@@ -1739,6 +2057,7 @@
                     questao: questaoNuvem,
                     excluida: false,
                     criado_por: usuarioData.user.id,
+                    owner_id: usuarioData.user.id,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'id' });
                 if (error) throw error;
@@ -1818,7 +2137,10 @@
                                 <span class="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
                                 <span class="text-xs text-slate-500">${q.assunto}</span>
                             </div>
-                            <button onclick="excluirQuestao(${q.id})" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>
+                            <div class="flex items-center gap-3">
+                                ${questoesCompartilhadasIds.has(String(q.id)) ? '<span class="text-[10px] rounded bg-cyan-50 text-cyan-800 px-2 py-1">Compartilhada</span>' : (![1,2,3,4,5,6,7,8,9].includes(Number(q.id)) ? `<button onclick="abrirModalCompartilhar('questao','${escapeHtml(String(q.id))}','questão')" class="text-indigo-700 hover:text-indigo-900 text-xs font-bold">Compartilhar</button>` : '<span class="text-[10px] text-slate-400">Questão-base</span>')}
+                                ${questoesCompartilhadasIds.has(String(q.id)) ? '' : `<button onclick="excluirQuestao(${q.id})" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>`}
+                            </div>
                         </div>
 
                         <p class="font-semibold text-slate-800 text-sm">${q.enunciado}</p>
@@ -1847,6 +2169,7 @@
             if (!confirm('Deseja realmente excluir esta questão do banco compartilhado?')) return;
             const questao = bancoQuestoes.find(q => String(q.id) === String(id));
             if (!questao) return;
+            if (questoesCompartilhadasIds.has(String(id))) return alert('Esta questão pertence a outro professor. Você pode utilizá-la enquanto o compartilhamento estiver ativo, mas somente o proprietário pode excluí-la.');
             try {
                 const { data: usuarioData, error: usuarioErro } = await supabaseClient.auth.getUser();
                 if (usuarioErro) throw usuarioErro;
@@ -1854,7 +2177,7 @@
                 // Exclusão lógica permite impedir que questões iniciais reapareçam após atualizar a página.
                 const { error } = await supabaseClient.from('banco_questoes').upsert({
                     id: String(questao.id), questao, excluida: true,
-                    criado_por: usuarioData.user.id, updated_at: new Date().toISOString()
+                    criado_por: usuarioData.user.id, owner_id: usuarioData.user.id, updated_at: new Date().toISOString()
                 }, { onConflict: 'id' });
                 if (error) throw error;
                 await removerImagensDaQuestaoNoStorage(questao);
@@ -1869,20 +2192,67 @@
         }
 
         function gerarProvasSelecionadas() {
-            const checkboxes = document.querySelectorAll('.chk-questao:checked');
-            let listaFinal = [];
-
-            if (checkboxes.length > 0) {
-                const ids = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-q-id')));
-                listaFinal = bancoQuestoes.filter(q => ids.includes(q.id));
-            } else if (temaMenuSelecionado !== 'todos') {
-                listaFinal = bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
-            } else {
-                listaFinal = bancoQuestoes;
-            }
-
-            if (listaFinal.length === 0) return alert("Selecione pelo menos uma questão.");
+            const listaFinal = obterQuestoesSelecionadasParaGeracao();
+            if (listaFinal.length === 0) return alert('Selecione pelo menos uma questão.');
             gerarProvasComLista(listaFinal);
+        }
+
+        function obterQuestoesSelecionadasParaGeracao() {
+            const checkboxes = document.querySelectorAll('.chk-questao:checked');
+            if (checkboxes.length > 0) {
+                const ids = Array.from(checkboxes).map(cb => String(cb.getAttribute('data-q-id')));
+                return bancoQuestoes.filter(q => ids.includes(String(q.id)));
+            }
+            if (temaMenuSelecionado !== 'todos') return bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
+            return bancoQuestoes;
+        }
+
+        function abrirModalAvaliacaoPCD() {
+            if (!professorLogado) return alert('Entre na área do professor para criar uma avaliação adaptada.');
+            alunosPCDDisponiveis = [];
+            const lista = document.getElementById('pcd-lista-alunos');
+            const grupos = [];
+            Object.entries(cadastroTurmas || {}).forEach(([chave, alunos]) => {
+                const separador = chave.lastIndexOf('_');
+                const serie = separador >= 0 ? chave.slice(0, separador) : chave;
+                const turma = separador >= 0 ? chave.slice(separador + 1) : '';
+                if (!Array.isArray(alunos) || !alunos.length) return;
+                const itens = alunos.map(nome => {
+                    const index = alunosPCDDisponiveis.push({ serie, turma, nome: String(nome), chaveTurma: chave }) - 1;
+                    return `<label class="pcd-student-check text-xs"><input type="checkbox" class="pcd-aluno-checkbox w-4 h-4" data-pcd-index="${index}"><span><strong>${escapeHtml(nome)}</strong><span class="block text-slate-500 font-normal">${escapeHtml(serie)} • ${escapeHtml(turma)}</span></span></label>`;
+                }).join('');
+                grupos.push(`<div class="space-y-2"><h4 class="text-xs font-bold text-indigo-700">${escapeHtml(serie)} • ${escapeHtml(turma)}</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${itens}</div></div>`);
+            });
+            lista.innerHTML = grupos.length ? grupos.join('') : '<p class="text-xs text-slate-500">Cadastre os alunos na aba Configurações & Turmas antes de criar uma avaliação PCD.</p>';
+            document.getElementById('modal-avaliacao-pcd').classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function fecharModalAvaliacaoPCD() {
+            document.getElementById('modal-avaliacao-pcd')?.classList.add('hidden');
+        }
+
+        function marcarTodosAlunosPCD(marcar) {
+            document.querySelectorAll('.pcd-aluno-checkbox').forEach(cb => { cb.checked = !!marcar; });
+        }
+
+        async function gerarAvaliacaoPCD() {
+            const selecionados = Array.from(document.querySelectorAll('.pcd-aluno-checkbox:checked'))
+                .map(cb => alunosPCDDisponiveis[Number(cb.dataset.pcdIndex)])
+                .filter(Boolean);
+            if (!selecionados.length) return alert('Selecione pelo menos um aluno para receber a avaliação adaptada.');
+            const questoes = obterQuestoesSelecionadasParaGeracao();
+            if (!questoes.length) return alert('Cadastre ou selecione pelo menos uma questão antes de gerar a avaliação.');
+            const acessibilidade = {
+                ativada: true,
+                tamanhoFonte: document.getElementById('pcd-tamanho-fonte').value,
+                altoContraste: document.getElementById('pcd-alto-contraste').checked,
+                espacamento: document.getElementById('pcd-espacamento').checked,
+                leituraVoz: document.getElementById('pcd-leitura-voz').checked,
+                instrucoes: document.getElementById('pcd-instrucoes').value.trim()
+            };
+            fecharModalAvaliacaoPCD();
+            await gerarProvasComLista(questoes, { alunosSelecionados: selecionados, acessibilidade, preservarExistentes: true });
         }
 
         function gerarTokenSeguro() {
@@ -1891,13 +2261,16 @@
             return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        async function persistirProvasNoSupabase() {
+        async function persistirListaProvasNoSupabase(listaProvas) {
             if (!supabaseClient || !professorLogado) throw new Error('O professor precisa estar autenticado no Supabase para publicar os links.');
+            if (!Array.isArray(listaProvas) || !listaProvas.length) return;
             const anoLetivo = document.getElementById('cfg-ano-letivo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
-            const rows = provasGeradas.map(p => ({
+            const rows = listaProvas.map(p => ({
                 student_token: p.studentToken,
                 student_id: p.studentId,
+                owner_id: p.ownerId || professorUidAtual,
+                turma_key: `${p.alunoSerie}__${p.alunoTurma}`,
                 aluno_nome: p.alunoName,
                 ano_letivo: Number(p.anoLetivo || anoLetivo),
                 serie: `${p.alunoSerie} - ${p.alunoTurma}`,
@@ -1910,85 +2283,103 @@
             }));
             const { error } = await supabaseClient.from('provas_alunos').upsert(rows, { onConflict: 'student_token' });
             if (error) throw error;
+        }
+
+        async function persistirProvasNoSupabase() {
+            await persistirListaProvasNoSupabase(provasGeradas);
             try { localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas)); } catch (e) { console.warn('Provas mantidas no Supabase; cache local excedeu o espaço disponível.'); }
         }
 
-        async function gerarProvasComLista(questoesBase) {
+        async function gerarProvasComLista(questoesBase, opcoes = {}) {
             if (!professorLogado) return alert('Entre na área do professor para gerar e publicar provas.');
-            let totalAlunos = 0;
-            Object.values(cadastroTurmas).forEach(arr => totalAlunos += arr.length);
-            if (totalAlunos === 0) return alert("Cadastre alunos na Aba 1.");
-
             const dataInicio = document.getElementById('cfg-data-inicio').value;
             const dataFim = document.getElementById('cfg-data-fim').value;
             const bimestre = document.getElementById('cfg-bimestre').value;
             const letras = ['A', 'B', 'C', 'D', 'E'];
-
-            provasGeradas = [];
-            let globalIndex = 0;
-
-            Object.keys(cadastroTurmas).forEach(chave => {
-                const [serie, turma] = chave.split('_');
-                const alunos = cadastroTurmas[chave];
-
-                alunos.forEach(alunoNome => {
-                    globalIndex++;
-                    const questoesSorteadas = embaralhar(questoesBase);
-
-                    const questoesEmbaralhadas = questoesSorteadas.map((q, qIndex) => {
-                        const todasAlternativas = [
-                            { text: q.correta.text, img: q.correta.img, isCorrect: true },
-                            ...q.distratores.map(d => ({ text: d.text, img: d.img, isCorrect: false }))
-                        ];
-                        
-                        const alternativasSort = embaralhar(todasAlternativas).map((alt, aIdx) => ({
-                            letter: letras[aIdx],
-                            text: alt.text,
-                            img: alt.img,
-                            isCorrect: alt.isCorrect
-                        }));
-
-                        return {
-                            numero: qIndex + 1,
-                            enunciado: q.enunciado,
-                            imgEnunciado: q.imgEnunciado,
-                            alternativas: alternativasSort,
-                            letraCorreta: alternativasSort.find(a => a.isCorrect)?.letter || 'A'
-                        };
-                    });
-
-                    const tokenAluno = gerarTokenSeguro();
-                    provasGeradas.push({
-                        studentId: tokenAluno,
-                        studentToken: tokenAluno,
-                        alunoName: alunoNome,
-                        alunoSerie: serie,
-                        alunoTurma: turma,
-                        bimestre: bimestre,
-                        escola: document.getElementById('cfg-escola').value,
-                        titulo: document.getElementById('cfg-titulo').value,
-                        disciplina: document.getElementById('cfg-disciplina').value,
-                        anoLetivo: document.getElementById('cfg-ano-letivo').value,
-                        professor: document.getElementById('cfg-professor').value,
-                        dataInicio: dataInicio,
-                        dataFim: dataFim,
-                        code: `PRV-${Math.floor(100000 + Math.random() * 900000)}`,
-                        questoes: questoesEmbaralhadas
-                    });
+            const alunosAlvo = Array.isArray(opcoes.alunosSelecionados) && opcoes.alunosSelecionados.length
+                ? opcoes.alunosSelecionados
+                : Object.entries(cadastroTurmas || {}).flatMap(([chave, alunos]) => {
+                    const separador = chave.lastIndexOf('_');
+                    const serie = separador >= 0 ? chave.slice(0, separador) : chave;
+                    const turma = separador >= 0 ? chave.slice(separador + 1) : '';
+                    return (Array.isArray(alunos) ? alunos : []).map(nome => ({ serie, turma, nome: String(nome), chaveTurma: chave }));
                 });
-            });
+            if (!alunosAlvo.length) return alert('Cadastre ou selecione pelo menos um aluno.');
+            if (!questoesBase || !questoesBase.length) return alert('Selecione pelo menos uma questão.');
+
+            const provaNovaChaves = new Set();
+            const provasNovas = [];
+            for (const alunoRegistro of alunosAlvo) {
+                const serie = alunoRegistro.serie || '';
+                const turma = alunoRegistro.turma || '';
+                const alunoNome = alunoRegistro.nome || alunoRegistro.alunoName || '';
+                const questoesSorteadas = embaralhar(questoesBase);
+                const questoesEmbaralhadas = questoesSorteadas.map((q, qIndex) => {
+                    const todasAlternativas = [
+                        { text: q.correta.text, img: q.correta.img, isCorrect: true },
+                        ...(q.distratores || []).map(d => ({ text: d.text, img: d.img, isCorrect: false }))
+                    ];
+                    const alternativasSort = embaralhar(todasAlternativas).map((alt, aIdx) => ({
+                        letter: letras[aIdx], text: alt.text, img: alt.img, isCorrect: alt.isCorrect
+                    }));
+                    return {
+                        numero: qIndex + 1,
+                        enunciado: q.enunciado,
+                        imgEnunciado: q.imgEnunciado,
+                        alternativas: alternativasSort,
+                        letraCorreta: alternativasSort.find(a => a.isCorrect)?.letter || 'A'
+                    };
+                });
+                const tokenAluno = gerarTokenSeguro();
+                const prova = {
+                    studentId: tokenAluno,
+                    studentToken: tokenAluno,
+                    ownerId: professorUidAtual,
+                    alunoName: alunoNome,
+                    alunoSerie: serie,
+                    alunoTurma: turma,
+                    bimestre,
+                    escola: document.getElementById('cfg-escola').value,
+                    titulo: document.getElementById('cfg-titulo').value,
+                    disciplina: document.getElementById('cfg-disciplina').value,
+                    anoLetivo: document.getElementById('cfg-ano-letivo').value,
+                    professor: document.getElementById('cfg-professor').value,
+                    dataInicio, dataFim,
+                    tipoAvaliacao: opcoes.acessibilidade?.ativada ? 'pcd' : 'regular',
+                    acessibilidade: opcoes.acessibilidade?.ativada ? { ...opcoes.acessibilidade } : null,
+                    code: `PRV-${Math.floor(100000 + Math.random() * 900000)}`,
+                    questoes: questoesEmbaralhadas
+                };
+                provasNovas.push(prova);
+                provaNovaChaves.add([alunoNome, serie, turma, prova.titulo, prova.disciplina, bimestre].join('|').toLocaleLowerCase());
+            }
+
+            if (opcoes.preservarExistentes) {
+                provasGeradas = (Array.isArray(provasGeradas) ? provasGeradas : []).filter(p =>
+                    !provaNovaChaves.has([p.alunoName, p.alunoSerie, p.alunoTurma, p.titulo, p.disciplina, p.bimestre].join('|').toLocaleLowerCase())
+                );
+                provasGeradas.push(...provasNovas);
+            } else {
+                provasGeradas = provasNovas;
+            }
 
             try {
-                await persistirProvasNoSupabase();
+                if (opcoes.preservarExistentes) {
+                    await persistirListaProvasNoSupabase(provasNovas);
+                    try { localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas)); } catch (_) {}
+                } else {
+                    await persistirProvasNoSupabase();
+                }
             } catch (error) {
                 alert('As provas foram montadas, mas não foi possível publicá-las no Supabase: ' + (error.message || error));
                 return;
             }
             renderizarBotoesFiltroTurmas();
             renderizarGridProvas();
-            atualizarSelectScanner();
             setTab('tab-generate');
-            alert('Provas publicadas no Supabase. Os links individuais já podem ser enviados aos alunos.');
+            alert(opcoes.acessibilidade?.ativada
+                ? `Avaliação adaptada publicada para ${provasNovas.length} aluno(s). Os links individuais estão disponíveis na lista de avaliações.`
+                : 'Provas publicadas no Supabase. Os links individuais já podem ser enviados aos alunos.');
         }
 
         function voltarSelecaoAnoProvas() {
@@ -2139,11 +2530,11 @@
             provasExibidas.forEach(prova => {
                 const token = prova.studentToken || prova.studentId;
                 const safeToken = escapeHtml(token);
-                const qrId = `omr-qr-${String(token).replace(/[^a-z0-9]/gi, '')}`;
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${encodeURIComponent(token)}`;
                 const bimestre = prova.bimestre || document.getElementById('cfg-bimestre').value || '—';
-                const alturaOmrMm = (26.5 + prova.questoes.length * 6.5).toFixed(1);
                 const resultadoAluno = bancoNotas.find(n => String(n.studentToken || '') === String(token));
+                const recursoEhProprio = !prova.ownerId || prova.ownerId === professorUidAtual;
+                const resultadoEhProprio = !resultadoAluno?.ownerId || resultadoAluno?.ownerId === professorUidAtual;
                 const temPrimeiraTentativa = Boolean(prova.awaitingSecondChance && prova.lastDetails && prova.lastDetails.length);
                 const botaoRespostaAluno = (resultadoAluno || temPrimeiraTentativa)
                     ? `<button onclick="abrirRespostasAluno('${safeToken}')" class="w-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold py-2 rounded-xl border border-emerald-200"><i data-lucide="clipboard-check" class="w-3 h-3 inline mr-1"></i>${resultadoAluno ? 'Prova respondida pelo aluno' : 'Ver respostas da primeira tentativa'}${resultadoAluno?.feedbackPublicado ? ' • feedback publicado' : ''}</button>`
@@ -2152,14 +2543,16 @@
                 grid.innerHTML += `
                     <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm relative">
                         <div class="flex justify-between items-start border-b border-slate-100 pb-3">
-                            <div><span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${escapeHtml(prova.code || '')}</span><h4 class="font-bold text-slate-900 text-sm mt-1">${escapeHtml(prova.alunoName || '')}</h4></div>
+                            <div><span class="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${escapeHtml(prova.code || '')}</span>${prova.tipoAvaliacao === 'pcd' ? '<span class="ml-1 text-[10px] uppercase font-bold text-violet-700 bg-violet-50 px-2 py-1 rounded">Adaptada PCD</span>' : ''}<h4 class="font-bold text-slate-900 text-sm mt-1">${escapeHtml(prova.alunoName || '')}</h4></div>
                             <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${escapeHtml(prova.alunoSerie || '')} • ${escapeHtml(prova.alunoTurma || '')}</span>
                         </div>
                         <div class="pt-2 space-y-2">
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link da avaliação</button>
                             ${botaoRespostaAluno}
-                            <button onclick="moverProvaParaLixeira('${safeToken}')" class="w-full bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold py-2 rounded-xl border border-amber-200"><i data-lucide="trash-2" class="w-3 h-3 inline mr-1"></i>Enviar avaliação para lixeira</button>
+                            ${recursoEhProprio ? `<button onclick="abrirModalCompartilhar('avaliacao','${safeToken}','avaliação de ${escapeHtml(prova.alunoName || 'aluno')}')" class="w-full bg-violet-50 text-violet-800 hover:bg-violet-100 text-xs font-semibold py-2 rounded-xl border border-violet-200">Compartilhar avaliação</button>` : '<p class="text-center text-[11px] text-cyan-700">Avaliação compartilhada com você</p>'}
+                            ${resultadoAluno && resultadoEhProprio ? `<button onclick="abrirModalCompartilhar('resultado','${safeToken}','resultado de ${escapeHtml(prova.alunoName || 'aluno')}')" class="w-full bg-cyan-50 text-cyan-800 hover:bg-cyan-100 text-xs font-semibold py-2 rounded-xl border border-cyan-200">Compartilhar resultado</button>` : ''}
+                            ${recursoEhProprio ? `<button onclick="moverProvaParaLixeira('${safeToken}')" class="w-full bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold py-2 rounded-xl border border-amber-200"><i data-lucide="trash-2" class="w-3 h-3 inline mr-1"></i>Enviar avaliação para lixeira</button>` : ''}
                         </div>
                     </div>`;
 
@@ -2172,8 +2565,8 @@
                         </div>
                     </article>`).join('');
 
-                const linhasOmr = prova.questoes.map(q =>
-                    `<tr><td class="omr-question-number">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="omr-bubble" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}</tr>`
+                const linhasGabarito = prova.questoes.map(q =>
+                    `<tr><td class="gabarito-numero">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="gabarito-bolha" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}</tr>`
                 ).join('');
 
                 areaImpressao.innerHTML += `
@@ -2195,18 +2588,16 @@
                             </div>
                             <div class="questoes-sequenciais">${questoesHtml}</div>
                             <section class="folha-gabarito">
-                                <div class="omr-scan-region" data-omr-count="${prova.questoes.length}" data-student-token="${safeToken}" style="height:${alturaOmrMm}mm;">
-                                    <svg class="omr-marker omr-tl" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-tr" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-bl" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg><svg class="omr-marker omr-br" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#000"/></svg>
-                                    <div class="omr-sheet-heading">
-                                        <strong>FOLHA DE RESPOSTAS — NÃO DOBRAR</strong><br>
+                                <div class="folha-respostas-manual">
+                                    <div class="gabarito-sheet-heading">
+                                        <strong>GABARITO DA PROVA</strong><br>
                                         Aluno: ${escapeHtml(prova.alunoName)} | Código: ${escapeHtml(prova.code || '')}<br>
-                                        Preencha completamente apenas uma bolha por questão, com caneta ou lápis escuro.
+                                        Marque uma única alternativa por questão. A correção será realizada pelo professor.
                                     </div>
-                                    <div id="${qrId}" class="omr-qr" data-omr-qr="${escapeHtml(prova.code || '')}"></div>
-                                    <table class="omr-table">
+                                    <table class="gabarito-marcacao-table">
                                         <colgroup><col style="width:10mm;">${Array.from({length:5}, () => '<col style="width:12.4mm;">').join('')}</colgroup>
                                         <thead><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-                                        <tbody>${linhasOmr}</tbody>
+                                        <tbody>${linhasGabarito}</tbody>
                                     </table>
                                 </div>
                             </section>
@@ -2214,38 +2605,6 @@
                     </div>`;
             });
 
-            // QR individual da prova: também permite identificar a folha quando o leitor o conseguir decodificar.
-            if (window.QRCode) {
-                areaImpressao.querySelectorAll('[data-omr-qr]').forEach(el => {
-                    try {
-                        new QRCode(el, {
-                            text: el.getAttribute('data-omr-qr'),
-                            width: 256, height: 256,
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                        // qrcodejs pode inserir canvas e imagem de compatibilidade.
-                        // Mantém apenas uma representação para não duplicar/deformar o QR impresso.
-                        const qrCanvas = el.querySelector('canvas');
-                        const qrImage = el.querySelector('img');
-                        if (qrCanvas && qrImage) qrImage.remove();
-                        if (qrCanvas) {
-                            qrCanvas.style.width = '19mm';
-                            qrCanvas.style.height = '19mm';
-                            qrCanvas.style.display = 'block';
-                        } else if (qrImage) {
-                            qrImage.style.width = '19mm';
-                            qrImage.style.height = '19mm';
-                            qrImage.style.display = 'block';
-                        }
-                    } catch (error) {
-                        el.innerHTML = `<span class="omr-token-fallback">${escapeHtml(el.getAttribute('data-omr-qr'))}</span>`;
-                    }
-                });
-            } else {
-                areaImpressao.querySelectorAll('[data-omr-qr]').forEach(el => {
-                    el.innerHTML = `<span class="omr-token-fallback">${escapeHtml(el.getAttribute('data-omr-qr'))}</span>`;
-                });
-            }
             if (window.lucide) lucide.createIcons();
         }
 
@@ -2284,7 +2643,20 @@
                     container.innerHTML = '<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><strong>Esta avaliação ainda não foi concluída.</strong><p class="mt-1">Quando o aluno enviar as respostas e finalizar a avaliação, a correção aparecerá aqui.</p></div>';
                     return;
                 }
-                respostaAlunoAtual = { token, prova, registro, permiteFeedback: true, pendente: false };
+                let podeEditarFeedback = String(registro.owner_id || '') === String(professorUidAtual || '');
+                if (!podeEditarFeedback && registro.owner_id) {
+                    const { data: compartilhamentoFeedback, error: erroCompartilhamento } = await supabaseClient
+                        .from('compartilhamentos_professor')
+                        .select('pode_editar')
+                        .eq('owner_id', registro.owner_id)
+                        .eq('destinatario_id', professorUidAtual)
+                        .eq('tipo', 'resultado')
+                        .eq('chave', String(token))
+                        .maybeSingle();
+                    if (erroCompartilhamento) throw erroCompartilhamento;
+                    podeEditarFeedback = Boolean(compartilhamentoFeedback?.pode_editar);
+                }
+                respostaAlunoAtual = { token, prova, registro, permiteFeedback: podeEditarFeedback, pendente: false };
                 renderizarRevisaoRespostaAluno();
             } catch (error) {
                 console.error('Erro ao consultar respostas do aluno:', error);
@@ -2450,7 +2822,7 @@
             provasGeradas = provasGeradas.filter(p => (p.studentToken || p.studentId) !== token);
             provasLixeira.push(prova);
             localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas));
-            renderizarBotoesFiltroTurmas(); renderizarGridProvas(); atualizarSelectScanner();
+            renderizarBotoesFiltroTurmas(); renderizarGridProvas();
             abrirLixeiraProvas();
             renderizarLixeiraProvas();
             atualizarStatusSync('Avaliação arquivada', 'ok');
@@ -2464,7 +2836,7 @@
             if (prova) { prova.excluidaEm = null; prova.expiraEm = null; provasGeradas.push(prova); }
             provasLixeira = provasLixeira.filter(p => (p.studentToken || p.studentId) !== token);
             localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas));
-            renderizarLixeiraProvas(); renderizarBotoesFiltroTurmas(); atualizarSelectScanner();
+            renderizarLixeiraProvas(); renderizarBotoesFiltroTurmas();
             atualizarStatusSync('Avaliação restaurada', 'ok');
         }
 
@@ -2564,6 +2936,20 @@
                 if (!data || data.erro) throw new Error(data?.erro || 'Prova não encontrada. Solicite ao professor um novo link.');
                 provaAlunoAtual = data;
                 tentativaAlunoAtual = Number(data.tentativa || 1);
+                saidasPaginaAluno = Number(data.saidas_tentativa || 0);
+                const contadorLocalSaidas = Number(localStorage.getItem(chaveContadorSaidas(token, tentativaAlunoAtual)) || 0);
+                saidasPaginaAluno = Math.max(saidasPaginaAluno, contadorLocalSaidas);
+                if (data.respostas_apagadas_em) {
+                    const chaveAvisoReset = `sys_avalia_saida_reset_aviso_${token}_${data.respostas_apagadas_em}`;
+                    if (!localStorage.getItem(chaveAvisoReset)) {
+                        localStorage.setItem(chaveAvisoReset, '1');
+                        localStorage.setItem(chaveRascunhoBloqueado(token, tentativaAlunoAtual), '1');
+                        localStorage.removeItem(chaveRascunho(token));
+                        localStorage.removeItem(chaveContadorSaidas(token, tentativaAlunoAtual));
+                        avisoSaidaAlunoPendente = 'apagadas';
+                    }
+                }
+                if (saidasPaginaAluno > 0) localStorage.setItem(chaveContadorSaidas(token, tentativaAlunoAtual), String(saidasPaginaAluno));
                 if (data.concluida) return congelarPaginaAluno(data.resultado_final || {
                     nota: data.ultima_nota,
                     acertos: `${data.ultimos_acertos || 0}/${data.total_questoes || data.prova?.questoes?.length || 0}`,
@@ -2576,9 +2962,17 @@
                     return renderizarPerguntaNovaChance({ nota: data.ultima_nota, acertos: data.ultimos_acertos, total_questoes: data.total_questoes, pode_tentar_novamente: true });
                 }
                 const localDraft = lerRascunhoLocal(token);
-                // O armazenamento local é atualizado antes da chamada de rede e pode conter a resposta mais recente.
-                const draft = { ...(data.respostas_rascunho || {}), ...(localDraft || {}) };
+                const rascunhoBloqueado = localStorage.getItem(chaveRascunhoBloqueado(token, tentativaAlunoAtual)) === '1';
+                // Após uma exclusão local/remota, não recupere um rascunho antigo que possa ainda estar no servidor.
+                const draft = (saidasPaginaAluno >= 3) ? {} : (rascunhoBloqueado ? { ...(localDraft || {}) } : { ...(data.respostas_rascunho || {}), ...(localDraft || {}) });
+                if (saidasPaginaAluno >= 3) {
+                    localStorage.removeItem(chaveRascunho(token));
+                    avisoSaidaAlunoPendente = 'apagadas';
+                } else if (saidasPaginaAluno > 0 && !avisoSaidaAlunoPendente) {
+                    avisoSaidaAlunoPendente = 'aviso';
+                }
                 renderizarProvaAluno(draft);
+                setTimeout(mostrarAvisoSaidaAlunoPendente, 250);
             } catch (error) {
                 console.error('Erro ao abrir prova do aluno:', error);
                 container.innerHTML = `<div class="text-center py-12 space-y-3"><h1 class="text-xl font-bold text-red-700">Não foi possível abrir a avaliação</h1><p class="text-sm text-slate-600">${escapeHtml(error.message || 'Erro de conexão.')}</p><p class="text-xs text-slate-500">Confira se o professor publicou o link e se o SQL de integração foi executado no Supabase.</p></div>`;
@@ -2594,25 +2988,156 @@
             try { return JSON.parse(localStorage.getItem(chaveRascunho(token)) || '{}'); } catch (_) { return {}; }
         }
 
+        function chaveContadorSaidas(token, tentativa) { return `sys_avalia_saidas_${token}_${Number(tentativa || 1)}`; }
+        function chaveRascunhoBloqueado(token, tentativa) { return `sys_avalia_rascunho_bloqueado_${token}_${Number(tentativa || 1)}`; }
+
+        function mostrarAvisoSaidaAlunoPendente() {
+            if (!avisoSaidaAlunoPendente || document.visibilityState !== 'visible') return;
+            const aviso = avisoSaidaAlunoPendente;
+            avisoSaidaAlunoPendente = null;
+            if (aviso === 'apagadas') {
+                alert('Você saiu da página da avaliação pela terceira vez. Suas respostas foram apagadas. A avaliação foi reiniciada.');
+                if (provaAlunoAtual && !paginasAlunoCongelada && !provaAlunoAtual.aguardando_nova_chance) renderizarProvaAluno({});
+            } else {
+                alert('Suas escolhas serão apagadas');
+            }
+        }
+
+        async function registrarSaidaDaAvaliacao() {
+            if (!studentMode || !studentTokenAtual || paginasAlunoCongelada || envioEmAndamento || !document.getElementById('student-exam-form')) return;
+            const agora = Date.now();
+            if (agora - ultimaSaidaAlunoMs < 1800) return;
+            ultimaSaidaAlunoMs = agora;
+            const chave = chaveContadorSaidas(studentTokenAtual, tentativaAlunoAtual);
+            const localAtual = Number(localStorage.getItem(chave) || 0);
+            const proximaContagemLocal = localAtual + 1;
+            localStorage.setItem(chave, String(proximaContagemLocal));
+            saidasPaginaAluno = Math.max(saidasPaginaAluno, proximaContagemLocal);
+
+            // Tenta persistir a última seleção antes de contar a saída.
+            try { await salvarRascunhoAluno(); } catch (_) {}
+            let resultadoServidor = null;
+            try {
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient.rpc('registrar_saida_pagina_aluno', {
+                        p_token: studentTokenAtual,
+                        p_contagem_local: proximaContagemLocal
+                    });
+                    if (error) throw error;
+                    resultadoServidor = data;
+                    if (data?.erro) throw new Error(data.erro);
+                }
+            } catch (error) {
+                console.warn('Contagem de saída não sincronizada; aplicando controle local:', error);
+            }
+
+            const contagemServidor = Number(resultadoServidor?.saidas_tentativa || 0);
+            saidasPaginaAluno = Math.max(saidasPaginaAluno, contagemServidor);
+            const apagar = resultadoServidor?.respostas_apagadas === true || saidasPaginaAluno >= 3;
+            if (apagar) {
+                localStorage.removeItem(chaveRascunho(studentTokenAtual));
+                localStorage.setItem(chaveRascunhoBloqueado(studentTokenAtual, tentativaAlunoAtual), '1');
+                localStorage.removeItem(chave);
+                saidasPaginaAluno = 0;
+                respostaAlunoAtual = {};
+                try {
+                    // Compatibilidade caso a migração RPC não esteja aplicada: limpa também o rascunho remoto.
+                    if (supabaseClient && !resultadoServidor?.respostas_apagadas) {
+                        await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: {} });
+                    }
+                } catch (error) { console.warn('Não foi possível limpar rascunho remoto:', error); }
+                if (resultadoServidor?.respostas_apagadas_em) {
+                    localStorage.setItem(`sys_avalia_saida_reset_aviso_${studentTokenAtual}_${resultadoServidor.respostas_apagadas_em}`, '1');
+                }
+                avisoSaidaAlunoPendente = 'apagadas';
+            } else {
+                const contagemFinal = Math.max(saidasPaginaAluno, proximaContagemLocal);
+                localStorage.setItem(chave, String(contagemFinal));
+                saidasPaginaAluno = contagemFinal;
+                avisoSaidaAlunoPendente = 'aviso';
+            }
+            mostrarAvisoSaidaAlunoPendente();
+        }
+
+        function configurarMonitoramentoSaidasAluno() {
+            document.addEventListener('visibilitychange', () => {
+                if (!studentMode || paginasAlunoCongelada) return;
+                if (document.visibilityState === 'hidden') {
+                    if (!cicloSaidaAlunoRegistrado) {
+                        cicloSaidaAlunoRegistrado = true;
+                        filaSaidaAluno = filaSaidaAluno.then(() => registrarSaidaDaAvaliacao()).catch(err => console.warn(err));
+                    }
+                } else {
+                    cicloSaidaAlunoRegistrado = false;
+                    mostrarAvisoSaidaAlunoPendente();
+                }
+            });
+            window.addEventListener('pagehide', () => {
+                if (!studentMode || paginasAlunoCongelada || cicloSaidaAlunoRegistrado) return;
+                cicloSaidaAlunoRegistrado = true;
+                // pagehide complementa visibilitychange quando o navegador fecha/navega diretamente.
+                filaSaidaAluno = filaSaidaAluno.then(() => registrarSaidaDaAvaliacao()).catch(err => console.warn(err));
+            });
+            window.addEventListener('pageshow', () => {
+                if (document.visibilityState === 'visible') {
+                    cicloSaidaAlunoRegistrado = false;
+                    mostrarAvisoSaidaAlunoPendente();
+                }
+            });
+        }
+
+        function aplicarAcessibilidadeAluno(config = {}) {
+            const classes = ['pcd-fonte-grande','pcd-fonte-muito-grande','pcd-alto-contraste','pcd-espacamento'];
+            document.body.classList.remove(...classes);
+            document.body.classList.toggle('pcd-fonte-grande', config.tamanhoFonte === 'grande');
+            document.body.classList.toggle('pcd-fonte-muito-grande', config.tamanhoFonte === 'muito-grande');
+            document.body.classList.toggle('pcd-alto-contraste', !!config.altoContraste);
+            document.body.classList.toggle('pcd-espacamento', !!config.espacamento);
+        }
+
+        function lerQuestaoEmVoz(numero) {
+            if (!('speechSynthesis' in window)) return alert('A leitura em voz alta não é compatível com este navegador. Utilize o leitor de tela do dispositivo.');
+            const q = provaAlunoAtual?.prova?.questoes?.find(item => Number(item.numero) === Number(numero));
+            if (!q) return;
+            const texto = `${q.numero}. ${q.enunciado}. ` + (q.alternativas || []).map(a => `Alternativa ${a.letter}. ${a.text}`).join('. ');
+            window.speechSynthesis.cancel();
+            const fala = new SpeechSynthesisUtterance(texto);
+            fala.lang = 'pt-BR';
+            fala.rate = 0.9;
+            window.speechSynthesis.speak(fala);
+        }
+
+        function pararLeituraEmVoz() {
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+
         function renderizarProvaAluno(respostas = {}) {
             const prova = provaAlunoAtual?.prova;
             if (!prova) throw new Error('Dados da prova incompletos.');
+            const acessibilidade = prova.acessibilidade || {};
+            aplicarAcessibilidadeAluno(acessibilidade);
+            const eAdaptada = prova.tipoAvaliacao === 'pcd' || acessibilidade.ativada === true;
             const container = document.getElementById('student-exam-content');
             container.innerHTML = `
                 <div class="border-b border-slate-200 pb-5 mb-6">
-                    <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">${escapeHtml(prova.escola || 'Avaliação escolar')} • ${escapeHtml(prova.serie || '')} • ${escapeHtml(prova.turma || '')}</p>
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">${escapeHtml(prova.escola || 'Avaliação escolar')} • ${escapeHtml(prova.serie || '')} • ${escapeHtml(prova.turma || '')}</p>
+                        ${eAdaptada ? '<span class="student-accessibility-badge"><span aria-hidden="true">♿</span> Avaliação adaptada</span>' : ''}
+                    </div>
                     <h1 class="text-2xl font-bold text-slate-900 mt-1">${escapeHtml(prova.titulo || 'Avaliação')}</h1>
                     <p class="text-sm text-slate-600 mt-2"><strong>Aluno:</strong> ${escapeHtml(prova.alunoName)} | <strong>Disciplina:</strong> ${escapeHtml(prova.disciplina || '')}</p>
                     <p class="text-xs text-slate-500 mt-1">Questões: ${prova.questoes.length} • Tentativa ${tentativaAlunoAtual} de 2</p>
+                    ${eAdaptada && acessibilidade.instrucoes ? `<div class="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-950" role="note"><strong>Orientações:</strong><p class="mt-1 whitespace-pre-wrap">${escapeHtml(acessibilidade.instrucoes)}</p></div>` : ''}
+                    ${eAdaptada && acessibilidade.leituraVoz ? '<div class="mt-3 flex flex-wrap gap-2"><span class="text-xs text-slate-500 self-center">Recurso de leitura disponível nas questões.</span><button type="button" onclick="pararLeituraEmVoz()" class="px-3 py-2 rounded-lg border text-xs font-bold">Parar leitura</button></div>' : ''}
                 </div>
-                <form id="student-exam-form" class="space-y-4">
-                    ${prova.questoes.map(q => `<section class="student-question">
-                        <p class="font-bold text-sm sm:text-base text-slate-800 mb-3">${q.numero}. ${escapeHtml(q.enunciado)}</p>
-                        ${q.imgEnunciado ? `<img src="${q.imgEnunciado}" class="max-h-56 rounded border mx-auto mb-3">` : ''}
+                <form id="student-exam-form" class="space-y-4" aria-label="Formulário de respostas da avaliação">
+                    ${prova.questoes.map(q => `<section class="student-question" aria-labelledby="student-q-title-${Number(q.numero)}">
+                        <div class="flex flex-wrap items-start justify-between gap-2 mb-3"><p id="student-q-title-${Number(q.numero)}" class="font-bold text-sm sm:text-base text-slate-800">${q.numero}. ${escapeHtml(q.enunciado)}</p>${eAdaptada && acessibilidade.leituraVoz ? `<button type="button" onclick="lerQuestaoEmVoz(${Number(q.numero)})" aria-label="Ouvir questão ${Number(q.numero)}" class="shrink-0 px-3 py-2 rounded-lg bg-violet-100 text-violet-900 text-xs font-bold">▶ Ouvir questão</button>` : ''}</div>
+                        ${q.imgEnunciado ? `<img src="${escapeHtml(q.imgEnunciado)}" alt="Imagem da questão ${Number(q.numero)}" class="max-h-56 rounded border mx-auto mb-3">` : ''}
                         <div class="space-y-1">${q.alternativas.map(alt => `<label class="student-option text-sm text-slate-700">
-                            <input type="radio" name="q_${q.numero}" value="${escapeHtml(alt.letter)}" ${respostas[String(q.numero)] === alt.letter ? 'checked' : ''} required>
+                            <input type="radio" name="q_${q.numero}" value="${escapeHtml(alt.letter)}" ${respostas[String(q.numero)] === alt.letter ? 'checked' : ''} required aria-label="Questão ${Number(q.numero)}, alternativa ${escapeHtml(alt.letter)}">
                             <span><strong>(${escapeHtml(alt.letter)})</strong> ${escapeHtml(alt.text)}</span>
-                            ${alt.img ? `<img src="${alt.img}" class="h-12 rounded border ml-2">` : ''}
+                            ${alt.img ? `<img src="${escapeHtml(alt.img)}" alt="Imagem da alternativa ${escapeHtml(alt.letter)}" class="h-12 rounded border ml-2">` : ''}
                         </label>`).join('')}</div>
                     </section>`).join('')}
                     <div class="pt-3"><button id="student-submit-button" type="button" onclick="submeterProvaAluno()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl p-3">Enviar respostas</button>
@@ -2620,6 +3145,7 @@
                 </form>`;
             const form = document.getElementById('student-exam-form');
             form.addEventListener('change', salvarRascunhoAluno);
+            cicloSaidaAlunoRegistrado = false;
         }
 
         async function salvarRascunhoAluno() {
@@ -2640,6 +3166,7 @@
             filaSalvamentoRascunho = filaSalvamentoRascunho.catch(() => {}).then(async () => {
                 const { error } = await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: snapshot });
                 if (error) throw error;
+                localStorage.removeItem(chaveRascunhoBloqueado(studentTokenAtual, tentativaAlunoAtual));
                 if (status && versao === versaoRascunhoAtual) status.textContent = 'Respostas salvas com segurança.';
             });
             try {
@@ -2705,6 +3232,10 @@
                 if (error) throw error;
                 if (data?.erro) throw new Error(data.erro);
                 tentativaAlunoAtual = 2;
+                saidasPaginaAluno = 0;
+                localStorage.removeItem(chaveContadorSaidas(studentTokenAtual, 2));
+                localStorage.removeItem(chaveRascunhoBloqueado(studentTokenAtual, 2));
+                avisoSaidaAlunoPendente = null;
                 renderizarProvaAluno({});
             } catch (error) { alert('Não foi possível iniciar a nova chance: ' + (error.message || error)); }
         }
@@ -2720,6 +3251,7 @@
 
         function congelarPaginaAluno(resultado = null) {
             paginasAlunoCongelada = true;
+            pararLeituraEmVoz();
             const container = document.getElementById('student-exam-content');
             const resumo = resultado?.resultado_final || resultado || {};
             const detalhes = Array.isArray(resumo.detalhes) ? resumo.detalhes : [];
@@ -2750,6 +3282,7 @@
                 <div class="rounded-xl bg-rose-50 p-3"><strong class="text-2xl text-rose-700">${errosNumero}</strong><p class="text-xs text-rose-800">Erros</p></div>
                 <div class="rounded-xl bg-slate-100 p-3"><strong class="text-2xl text-slate-700">${Number(resumo.tentativas || tentativaAlunoAtual || 1)}</strong><p class="text-xs text-slate-700">Tentativa(s)</p></div>
             </section>` : `<p class="text-sm text-slate-600">Sua avaliação foi registrada. A nota detalhada será exibida quando o resultado estiver disponível.</p>`;
+            document.body.classList.remove('pcd-fonte-grande','pcd-fonte-muito-grande','pcd-alto-contraste','pcd-espacamento');
             container.innerHTML = `<div class="max-w-3xl mx-auto py-8 space-y-6">
                 <div class="text-center space-y-3 border-b border-slate-200 pb-5">
                     <div class="mx-auto w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><i data-lucide="check-check" class="w-9 h-9"></i></div>
@@ -2782,451 +3315,6 @@
         function copiarLinkAluno(link) {
             navigator.clipboard.writeText(link);
             alert("Link individual copiado!");
-        }
-
-        function atualizarSelectScanner() {
-            const select = document.getElementById('scanner-select-aluno');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Selecione --</option>';
-            provasGeradas.forEach(p => {
-                select.innerHTML += `<option value="${p.studentToken || p.studentId}">${p.alunoName} [${p.alunoSerie} - ${p.alunoTurma}]</option>`;
-            });
-        }
-
-        async function alternarCamera() {
-            const video = document.getElementById('webcam-video');
-            const placeholder = document.getElementById('webcam-placeholder');
-            const btnText = document.getElementById('btn-camera-text');
-            const status = document.getElementById('scanner-status');
-
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = null;
-                video.pause();
-                video.srcObject = null;
-                video.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-                btnText.textContent = 'Ligar câmera traseira';
-                if (status) status.textContent = 'Câmera desligada. Você também pode enviar uma foto da galeria.';
-                return;
-            }
-
-            try {
-                if (!navigator.mediaDevices?.getUserMedia) {
-                    throw new Error('Este navegador não disponibiliza câmera. Utilize “Enviar foto da galeria”.');
-                }
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
-                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                video.srcObject = cameraStream;
-                await video.play();
-                video.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-                btnText.textContent = 'Desligar câmera';
-                scannerImageAtual = null;
-                if (status) status.textContent = 'Câmera ativa. Mantenha os quatro quadrados pretos visíveis e evite sombras.';
-            } catch (err) {
-                cameraStream = null;
-                if (status) status.textContent = err.message || 'Não foi possível abrir a câmera.';
-                alert(err.message || 'Câmera indisponível. Verifique a permissão do navegador.');
-            }
-        }
-
-        function carregarFotoScanner(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                alert('Selecione uma fotografia da folha de respostas.');
-                return;
-            }
-            const image = new Image();
-            image.onload = () => {
-                scannerImageAtual = image;
-                const status = document.getElementById('scanner-status');
-                if (status) status.textContent = `Foto carregada (${image.naturalWidth} × ${image.naturalHeight}). Clique em “Capturar e ler gabarito”.`;
-                const placeholder = document.getElementById('webcam-placeholder');
-                if (placeholder && !cameraStream) {
-                    placeholder.classList.remove('hidden');
-                    placeholder.innerHTML = '<i data-lucide="image-check" class="w-10 h-10 text-emerald-400 mx-auto"></i><p class="text-xs text-slate-200">Foto carregada. A leitura será feita a partir da imagem selecionada.</p>';
-                    if (window.lucide) lucide.createIcons();
-                }
-            };
-            image.onerror = () => alert('Não foi possível abrir a imagem selecionada.');
-            image.src = URL.createObjectURL(file);
-        }
-
-        async function aguardarOpenCV(timeoutMs = 60000) {
-            const inicio = Date.now();
-            let promessaResolucao = null;
-            let ultimoErro = null;
-            const possuiAPI = api => Boolean(api && api.Mat && api.MatVector && api.findContours &&
-                api.getPerspectiveTransform && api.warpPerspective && api.approxPolyDP);
-
-            while (Date.now() - inicio < timeoutMs) {
-                if (window.__opencvLoadError) throw new Error(window.__opencvLoadError);
-                let instancia = window.cv;
-
-                if (instancia && typeof instancia.then === 'function') {
-                    // A documentação do OpenCV.js define cv como Promise em builds async.
-                    // Promise.resolve transforma thenables em Promise nativa; não encadeamos
-                    // .catch() no retorno de instancia.then(), que em alguns builds é undefined.
-                    if (!promessaResolucao) {
-                        promessaResolucao = Promise.resolve(instancia).then(api => {
-                            if (api) window.cv = api;
-                            return api || window.cv;
-                        }, erro => {
-                            ultimoErro = erro;
-                            return null;
-                        });
-                    }
-                    const apiResolvida = await Promise.race([
-                        promessaResolucao,
-                        new Promise(resolve => window.setTimeout(() => resolve(null), 250))
-                    ]);
-                    if (possuiAPI(apiResolvida)) {
-                        window.cv = apiResolvida;
-                        return apiResolvida;
-                    }
-                    instancia = window.cv;
-                }
-
-                if (possuiAPI(instancia)) return instancia;
-                await new Promise(resolve => window.setTimeout(resolve, 200));
-            }
-
-            const detalhe = ultimoErro ? ` Detalhe: ${ultimoErro.message || ultimoErro}` : '';
-            throw new Error('OpenCV.js não terminou de inicializar. Atualize o site, aguarde a biblioteca carregar e tente novamente.' + detalhe);
-        }
-
-        function pontoExtremoMarcador(pontos, tipo) {
-            const valor = p => {
-                if (tipo === 'tl') return p.x + p.y;
-                if (tipo === 'tr') return p.x - p.y;
-                if (tipo === 'br') return p.x + p.y;
-                return p.y - p.x;
-            };
-            return pontos.reduce((melhor, p) => {
-                if (!melhor) return p;
-                if (tipo === 'tl' && valor(p) < valor(melhor)) return p;
-                if (tipo === 'tr' && valor(p) > valor(melhor)) return p;
-                if (tipo === 'br' && valor(p) > valor(melhor)) return p;
-                if (tipo === 'bl' && valor(p) > valor(melhor)) return p;
-                return melhor;
-            }, null);
-        }
-
-        function detectarMarcadoresOMR(cv, imagemCanvas) {
-            const src = cv.imread(imagemCanvas);
-            const gray = new cv.Mat();
-            const bin = new cv.Mat();
-            const contours = new cv.MatVector();
-            const hierarchy = new cv.Mat();
-            const candidatos = [];
-            try {
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
-                cv.threshold(gray, bin, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-                cv.findContours(bin, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-                const minArea = Math.max(35, src.cols * src.rows * 0.000006);
-                const ladoMinimo = Math.max(10, src.cols * 0.009);
-                const ladoMaximo = src.cols * 0.085;
-
-                for (let i = 0; i < contours.size(); i++) {
-                    const contour = contours.get(i);
-                    let approx = null;
-                    try {
-                        const area = Math.abs(cv.contourArea(contour));
-                        if (area < minArea) continue;
-                        const rect = cv.boundingRect(contour);
-                        const ladoMedio = (rect.width + rect.height) / 2;
-                        if (ladoMedio < ladoMinimo || ladoMedio > ladoMaximo) continue;
-
-                        const perimetro = cv.arcLength(contour, true);
-                        approx = new cv.Mat();
-                        cv.approxPolyDP(contour, approx, 0.035 * perimetro, true);
-                        if (approx.rows !== 4 || !cv.isContourConvex(approx)) continue;
-
-                        const dados = approx.data32S;
-                        const pontos = [];
-                        for (let p = 0; p < 4; p++) pontos.push({ x: dados[p * 2], y: dados[p * 2 + 1] });
-                        const distancias = pontos.map((p, idx) => {
-                            const prox = pontos[(idx + 1) % 4];
-                            return Math.hypot(prox.x - p.x, prox.y - p.y);
-                        });
-                        const ladoMin = Math.min(...distancias);
-                        const ladoMax = Math.max(...distancias);
-                        const lado = distancias.reduce((a,b) => a+b, 0) / 4;
-                        const preenchimento = area / Math.max(1, rect.width * rect.height);
-                        // Quadrado sólido pode parecer um losango na foto; por isso não usamos
-                        // apenas largura/altura da bounding box para rejeitar rotação.
-                        if (lado < ladoMinimo || lado > ladoMaximo || ladoMin / Math.max(1, ladoMax) < 0.48 || preenchimento < 0.38) continue;
-
-                        candidatos.push({
-                            area, lado,
-                            cx: pontos.reduce((a,p) => a+p.x, 0) / 4,
-                            cy: pontos.reduce((a,p) => a+p.y, 0) / 4,
-                            pontos
-                        });
-                    } finally {
-                        if (approx) approx.delete();
-                        contour.delete();
-                    }
-                }
-
-                candidatos.sort((a,b) => b.area - a.area);
-                const maiores = candidatos.slice(0, 4);
-                if (maiores.length !== 4) {
-                    throw new Error('Não encontrei os quatro marcadores pretos. Imprima a folha OMR atualizada e fotografe a folha inteira, sem cortar os cantos.');
-                }
-                const lados = maiores.map(c => c.lado).sort((a,b) => a-b);
-                const mediana = (lados[1] + lados[2]) / 2;
-                if (maiores.some(c => c.lado < mediana * 0.55 || c.lado > mediana * 1.65)) {
-                    throw new Error('Os marcadores encontrados têm tamanhos diferentes. Evite sombras, bordas de mesa e objetos junto à folha.');
-                }
-
-                const tl = maiores.reduce((a,b) => (a.cx+a.cy) < (b.cx+b.cy) ? a : b);
-                const br = maiores.reduce((a,b) => (a.cx+a.cy) > (b.cx+b.cy) ? a : b);
-                const tr = maiores.reduce((a,b) => (a.cx-a.cy) > (b.cx-b.cy) ? a : b);
-                const bl = maiores.reduce((a,b) => (a.cx-a.cy) < (b.cx-b.cy) ? a : b);
-                if (new Set([tl, tr, br, bl]).size !== 4) {
-                    throw new Error('Não consegui localizar os quatro cantos. Posicione a câmera mais de frente para a folha.');
-                }
-                return {
-                    points: [
-                        pontoExtremoMarcador(tl.pontos, 'tl'),
-                        pontoExtremoMarcador(tr.pontos, 'tr'),
-                        pontoExtremoMarcador(br.pontos, 'br'),
-                        pontoExtremoMarcador(bl.pontos, 'bl')
-                    ],
-                    sourceWidth: src.cols,
-                    sourceHeight: src.rows
-                };
-            } finally {
-                src.delete(); gray.delete(); bin.delete(); contours.delete(); hierarchy.delete();
-            }
-        }
-
-        function calcularEscuridaoBolha(imageData, largura, xCentro, yCentro) {
-            // A amostra fica no interior da bolha (4,4 mm); a borda impressa fica fora do raio.
-            const raio = 12;
-            let pixels = 0, escuros = 0, soma = 0;
-            for (let y = Math.max(0, Math.floor(yCentro - raio)); y < Math.min(imageData.height, Math.ceil(yCentro + raio)); y++) {
-                for (let x = Math.max(0, Math.floor(xCentro - raio)); x < Math.min(imageData.width, Math.ceil(xCentro + raio)); x++) {
-                    const dx = x - xCentro, dy = y - yCentro;
-                    if (dx * dx + dy * dy > raio * raio) continue;
-                    const idx = (y * largura + x) * 4;
-                    const cinza = (imageData.data[idx] * 0.299) + (imageData.data[idx + 1] * 0.587) + (imageData.data[idx + 2] * 0.114);
-                    soma += cinza;
-                    if (cinza < 205) escuros++;
-                    pixels++;
-                }
-            }
-            const media = pixels ? soma / pixels : 255;
-            return { ratio: pixels ? escuros / pixels : 0, media };
-        }
-
-        function lerBolhasOMR(cv, imagemCanvas, quantidadeQuestoes) {
-            const marcadores = detectarMarcadoresOMR(cv, imagemCanvas);
-            const larguraPadrao = 1600;
-            const alturaMm = 26.5 + quantidadeQuestoes * 6.5;
-            const alturaPadrao = Math.round(larguraPadrao * alturaMm / 160);
-            const src = cv.imread(imagemCanvas);
-            const warped = new cv.Mat();
-            const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, marcadores.points.flatMap(p => [p.x, p.y]));
-            const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, larguraPadrao - 1, 0, larguraPadrao - 1, alturaPadrao - 1, 0, alturaPadrao - 1]);
-            const transform = cv.getPerspectiveTransform(srcPts, dstPts);
-            try {
-                cv.warpPerspective(src, warped, transform, new cv.Size(larguraPadrao, alturaPadrao), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255,255,255,255));
-                const aligned = document.createElement('canvas');
-                aligned.width = larguraPadrao;
-                aligned.height = alturaPadrao;
-                cv.imshow(aligned, warped);
-                const ctx = aligned.getContext('2d', { willReadFrequently: true });
-                const data = ctx.getImageData(0, 0, aligned.width, aligned.height);
-                let qrToken = '';
-                if (window.jsQR) {
-                    try {
-                        const qrX = Math.max(0, larguraPadrao - 300);
-                        const qrCrop = ctx.getImageData(qrX, 0, 260, 260);
-                        const qrResult = jsQR(qrCrop.data, qrCrop.width, qrCrop.height, { inversionAttempts: 'attemptBoth' });
-                        if (qrResult && /^[A-Z0-9-]{4,32}$/i.test(qrResult.data)) qrToken = qrResult.data;
-                    } catch (_) { /* o QR é auxiliar; a seleção manual continua disponível */ }
-                }
-                const answers = {};
-                const scores = {};
-                const letras = ['A','B','C','D','E'];
-
-                for (let row = 0; row < quantidadeQuestoes; row++) {
-                    const numeroQuestao = row + 1;
-                    const yMm = 16 + 5.5 + (row + 0.5) * 6.5;
-                    const y = yMm * 10;
-                    const linha = {};
-                    letras.forEach((letra, k) => {
-                        // Grade vertical: tabela centralizada em 72 mm; coluna Nº (10 mm) + 5 bolhas (12,4 mm cada).
-                        const xMm = 44 + 10 + (k + 0.5) * 12.4;
-                        linha[letra] = calcularEscuridaoBolha(data, aligned.width, xMm * 10, y);
-                    });
-                    const ordenadas = letras.map(letra => ({ letra, ...linha[letra] })).sort((a,b) => b.ratio-a.ratio);
-                    const primeira = ordenadas[0], segunda = ordenadas[1];
-                    let resposta = '';
-                    let estado = 'em branco';
-                    if (primeira.ratio >= 0.15 && segunda.ratio >= 0.11 && (primeira.ratio - segunda.ratio) < 0.045) {
-                        estado = 'dupla/ambígua';
-                    } else if (primeira.ratio >= 0.15 && (primeira.ratio - segunda.ratio) >= 0.04) {
-                        resposta = primeira.letra;
-                        estado = 'detectada';
-                    } else if (primeira.ratio >= 0.08) {
-                        estado = 'marca fraca — conferir';
-                    }
-                    answers[String(numeroQuestao)] = resposta;
-                    scores[String(numeroQuestao)] = { estado, confianca: primeira.ratio, alternativa: primeira.letra, segunda: segunda.ratio, linha };
-                }
-
-                return { answers, scores, alignedCanvas: aligned, qrToken };
-            } finally {
-                src.delete(); warped.delete(); srcPts.delete(); dstPts.delete(); transform.delete();
-            }
-        }
-
-        async function processarLeituraOptica() {
-            if (!professorLogado) return alert('Acesso restrito ao professor.');
-            const studentId = document.getElementById('scanner-select-aluno').value;
-            if (!studentId) return alert('Selecione o estudante correspondente à folha.');
-            const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === studentId || p.studentId === studentId);
-            if (!prova) return alert('Prova não localizada. Gere/publice as provas novamente.');
-
-            const status = document.getElementById('scanner-status');
-            const container = document.getElementById('resultado-scanner-container');
-            try {
-                if (status) status.textContent = 'Carregando OpenCV. Na primeira leitura pode levar alguns segundos...';
-                const cv = await aguardarOpenCV();
-                const video = document.getElementById('webcam-video');
-                const canvas = document.getElementById('scanner-work-canvas');
-                let largura = 0, altura = 0;
-                if (scannerImageAtual) {
-                    largura = scannerImageAtual.naturalWidth; altura = scannerImageAtual.naturalHeight;
-                    const escala = Math.min(1, 1800 / Math.max(largura, altura));
-                    canvas.width = Math.round(largura * escala); canvas.height = Math.round(altura * escala);
-                    canvas.getContext('2d').drawImage(scannerImageAtual, 0, 0, canvas.width, canvas.height);
-                } else if (cameraStream && video.readyState >= 2 && video.videoWidth > 0) {
-                    largura = video.videoWidth; altura = video.videoHeight;
-                    canvas.width = largura; canvas.height = altura;
-                    canvas.getContext('2d').drawImage(video, 0, 0, largura, altura);
-                } else {
-                    throw new Error('Ligue a câmera traseira ou envie uma foto da folha pela galeria antes de ler.');
-                }
-
-                const leitura = lerBolhasOMR(cv, canvas, prova.questoes.length);
-                if (leitura.qrToken && leitura.qrToken !== String(prova.code || '')) {
-                    throw new Error('O código QR desta folha não corresponde ao estudante selecionado. Escolha o aluno correto e leia novamente.');
-                }
-                const marcadas = leitura.answers;
-                const alertas = Object.entries(leitura.scores).filter(([,s]) => s.estado !== 'detectada');
-                container.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
-                            <strong>Folha alinhada e analisada.</strong> Confira as respostas detectadas abaixo. Campos em branco, marcas fracas ou duplas exigem revisão manual antes de salvar.
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-center">
-                            <div class="rounded-lg bg-slate-50 p-2"><strong class="text-lg">${prova.questoes.length}</strong><p class="text-[10px] text-slate-500">Questões lidas</p></div>
-                            <div class="rounded-lg bg-amber-50 p-2"><strong class="text-lg text-amber-700">${alertas.length}</strong><p class="text-[10px] text-slate-500">Itens para conferir</p></div>
-                        </div>
-                        <h4 class="font-bold text-sm">Respostas reconhecidas — ${escapeHtml(prova.alunoName)}</h4>
-                        <div class="space-y-2">
-                            ${prova.questoes.map(q => {
-                                const score = leitura.scores[String(q.numero)];
-                                const detected = marcadas[String(q.numero)] || '';
-                                const cls = score.estado === 'detectada' ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50';
-                                return `<label class="flex items-center justify-between gap-3 rounded-lg border ${cls} p-2 text-xs">
-                                    <span class="min-w-0"><strong>Questão ${q.numero}</strong><br><small class="text-slate-500">${escapeHtml(score.estado)} · ${Math.round(score.confianca * 100)}%</small></span>
-                                    <select data-scanner-q="${q.numero}" class="border rounded-lg p-2 bg-white min-w-[92px]">
-                                        <option value="">Em branco / revisar</option>
-                                        ${['A','B','C','D','E'].map(l => `<option value="${l}" ${detected === l ? 'selected' : ''}>${l}</option>`).join('')}
-                                    </select>
-                                </label>`;
-                            }).join('')}
-                        </div>
-                        <button onclick="confirmarLeituraOptica('${escapeHtml(prova.studentToken || prova.studentId)}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs p-3 rounded-xl">Confirmar correção e salvar nota</button>
-                        <p class="text-[10px] text-slate-500">A leitura é uma sugestão automática. Confira especialmente respostas marcadas como duplas ou fracas.</p>
-                    </div>`;
-                if (status) status.textContent = 'Leitura concluída. Revise as alternativas antes de confirmar.';
-            } catch (error) {
-                console.error('Falha no leitor OMR:', error);
-                container.innerHTML = `<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-                    <strong>Não foi possível ler esta folha.</strong><p class="mt-2">${escapeHtml(error.message || 'Erro desconhecido.')}</p>
-                    <p class="mt-2 text-xs">Use uma folha impressa na versão OMR nova, enquadre os quatro marcadores pretos e evite sombras, dobras ou cortes.</p>
-                    <button onclick="abrirConferenciaManualScanner()" class="mt-3 w-full rounded-lg bg-white border border-rose-200 py-2 text-xs font-bold">Registrar respostas manualmente</button>
-                </div>`;
-                if (status) status.textContent = 'Leitura não concluída. Verifique as instruções.';
-            }
-        }
-
-        function abrirConferenciaManualScanner() {
-            const studentId = document.getElementById('scanner-select-aluno').value;
-            const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === studentId || p.studentId === studentId);
-            if (!prova) return alert('Selecione um estudante.');
-            document.getElementById('resultado-scanner-container').innerHTML = `<div class="space-y-3">
-                <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs">Modo manual de contingência. Registre exatamente as alternativas preenchidas na folha.</div>
-                ${prova.questoes.map(q => `<label class="flex items-center justify-between gap-3 border rounded-lg p-2 text-xs"><span class="font-semibold">Questão ${q.numero}</span><select data-scanner-q="${q.numero}" class="border rounded-lg p-2 bg-white"><option value="">Em branco</option>${['A','B','C','D','E'].map(l => `<option value="${l}">${l}</option>`).join('')}</select></label>`).join('')}
-                <button onclick="confirmarLeituraOptica('${escapeHtml(prova.studentToken || prova.studentId)}')" class="w-full bg-emerald-600 text-white font-bold text-xs p-3 rounded-xl">Corrigir e salvar</button>
-            </div>`;
-        }
-
-        async function confirmarLeituraOptica(studentId) {
-            const prova = provasGeradas.find(p => (p.studentToken || p.studentId) === studentId || p.studentId === studentId);
-            if (!prova) return;
-            const marcadas = {};
-            document.querySelectorAll('[data-scanner-q]').forEach(sel => marcadas[String(sel.getAttribute('data-scanner-q'))] = sel.value || null);
-            const detalhes = prova.questoes.map(q => {
-                const marcada = marcadas[String(q.numero)] || null;
-                const acertou = marcada === q.letraCorreta;
-                return { numero: q.numero, enunciado: q.enunciado, marcada, correta: q.letraCorreta, acertou };
-            });
-            const acertos = detalhes.filter(d => d.acertou).length;
-            const erros = detalhes.filter(d => !d.acertou).length;
-            const nota = Number(((acertos / prova.questoes.length) * 10).toFixed(1));
-            const registro = {
-                studentToken: prova.studentToken || prova.studentId,
-                aluno: prova.alunoName,
-                anoLetivo: String(prova.anoLetivo || document.getElementById('cfg-ano-letivo').value),
-                serie: `${prova.alunoSerie} - ${prova.alunoTurma}`,
-                bimestre: prova.bimestre || document.getElementById('cfg-bimestre').value,
-                disciplina: prova.disciplina || document.getElementById('cfg-disciplina').value,
-                acertos: `${acertos}/${prova.questoes.length}`,
-                nota, origem: 'Leitor óptico OMR', data: new Date().toLocaleString('pt-BR'), detalhes, respostas: marcadas
-            };
-            salvarNotaNoBanco(registro);
-            if (supabaseClient && professorLogado) {
-                const { error } = await supabaseClient.from('respostas_avaliacoes').upsert([{
-                    student_token: registro.studentToken,
-                    aluno_nome: registro.aluno,
-                    ano_letivo: Number(registro.anoLetivo),
-                    serie: registro.serie,
-                    bimestre: registro.bimestre,
-                    disciplina: registro.disciplina,
-                    acertos: registro.acertos,
-                    nota: registro.nota,
-                    origem: registro.origem,
-                    detalhes: detalhes,
-                    respostas: marcadas,
-                    tentativas: 1
-                }], { onConflict: 'student_token' });
-                if (error) {
-                    console.error('Erro ao salvar correção no Supabase:', error);
-                    alert('A correção foi calculada, mas não foi sincronizada com o Supabase: ' + error.message);
-                }
-            }
-            const listaDetalhes = detalhes.map(d => `<div class="rounded-lg border p-3 ${d.acertou ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}">
-                <p class="font-bold text-xs">${d.acertou ? '✓ ACERTO' : (d.marcada ? '✗ ERRO' : '— EM BRANCO')} — Questão ${d.numero}</p>
-                <p class="text-xs text-slate-700 mt-1">${escapeHtml(d.enunciado)}</p>
-                <p class="text-xs mt-1">Marcada: <strong>${d.marcada || 'Em branco'}</strong> • Correta: <strong>${d.correta}</strong></p>
-            </div>`).join('');
-            document.getElementById('resultado-scanner-container').innerHTML = `<div class="space-y-3">
-                <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-emerald-50 rounded-lg p-3"><strong class="text-xl text-emerald-700">${acertos}</strong><p class="text-[10px]">Acertos</p></div><div class="bg-rose-50 rounded-lg p-3"><strong class="text-xl text-rose-700">${erros}</strong><p class="text-[10px]">Erros</p></div><div class="bg-indigo-50 rounded-lg p-3"><strong class="text-xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-[10px]">Nota</p></div></div>
-                <h4 class="font-bold text-sm">Correção questão por questão</h4><div class="space-y-2">${listaDetalhes}</div>
-            </div>`;
         }
 
         function salvarNotaNoBanco(registro) {
@@ -3272,7 +3360,7 @@
                 if (campoLista) campoLista.value = '';
                 fecharConfirmacaoZerarBanco();
                 alternarTurmaAluno();
-                renderizarBancoNotas(); renderizarBotoesFiltroTurmas(); renderizarGridProvas(); renderizarLixeiraProvas(); atualizarSelectScanner(); atualizarBadges();
+                renderizarBancoNotas(); renderizarBotoesFiltroTurmas(); renderizarGridProvas(); renderizarLixeiraProvas(); atualizarBadges();
                 atualizarStatusSync('Dados de teste zerados', 'ok');
                 alert('Dados de teste removidos com sucesso. O banco de questões e as imagens foram preservados.');
             } catch (error) {
@@ -3357,7 +3445,8 @@
                         <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.bimestre || '—')}</td>
                         <td class="px-6 py-4 font-mono text-xs">${escapeHtml(row.acertos || '')}</td>
                         <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
-                        <td class="px-6 py-4 text-[11px] text-slate-500">${row.origem} • ${row.data}</td>
+                        <td class="px-6 py-4 text-[11px] text-slate-500">${escapeHtml(row.origem || '')} • ${escapeHtml(row.data || '')}</td>
+                        <td class="px-6 py-4">${row.studentToken && (!row.ownerId || row.ownerId === professorUidAtual) ? `<button onclick="abrirModalCompartilhar('resultado','${escapeHtml(row.studentToken)}','resultado de ${escapeHtml(row.aluno || 'aluno')}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-50 text-cyan-800 text-[11px] font-bold">Compartilhar</button>` : '<span class="text-xs text-slate-400">—</span>'}</td>
                     </tr>
                 `;
             });
@@ -3369,7 +3458,7 @@
 
         function atualizarTabelaNotasVazia() {
             const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
             document.getElementById('stat-total').textContent = '0';
             document.getElementById('stat-media').textContent = '0.0';
             document.getElementById('stat-maior').textContent = '0.0';
