@@ -1,0 +1,19 @@
+ATUALIZACAO V16 — RESULTADO FINAL NO LINK DO ALUNO
+
+O que muda
+- Depois do envio final da avaliacao, o mesmo link do aluno mostra a nota, os acertos, os erros e a correcao de cada questao.
+- Se o aluno atualizar ou reabrir o link apos a conclusao, o resultado continua visivel.
+- Se a nota da primeira tentativa for inferior a 6,0, o sistema continua perguntando se deseja uma segunda chance. O gabarito completo so aparece depois da conclusao, na segunda tentativa ou quando o aluno recusa a nova chance.
+- O fluxo e o conteudo das avaliacoes on-line nao foram modificados.
+
+Instalacao
+1. No GitHub, substitua o index.html pelo arquivo Sistema_Avaliacao_Digital_Resultado_Aluno.html, renomeando-o para index.html.
+2. No Supabase do projeto abmhfmlttjmwksqhnzwr, abra SQL Editor > New Query.
+3. Abra migracao_resultado_final_link_aluno_v16.sql, copie todo o conteudo, cole no SQL Editor e clique RUN.
+4. Aguarde o GitHub Pages publicar. No navegador, atualize com Ctrl+F5.
+5. Teste com um link de aluno de teste: responda a primeira tentativa abaixo de 6,0, escolha SIM, responda novamente e envie. A tela final deve mostrar nota e a correcao por questao.
+
+Observacoes
+- Esta migracao atualiza somente as funcoes RPC de consulta/finalizacao. Ela nao apaga notas nem avaliacoes.
+- A chave correta continua protegida: as alternativas corretas nao sao entregues antes da conclusao.
+- O link do aluno e um token individual; nao compartilhe links de outros alunos.
