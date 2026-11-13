@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE AVALIAÇÃO DIGITAL</title>
-    <!-- V18: avaliação adaptada PCD e controle de saídas da página do aluno; recursos anteriores preservados. -->
+    <!-- V18: avaliação adaptada PCD, controle de saídas e recuperação de senha Supabase. -->
     
     <!-- PWA: arquivos separados são necessários para instalação e service worker no GitHub Pages -->
     <link rel="manifest" href="./manifest.webmanifest">
@@ -232,8 +232,21 @@
                 <div><label class="block text-xs font-bold text-slate-700 mb-1">Senha</label><input id="teacher-password" type="password" autocomplete="current-password" required class="w-full border rounded-xl p-3 text-sm" placeholder="Sua senha"></div>
                 <button id="teacher-login-button" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl p-3 text-sm">Entrar no sistema</button>
             </form>
+            <button id="teacher-forgot-password-button" type="button" onclick="solicitarRecuperacaoSenha()" class="w-full text-sm font-semibold text-indigo-700 hover:text-indigo-900 underline">Esqueci minha senha</button>
+            <div id="teacher-password-recovery-panel" class="hidden border border-indigo-200 bg-indigo-50 rounded-xl p-4 space-y-3">
+                <div>
+                    <h2 class="font-bold text-indigo-900">Criar nova senha</h2>
+                    <p class="text-xs text-indigo-800 mt-1">O link de recuperação foi validado. Escolha uma nova senha para sua conta.</p>
+                </div>
+                <form id="teacher-password-recovery-form" onsubmit="salvarNovaSenhaProfessor(event)" class="space-y-2">
+                    <div><label class="block text-xs font-bold text-slate-700 mb-1">Nova senha</label><input id="teacher-new-password" type="password" minlength="8" autocomplete="new-password" required class="w-full border rounded-xl p-3 text-sm" placeholder="Mínimo de 8 caracteres"></div>
+                    <div><label class="block text-xs font-bold text-slate-700 mb-1">Confirmar nova senha</label><input id="teacher-confirm-password" type="password" minlength="8" autocomplete="new-password" required class="w-full border rounded-xl p-3 text-sm" placeholder="Repita a nova senha"></div>
+                    <button id="teacher-save-new-password" type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl p-3 text-sm">Salvar nova senha</button>
+                </form>
+                <button type="button" onclick="voltarLoginProfessor()" class="w-full text-xs text-indigo-700 underline">Voltar para o login</button>
+            </div>
             <p id="teacher-auth-status" class="text-xs text-center text-slate-500" role="status">Configure e conecte o Supabase para acessar o painel.</p>
-            <details class="border border-slate-200 rounded-xl p-3">
+            <details id="teacher-signup-details" class="border border-slate-200 rounded-xl p-3">
                 <summary class="cursor-pointer text-xs font-bold text-indigo-700">Sou colega e preciso criar meu acesso</summary>
                 <form id="teacher-signup-form" onsubmit="cadastrarContaProfessor(event)" class="space-y-2 mt-3">
                     <input id="teacher-signup-name" type="text" required maxlength="120" placeholder="Nome completo" class="w-full border rounded-lg p-2.5 text-sm">
@@ -243,7 +256,7 @@
                 </form>
                 <p class="text-[10px] text-slate-500 mt-2">Cada colega usa seu próprio e-mail e senha. O administrador aprova o pedido antes do primeiro acesso ao painel.</p>
             </details>
-            <p class="text-[11px] leading-relaxed text-slate-400">O acesso dos alunos continua sendo feito pelo link individual da avaliação. As contas de professores são individuais e não compartilham senhas.</p>
+            <p id="teacher-auth-extra" class="text-[11px] leading-relaxed text-slate-400">O acesso dos alunos continua sendo feito pelo link individual da avaliação. As contas de professores são individuais e não compartilham senhas.</p>
         </div>
     </section>
 
@@ -897,12 +910,13 @@
         let notaTurmaSelecionada = null;
         // Chave Publishable pública do novo projeto Supabase. Pode ficar no HTML publicado.
         // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
-        const CONFIG_SUPABASE_VERSION = '2026-11-12-v18-pcd-saidas';
+        const CONFIG_SUPABASE_VERSION = '2026-11-13-v18-recuperacao-senha';
         const SUPABASE_URL_PADRAO = 'https://abmhfmlttjmwksqhnzwr.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_QzbibIo1845K1uur6R4V7w_Sjt3b-Jk';
 
         let supabaseClient = null;
         let supabaseAuthSubscription = null;
+        let modoRecuperacaoSenha = false;
         let realtimeChannel = null;
         let professorLogado = false;
         let studentMode = false;
@@ -1261,7 +1275,7 @@
         }
 
         async function mostrarPainelProfessor(session) {
-            if (studentMode || !session?.user || !supabaseClient) return;
+            if (studentMode || modoRecuperacaoSenha || !session?.user || !supabaseClient) return;
             const uid = session.user.id;
             const uidAnterior = localStorage.getItem('sys_professor_ultimo_uid');
             if (uidAnterior && uidAnterior !== uid) {
@@ -1320,6 +1334,113 @@
             try { await painelProfessorEmCarregamento; }
             catch (error) { console.error('Falha ao restaurar painel:', error); }
             finally { painelProfessorEmCarregamento = null; }
+        }
+
+        function retornoDeRecuperacaoSenhaNaUrl() {
+            const query = new URLSearchParams(window.location.search);
+            const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+            return query.get('password-reset') === '1' || query.get('type') === 'recovery' || hash.get('type') === 'recovery';
+        }
+
+        function mostrarFormularioNovaSenhaProfessor() {
+            if (studentMode) return;
+            modoRecuperacaoSenha = true;
+            professorLogado = false;
+            adminLogado = false;
+            professorUidAtual = null;
+            document.getElementById('teacher-auth-gate')?.classList.remove('hidden');
+            document.getElementById('teacher-header')?.classList.add('hidden');
+            document.getElementById('teacher-main')?.classList.add('hidden');
+            document.getElementById('teacher-login-form')?.classList.add('hidden');
+            document.getElementById('teacher-forgot-password-button')?.classList.add('hidden');
+            document.getElementById('teacher-signup-details')?.classList.add('hidden');
+            document.getElementById('teacher-auth-extra')?.classList.add('hidden');
+            document.getElementById('teacher-password-recovery-panel')?.classList.remove('hidden');
+            const status = document.getElementById('teacher-auth-status');
+            if (status) status.textContent = 'Defina uma nova senha para sua conta.';
+            document.getElementById('teacher-new-password')?.focus();
+        }
+
+        function voltarLoginProfessor() {
+            document.getElementById('teacher-password-recovery-panel')?.classList.add('hidden');
+            document.getElementById('teacher-login-form')?.classList.remove('hidden');
+            document.getElementById('teacher-forgot-password-button')?.classList.remove('hidden');
+            document.getElementById('teacher-signup-details')?.classList.remove('hidden');
+            document.getElementById('teacher-auth-extra')?.classList.remove('hidden');
+            const status = document.getElementById('teacher-auth-status');
+            if (status) status.textContent = 'Você pode entrar com sua nova senha.';
+            const urlLimpa = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, urlLimpa);
+        }
+
+        async function solicitarRecuperacaoSenha() {
+            const status = document.getElementById('teacher-auth-status');
+            const email = (document.getElementById('teacher-email')?.value || '').trim();
+            if (!supabaseClient) {
+                if (status) status.textContent = 'Supabase não conectado. Atualize a página e tente novamente.';
+                return;
+            }
+            if (!email) {
+                if (status) status.textContent = 'Informe seu e-mail no campo acima para receber o link de recuperação.';
+                document.getElementById('teacher-email')?.focus();
+                return;
+            }
+            const botao = document.getElementById('teacher-forgot-password-button');
+            if (botao) { botao.disabled = true; botao.textContent = 'Enviando link…'; }
+            try {
+                const redirectTo = window.location.origin + window.location.pathname + '?password-reset=1';
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+                if (error) throw error;
+                if (status) status.textContent = 'Solicitação enviada. Verifique seu e-mail e use o link mais recente para definir uma nova senha. Verifique também a caixa de spam.';
+            } catch (error) {
+                console.error('Erro ao solicitar recuperação de senha:', error);
+                if (status) status.textContent = 'Não foi possível enviar o link: ' + (error.message || 'verifique a configuração de URL do Supabase.');
+            } finally {
+                if (botao) { botao.disabled = false; botao.textContent = 'Esqueci minha senha'; }
+            }
+        }
+
+        async function salvarNovaSenhaProfessor(event) {
+            event.preventDefault();
+            const status = document.getElementById('teacher-auth-status');
+            const nova = document.getElementById('teacher-new-password')?.value || '';
+            const confirmacao = document.getElementById('teacher-confirm-password')?.value || '';
+            const botao = document.getElementById('teacher-save-new-password');
+            if (nova.length < 8) {
+                if (status) status.textContent = 'A nova senha deve ter pelo menos 8 caracteres.';
+                return;
+            }
+            if (nova !== confirmacao) {
+                if (status) status.textContent = 'As senhas não conferem. Digite novamente.';
+                return;
+            }
+            if (!supabaseClient) {
+                if (status) status.textContent = 'Não foi possível conectar ao Supabase. Abra novamente o link de recuperação mais recente.';
+                return;
+            }
+            if (botao) { botao.disabled = true; botao.textContent = 'Salvando…'; }
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: nova });
+                if (error) throw error;
+                document.getElementById('teacher-password-recovery-form')?.reset();
+                modoRecuperacaoSenha = false;
+                try { await supabaseClient.auth.signOut(); } catch (_) {}
+                document.getElementById('teacher-password-recovery-panel')?.classList.add('hidden');
+                document.getElementById('teacher-login-form')?.classList.remove('hidden');
+                document.getElementById('teacher-forgot-password-button')?.classList.remove('hidden');
+                document.getElementById('teacher-signup-details')?.classList.remove('hidden');
+                document.getElementById('teacher-auth-extra')?.classList.remove('hidden');
+                const emailInput = document.getElementById('teacher-email');
+                if (emailInput) emailInput.value = 'samuelmsousa2@gmail.com';
+                if (status) status.textContent = 'Senha alterada com sucesso. Entre agora utilizando a nova senha.';
+                document.getElementById('teacher-password')?.focus();
+                window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+            } catch (error) {
+                console.error('Erro ao atualizar senha:', error);
+                if (status) status.textContent = 'Não foi possível atualizar a senha: ' + (error.message || 'o link pode ter expirado. Solicite outro link de recuperação.');
+            } finally {
+                if (botao) { botao.disabled = false; botao.textContent = 'Salvar nova senha'; }
+            }
         }
 
         async function entrarProfessor(event) {
@@ -1446,11 +1567,13 @@
                     },
                     realtime: { params: { eventsPerSecond: 10 } }
                 });
-                const { data: authData, error: authError } = await supabaseClient.auth.getSession();
-                if (authError) throw authError;
-
+                // Registra o listener antes de consultar a sessão para não perder o evento PASSWORD_RECOVERY.
                 const { data } = supabaseClient.auth.onAuthStateChange((event, session) => {
                     if (studentMode) return;
+                    if (event === 'PASSWORD_RECOVERY') {
+                        window.setTimeout(() => mostrarFormularioNovaSenhaProfessor(), 0);
+                        return;
+                    }
                     // O callback não deve iniciar chamadas Supabase dentro do próprio callback.
                     window.setTimeout(() => {
                         if (studentMode) return;
@@ -1460,8 +1583,16 @@
                 });
                 supabaseAuthSubscription = data.subscription;
 
-                if (authData.session && !studentMode) await mostrarPainelProfessor(authData.session);
-                else if (!studentMode) mostrarGateProfessor('Conectado ao Supabase. Entre com seu e-mail e senha de professor.');
+                const { data: authData, error: authError } = await supabaseClient.auth.getSession();
+                if (authError) throw authError;
+
+                if (!studentMode && retornoDeRecuperacaoSenhaNaUrl()) {
+                    mostrarFormularioNovaSenhaProfessor();
+                } else if (authData.session && !studentMode) {
+                    await mostrarPainelProfessor(authData.session);
+                } else if (!studentMode) {
+                    mostrarGateProfessor('Conectado ao Supabase. Entre com seu e-mail e senha de professor.');
+                }
             } catch (error) {
                 console.error('Erro Supabase:', error);
                 // Evita que o login interprete um cliente parcialmente inicializado como conexão válida.
