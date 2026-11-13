@@ -3388,8 +3388,14 @@
             const temNota = Number.isFinite(nota);
             const errosNumero = Math.max(0, totalQuestoes - (Number.isFinite(acertosNumero) ? acertosNumero : 0));
             const acertosLabel = acertosTexto.includes('/') ? acertosTexto : `${Number.isFinite(acertosNumero) ? acertosNumero : 0}/${totalQuestoes}`;
-            const detalhesHTML = detalhes.map((d, indice) => {
-                const acertou = d.acertou === true;
+            // Separa os resultados por desempenho: cada questão aparece em apenas um grupo.
+            // Questões não respondidas ficam no grupo de erros, identificadas como "NÃO RESPONDIDA".
+            const detalhesNumerados = detalhes.map((d, indice) => ({ d, indice }));
+            const detalhesAcertos = detalhesNumerados.filter(item => item.d.acertou === true);
+            const detalhesErros = detalhesNumerados.filter(item => item.d.acertou !== true);
+
+            const renderizarCardsResultado = (itens, grupoAcerto) => itens.map(({ d, indice }) => {
+                const acertou = grupoAcerto;
                 const marcada = d.marcada || '';
                 const situacao = acertou ? 'ACERTO' : (marcada ? 'ERRO' : 'NÃO RESPONDIDA');
                 const classesResultado = acertou
@@ -3402,6 +3408,11 @@
                     <p class="text-sm"><strong>Resposta correta:</strong> ${escapeHtml(d.correta || '—')}</p>
                 </article>`;
             }).join('');
+
+            const secoesDetalhesHTML = [
+                detalhesAcertos.length ? `<section class="space-y-3"><div class="flex items-center justify-between gap-2"><h2 class="text-lg font-bold text-emerald-800">Questões que você acertou</h2><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">${detalhesAcertos.length} acerto(s)</span></div><div class="space-y-2">${renderizarCardsResultado(detalhesAcertos, true)}</div></section>` : '',
+                detalhesErros.length ? `<section class="space-y-3"><div class="flex items-center justify-between gap-2"><h2 class="text-lg font-bold text-rose-800">Questões que você errou</h2><span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800">${detalhesErros.length} questão(ões)</span></div><p class="text-xs text-slate-500">As questões não respondidas também aparecem aqui, identificadas como "NÃO RESPONDIDA".</p><div class="space-y-2">${renderizarCardsResultado(detalhesErros, false)}</div></section>` : ''
+            ].filter(Boolean).join('');
             const resumoHTML = temNota ? `<section class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div class="rounded-xl bg-indigo-50 p-3"><strong class="text-2xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-xs text-indigo-800">Nota final</p></div>
                 <div class="rounded-xl bg-emerald-50 p-3"><strong class="text-2xl text-emerald-700">${acertosLabel}</strong><p class="text-xs text-emerald-800">Acertos</p></div>
@@ -3416,7 +3427,7 @@
                     <p class="text-sm text-slate-500">Sua avaliação foi concluída. Confira abaixo seu resultado final.</p>
                 </div>
                 ${resumoHTML}
-                ${detalhes.length ? `<section class="space-y-3"><h2 class="text-lg font-bold text-slate-900">Seus erros e acertos</h2><p class="text-xs text-slate-500">Confira a alternativa que você marcou e a resposta correta de cada questão.</p><div class="space-y-2">${detalhesHTML}</div></section>` : ''}
+                ${detalhes.length ? `<section class="space-y-4"><div><h2 class="text-lg font-bold text-slate-900">Resultado por questão</h2><p class="text-xs text-slate-500 mt-1">Confira separadamente as questões que você acertou e as que errou.</p></div>${secoesDetalhesHTML}</section>` : ''}
                 <p class="text-center text-xs text-slate-400">Esta avaliação foi finalizada. Você não poderá alterar suas respostas.</p>
             </div>`;
             if (window.lucide) lucide.createIcons();
