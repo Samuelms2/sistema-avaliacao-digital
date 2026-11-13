@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE AVALIAÇÃO DIGITAL</title>
-    <!-- V19: correção de persistência Supabase, propriedade por professor e links de avaliação. -->
+    <!-- V20: filtros por escola/ano/bimestre, espelhamento automático de notas e cadastro individual de professores. -->
     
     <!-- PWA: arquivos separados são necessários para instalação e service worker no GitHub Pages -->
     <link rel="manifest" href="./manifest.webmanifest">
@@ -705,26 +705,37 @@
         <!-- TAB 5: NOTAS EM TEMPO REAL E HISTÓRICO -->
         <section id="tab-database" class="tab-content hidden">
             <div class="space-y-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex justify-between items-center">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-3">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Notas Atribuídas em Tempo Real</h3>
-                        <p class="text-xs text-slate-500">Sincronizado automaticamente</p>
+                        <p class="text-xs text-slate-500">As notas são registradas automaticamente quando o aluno conclui a avaliação.</p>
+                        <span id="notas-sync-status" class="inline-flex mt-2 text-[11px] font-semibold rounded-full px-2.5 py-1 bg-amber-50 text-amber-800" role="status">Aguardando conexão com o Supabase…</span>
                     </div>
                     <button onclick="abrirConfirmacaoZerarBanco()" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold px-4 py-2.5 rounded-xl border border-red-300 transition">
                         <i data-lucide="database-zap" class="w-4 h-4 inline mr-1"></i>Zerar banco de dados
                     </button>
                 </div>
 
-                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-2">
-                    <span class="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-2">
-                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
-                        <span>Selecione o Ano Letivo:</span>
-                    </span>
-                    <div id="container-botoes-anos-notas" class="flex flex-wrap gap-2 pt-1"></div>
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-inner space-y-4">
+                    <div class="space-y-2">
+                        <span class="text-xs uppercase font-bold tracking-wider text-amber-300 flex items-center space-x-2"><i data-lucide="school" class="w-3.5 h-3.5"></i><span>1. Selecione a escola:</span></span>
+                        <div id="container-botoes-escolas-notas" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                    <div class="space-y-2 border-t border-slate-700 pt-3">
+                        <span class="text-xs uppercase font-bold tracking-wider text-cyan-300 flex items-center space-x-2"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><span>2. Selecione o ano letivo:</span></span>
+                        <div id="container-botoes-anos-notas" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                    <div class="space-y-2 border-t border-slate-700 pt-3">
+                        <span class="text-xs uppercase font-bold tracking-wider text-emerald-300 flex items-center space-x-2"><i data-lucide="calendar-check" class="w-3.5 h-3.5"></i><span>3. Selecione o bimestre:</span></span>
+                        <div id="container-botoes-bimestres-notas" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
                 </div>
 
-                <div class="border-b border-slate-200">
-                    <div id="container-abas-turmas-notas" class="flex space-x-2 overflow-x-auto hidden px-2"></div>
+                <div class="space-y-2">
+                    <span class="text-xs uppercase font-bold tracking-wider text-slate-600 px-2">4. Filtrar por série / turma:</span>
+                    <div class="border-b border-slate-200">
+                        <div id="container-abas-turmas-notas" class="flex flex-wrap gap-2 overflow-x-auto hidden px-2"></div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -757,6 +768,7 @@
                             <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
                                 <tr>
                                     <th class="px-6 py-3.5">Estudante</th>
+                                    <th class="px-6 py-3.5">Escola</th>
                                     <th class="px-6 py-3.5">Série / Turma</th>
                                     <th class="px-6 py-3.5">Disciplina</th>
                                     <th class="px-6 py-3.5">Bimestre</th>
@@ -869,8 +881,11 @@
         let escolaFiltroProvasSelecionada = null;
         let turmaFiltroSelecionada = null;
         let temaMenuSelecionado = 'todos';
+        const FILTRO_NOTAS_TODOS = '__TODOS__';
+        let notaEscolaSelecionada = FILTRO_NOTAS_TODOS;
         let notaAnoSelecionado = null;
-        let notaTurmaSelecionada = null;
+        let notaBimestreSelecionado = null;
+        let notaTurmaSelecionada = FILTRO_NOTAS_TODOS;
         // Chave Publishable pública do novo projeto Supabase. Pode ficar no HTML publicado.
         // Nunca coloque aqui senha de usuário, sb_secret ou service_role.
         const CONFIG_SUPABASE_VERSION = '2026-11-13-v18-login-recovery-fix';
@@ -1215,7 +1230,12 @@
             if (!el) return;
             el.textContent = texto;
             el.className = `px-2 py-1.5 rounded-lg text-[11px] ${estado === 'erro' ? 'bg-rose-600/30 text-rose-100' : estado === 'pendente' ? 'bg-amber-500/20 text-amber-100' : 'bg-white/10 text-emerald-200'}`;
-            el.classList.add('hidden'); // Status interno; não exibe avisos no topo da tela.
+            el.classList.add('hidden'); // Status interno do cabeçalho.
+            const notasStatus = document.getElementById('notas-sync-status');
+            if (notasStatus) {
+                notasStatus.textContent = texto;
+                notasStatus.className = `inline-flex mt-2 text-[11px] font-semibold rounded-full px-2.5 py-1 ${estado === 'erro' ? 'bg-rose-50 text-rose-800' : estado === 'pendente' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`;
+            }
         }
 
         function mostrarGateProfessor(mensagem = '') {
@@ -1287,9 +1307,10 @@
                 // Qualquer conta autenticada cria/ativa seu próprio perfil de professor.
                 // A função SQL nunca concede papel administrativo; apenas o acesso individual.
                 const ativacao = await supabaseClient.rpc('ativar_acesso_individual_professor');
-                if (ativacao.error) {
-                    throw new Error('Não foi possível criar seu ambiente individual. Execute o arquivo corrigir_supabase_avaliacao.sql no Supabase. Detalhe: ' + ativacao.error.message);
-                }
+                // O gatilho em auth.users cria o perfil no instante do cadastro.
+                // Assim, uma falha na RPC antiga não impede um novo docente de entrar
+                // quando seu perfil individual já foi criado corretamente.
+                if (ativacao.error) console.warn('RPC de ativação indisponível; verificando o perfil criado pelo Auth:', ativacao.error);
                 const perfilResult = await supabaseClient
                     .from('perfis_professores')
                     .select('user_id,is_admin,is_professor,ativo')
@@ -1297,7 +1318,8 @@
                     .maybeSingle();
                 if (perfilResult.error) throw perfilResult.error;
                 if (!perfilResult.data || perfilResult.data.ativo !== true || perfilResult.data.is_professor !== true) {
-                    throw new Error('O Supabase não confirmou a criação do ambiente individual. Execute a migração SQL fornecida e entre novamente.');
+                    const detalheAtivacao = ativacao.error?.message ? ' Detalhe da ativação: ' + ativacao.error.message : '';
+                    throw new Error('O Supabase ainda não criou/ativou o perfil individual deste professor. Execute atualizacao_notas_cadastro_professores.sql no Supabase e entre novamente.' + detalheAtivacao);
                 }
                 admin = perfilResult.data.is_admin === true;
 
@@ -1494,26 +1516,58 @@
         async function cadastrarContaProfessor(event) {
             event.preventDefault();
             const status = document.getElementById('teacher-auth-status');
-            if (!supabaseClient) return status.textContent = 'Supabase não conectado. Atualize a página e tente novamente.';
+            const form = document.getElementById('teacher-signup-form');
+            const botao = event.submitter || form?.querySelector('button[type="submit"]');
+            if (!supabaseClient) {
+                status.textContent = 'Supabase não conectado. Confira a URL e a chave pública nas configurações e atualize a página.';
+                return;
+            }
             const nome = document.getElementById('teacher-signup-name').value.trim();
-            const email = document.getElementById('teacher-signup-email').value.trim();
+            const email = document.getElementById('teacher-signup-email').value.trim().toLowerCase();
             const senha = document.getElementById('teacher-signup-password').value;
-            if (senha.length < 8) return status.textContent = 'A senha deve ter pelo menos 8 caracteres.';
-            const botao = event.submitter;
+            if (!nome) { status.textContent = 'Informe o nome completo do professor.'; return; }
+            if (senha.length < 8) { status.textContent = 'A senha deve ter pelo menos 8 caracteres.'; return; }
             if (botao) { botao.disabled = true; botao.textContent = 'Criando conta…'; }
+            status.textContent = 'Enviando cadastro ao Supabase…';
             try {
-                const { data, error } = await supabaseClient.auth.signUp({ email, password: senha, options: { data: { nome_completo: nome } } });
+                const redirectUrl = `${window.location.origin}${window.location.pathname}`;
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email,
+                    password: senha,
+                    options: {
+                        data: { nome_completo: nome },
+                        emailRedirectTo: redirectUrl
+                    }
+                });
                 if (error) throw error;
-                if (data.session) {
-                    status.textContent = 'Conta criada. Preparando seu ambiente individual…';
-                    const abriu = await mostrarPainelProfessor(data.session);
-                    if (!abriu) throw new Error(status.textContent || 'Não foi possível abrir o ambiente. Confira a migração SQL.');
-                } else {
-                    status.textContent = 'Conta criada. Confirme o e-mail recebido e depois entre com seu e-mail e senha. Seu ambiente será ativado automaticamente.';
+                if (!data?.user) throw new Error('O Supabase não retornou a conta criada. Confira se os cadastros por e-mail estão habilitados em Authentication > Settings.');
+                if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+                    status.textContent = 'Este e-mail pode já estar cadastrado. Tente entrar ou use “Esqueci minha senha”.';
+                    return;
                 }
-                document.getElementById('teacher-signup-form').reset();
+                if (data.session) {
+                    status.textContent = 'Conta criada. Ativando o ambiente individual…';
+                    const abriu = await mostrarPainelProfessor(data.session);
+                    if (!abriu) {
+                        throw new Error('A conta foi criada, mas o ambiente não abriu. Execute a atualização SQL de notas e cadastro no Supabase e tente entrar novamente.');
+                    }
+                    status.textContent = 'Ambiente individual criado com sucesso.';
+                    form.reset();
+                } else {
+                    status.textContent = 'Cadastro recebido! Abra o e-mail de confirmação enviado pelo Supabase. Depois, volte a este site e entre com o e-mail e a senha cadastrados. O perfil do professor será criado automaticamente.';
+                    form.reset();
+                }
             } catch (error) {
-                status.textContent = 'Não foi possível criar a conta: ' + (error.message || error);
+                console.error('Falha ao cadastrar novo professor:', error);
+                let mensagem = error?.message || String(error);
+                if (/signup is disabled|signups not allowed/i.test(mensagem)) {
+                    mensagem = 'Os cadastros estão desabilitados no Supabase. Ative Authentication > Settings > Enable Sign Ups e tente novamente.';
+                } else if (/user already registered|already registered/i.test(mensagem)) {
+                    mensagem = 'Este e-mail já possui uma conta. Entre ou utilize “Esqueci minha senha”.';
+                } else if (/email rate limit|rate limit/i.test(mensagem)) {
+                    mensagem = 'O limite de envio de e-mails foi atingido. Aguarde e tente novamente.';
+                }
+                status.textContent = 'Não foi possível concluir o cadastro: ' + mensagem;
             } finally {
                 if (botao) { botao.disabled = false; botao.textContent = 'Criar meu ambiente individual'; }
             }
@@ -1784,19 +1838,54 @@
                 }
                 alternarTurmaAluno();
 
-                bancoNotas = (respostas.data || []).map(n => ({
-                    id: n.id, ownerId: n.owner_id || null, studentToken: n.student_token || '', aluno: n.aluno_nome,
-                    anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
-                    disciplina: n.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
-                    origem: n.origem || 'Avaliação online',
-                    data: n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : '',
-                    detalhes: n.detalhes || n.erros || [],
-                    respostas: n.respostas || {},
-                    feedbackProfessor: n.feedback_professor || '',
-                    feedbackQuestoes: n.feedback_questoes || {},
-                    feedbackPublicado: Boolean(n.feedback_publicado),
-                    feedbackEnviadoEm: n.feedback_enviado_em || null
-                }));
+                const provasPorToken = new Map((provas.data || []).map(r => [String(r.student_token || ''), r]));
+                bancoNotas = (respostas.data || []).map(n => {
+                    const provaRegistro = provasPorToken.get(String(n.student_token || ''));
+                    const provaJson = provaRegistro?.prova || {};
+                    return {
+                        id: n.id, ownerId: n.owner_id || null, studentToken: n.student_token || '', aluno: n.aluno_nome,
+                        escola: n.escola || provaJson.escola || 'Escola não informada',
+                        anoLetivo: String(n.ano_letivo || provaRegistro?.ano_letivo || provaJson.anoLetivo || ''),
+                        serie: n.serie || (provaJson.alunoSerie ? `${provaJson.alunoSerie} - ${provaJson.alunoTurma || ''}` : ''),
+                        bimestre: n.bimestre || provaRegistro?.bimestre || provaJson.bimestre || '',
+                        disciplina: n.disciplina || provaJson.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
+                        origem: n.origem || 'Avaliação online',
+                        data: n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : '',
+                        detalhes: n.detalhes || n.erros || [],
+                        respostas: n.respostas || {},
+                        feedbackProfessor: n.feedback_professor || '',
+                        feedbackQuestoes: n.feedback_questoes || {},
+                        feedbackPublicado: Boolean(n.feedback_publicado),
+                        feedbackEnviadoEm: n.feedback_enviado_em || null
+                    };
+                });
+                // Recuperação automática: se uma versão antiga não criou a linha em respostas_avaliacoes,
+                // a nota final continua disponível no registro original da prova concluída.
+                const tokensComNota = new Set(bancoNotas.map(n => String(n.studentToken || '')).filter(Boolean));
+                (provas.data || []).forEach(r => {
+                    const resultado = r.resultado_final || {};
+                    const finalizada = Boolean(r.concluida || (r.resultado_final && !r.aguardando_nova_chance));
+                    const notaBruta = r.last_note ?? resultado.nota;
+                    if (!finalizada || r.aguardando_nova_chance || !r.student_token || notaBruta == null || tokensComNota.has(String(r.student_token))) return;
+                    const provaJson = r.prova || {};
+                    const acertosNum = r.last_hits ?? resultado.acertos_numero ?? null;
+                    const totalQuestoes = r.total_questoes ?? resultado.total_questoes ?? provaJson.questoes?.length ?? null;
+                    bancoNotas.push({
+                        id: r.id, ownerId: r.owner_id || null, studentToken: r.student_token,
+                        aluno: r.aluno_nome || provaJson.alunoName || 'Aluno',
+                        escola: provaJson.escola || 'Escola não informada',
+                        anoLetivo: String(r.ano_letivo || provaJson.anoLetivo || ''),
+                        serie: r.serie || `${provaJson.alunoSerie || ''} - ${provaJson.alunoTurma || ''}`,
+                        bimestre: r.bimestre || provaJson.bimestre || '',
+                        disciplina: r.disciplina || provaJson.disciplina || '',
+                        acertos: resultado.acertos || (acertosNum != null && totalQuestoes != null ? `${acertosNum}/${totalQuestoes}` : ''),
+                        nota: Number(notaBruta || 0), origem: 'Avaliação online',
+                        data: r.updated_at ? new Date(r.updated_at).toLocaleString('pt-BR') : '',
+                        detalhes: r.last_details || resultado.detalhes || [],
+                        respostas: r.last_answers || resultado.respostas || {},
+                        feedbackProfessor: '', feedbackQuestoes: {}, feedbackPublicado: false, feedbackEnviadoEm: null
+                    });
+                });
                 localStorage.setItem('sys_avalia_notas', JSON.stringify(bancoNotas));
 
                 const todasProvasBanco = (provas.data || []).map(r => {
@@ -1869,6 +1958,7 @@
                     if (String(n.owner_id || '') !== String(professorUidAtual || '')) return;
                     const registro = {
                         id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
+                        escola: n.escola || 'Escola não informada',
                         anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
                         disciplina: n.disciplina || '', acertos: n.acertos || '', nota: Number(n.nota || 0),
                         origem: n.origem || 'Supabase Realtime',
@@ -3407,56 +3497,82 @@
         }
 
         function renderizarBancoNotas() {
+            const containerEscolas = document.getElementById('container-botoes-escolas-notas');
             const containerAnos = document.getElementById('container-botoes-anos-notas');
+            const containerBimestres = document.getElementById('container-botoes-bimestres-notas');
             const containerTurmas = document.getElementById('container-abas-turmas-notas');
             const tbody = document.getElementById('tabela-notas-body');
-            if (!containerAnos || !containerTurmas || !tbody) return;
+            if (!containerEscolas || !containerAnos || !containerBimestres || !containerTurmas || !tbody) return;
 
-            const anos = [...new Set(bancoNotas.map(n => n.anoLetivo))].sort().reverse();
-            if (!notaAnoSelecionado && anos.length > 0) notaAnoSelecionado = anos[0];
+            const normalizar = valor => String(valor ?? '').trim();
+            const unicos = valores => [...new Set(valores.map(normalizar).filter(Boolean))];
+            const escolaProva = p => normalizar(p.escola || p.prova?.escola || '');
+            const anoProva = p => normalizar(p.anoLetivo || p.prova?.anoLetivo || '');
+            const bimestreProva = p => normalizar(p.bimestre || p.prova?.bimestre || '');
+            const turmaProva = p => normalizar(`${p.alunoSerie || p.prova?.alunoSerie || ''} - ${p.alunoTurma || p.prova?.alunoTurma || ''}`).replace(/^\s*-\s*|\s*-\s*$/g, '').trim();
+            const provas = Array.isArray(provasGeradas) ? provasGeradas : [];
+            const notas = Array.isArray(bancoNotas) ? bancoNotas : [];
+            const escolaConfigurada = normalizar(document.getElementById('cfg-escola')?.value);
+            const anoConfigurado = normalizar(document.getElementById('cfg-ano-letivo')?.value || new Date().getFullYear());
+            const bimestreConfigurado = normalizar(document.getElementById('cfg-bimestre')?.value || '1º Bimestre');
 
-            containerAnos.innerHTML = '';
-            if (anos.length === 0) {
-                containerAnos.innerHTML = '<span class="text-xs text-slate-400">Nenhuma nota registrada.</span>';
-                containerTurmas.classList.add('hidden');
-                atualizarTabelaNotasVazia();
-                return;
-            }
+            const escolas = unicos([escolaConfigurada, ...provas.map(escolaProva), ...notas.map(n => n.escola)]);
+            const anos = unicos([anoConfigurado, ...provas.map(anoProva), ...notas.map(n => n.anoLetivo)])
+                .sort((a, b) => Number(b) - Number(a) || b.localeCompare(a, 'pt-BR', { numeric: true }));
+            const ordemBimestres = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
+            const bimestresExtras = unicos([...provas.map(bimestreProva), ...notas.map(n => n.bimestre)])
+                .filter(b => !ordemBimestres.includes(b)).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+            const bimestres = [...ordemBimestres, ...bimestresExtras];
 
-            anos.forEach(ano => {
-                const btn = document.createElement('button');
-                btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${notaAnoSelecionado === ano ? 'bg-amber-500 text-slate-900 shadow' : 'bg-slate-800 text-slate-300'}`;
-                btn.textContent = ano;
-                btn.onclick = () => {
-                    notaAnoSelecionado = ano;
-                    notaTurmaSelecionada = null;
-                    renderizarBancoNotas();
-                };
-                containerAnos.appendChild(btn);
-            });
+            if (notaEscolaSelecionada !== FILTRO_NOTAS_TODOS && !escolas.includes(notaEscolaSelecionada)) notaEscolaSelecionada = FILTRO_NOTAS_TODOS;
+            if (!notaAnoSelecionado || !anos.includes(notaAnoSelecionado)) notaAnoSelecionado = anos[0] || anoConfigurado;
+            if (!notaBimestreSelecionado || !bimestres.includes(notaBimestreSelecionado)) notaBimestreSelecionado = bimestres.includes(bimestreConfigurado) ? bimestreConfigurado : bimestres[0];
 
-            const notasDoAno = bancoNotas.filter(n => n.anoLetivo === notaAnoSelecionado);
-            const turmas = [...new Set(notasDoAno.map(n => n.serie))].sort();
-            if (!notaTurmaSelecionada && turmas.length > 0) notaTurmaSelecionada = turmas[0];
-
-            containerTurmas.innerHTML = '';
-            if (turmas.length > 0) {
-                containerTurmas.classList.remove('hidden');
-                turmas.forEach(turma => {
+            const criarBotoes = (container, opcoes, selecionado, aoSelecionar, tipo = 'dark') => {
+                container.innerHTML = '';
+                opcoes.forEach(opcao => {
+                    const ativo = String(opcao.value) === String(selecionado);
                     const btn = document.createElement('button');
-                    btn.className = `whitespace-nowrap px-5 py-3 font-bold text-sm border-b-2 transition ${notaTurmaSelecionada === turma ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500'}`;
-                    btn.textContent = turma;
-                    btn.onclick = () => {
-                        notaTurmaSelecionada = turma;
-                        renderizarBancoNotas();
-                    };
-                    containerTurmas.appendChild(btn);
+                    btn.type = 'button';
+                    btn.textContent = opcao.label;
+                    btn.className = tipo === 'tabs'
+                        ? `whitespace-nowrap px-4 py-2 rounded-lg text-xs font-bold border transition ${ativo ? 'bg-indigo-600 text-white border-indigo-500 shadow' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`
+                        : `whitespace-nowrap px-4 py-2 rounded-lg text-xs font-bold border transition ${ativo ? 'bg-amber-400 text-slate-950 border-amber-300 shadow' : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'}`;
+                    btn.addEventListener('click', () => aoSelecionar(opcao.value));
+                    container.appendChild(btn);
                 });
-            } else {
-                containerTurmas.classList.add('hidden');
-            }
+            };
 
-            atualizarTabelaNotas(notasDoAno.filter(n => n.serie === notaTurmaSelecionada));
+            criarBotoes(containerEscolas,
+                [{ value: FILTRO_NOTAS_TODOS, label: 'Todas as escolas' }, ...escolas.map(e => ({ value: e, label: e }))],
+                notaEscolaSelecionada, valor => { notaEscolaSelecionada = valor; notaTurmaSelecionada = FILTRO_NOTAS_TODOS; renderizarBancoNotas(); });
+            criarBotoes(containerAnos, anos.map(a => ({ value: a, label: a })),
+                notaAnoSelecionado, valor => { notaAnoSelecionado = valor; notaTurmaSelecionada = FILTRO_NOTAS_TODOS; renderizarBancoNotas(); });
+            criarBotoes(containerBimestres, bimestres.map(b => ({ value: b, label: b })),
+                notaBimestreSelecionado, valor => { notaBimestreSelecionado = valor; notaTurmaSelecionada = FILTRO_NOTAS_TODOS; renderizarBancoNotas(); });
+
+            const filtragemProvas = provas.filter(p =>
+                (notaEscolaSelecionada === FILTRO_NOTAS_TODOS || escolaProva(p) === notaEscolaSelecionada) &&
+                anoProva(p) === notaAnoSelecionado && bimestreProva(p) === notaBimestreSelecionado
+            );
+            const filtragemNotas = notas.filter(n =>
+                (notaEscolaSelecionada === FILTRO_NOTAS_TODOS || normalizar(n.escola) === notaEscolaSelecionada) &&
+                normalizar(n.anoLetivo) === notaAnoSelecionado && normalizar(n.bimestre) === notaBimestreSelecionado
+            );
+            const turmas = unicos([
+                ...filtragemProvas.map(turmaProva),
+                ...filtragemNotas.map(n => n.serie)
+            ]).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+            if (notaTurmaSelecionada !== FILTRO_NOTAS_TODOS && !turmas.includes(notaTurmaSelecionada)) notaTurmaSelecionada = FILTRO_NOTAS_TODOS;
+            const opcoesTurmas = [{ value: FILTRO_NOTAS_TODOS, label: 'Todas as turmas' }, ...turmas.map(t => ({ value: t, label: t }))];
+            containerTurmas.classList.remove('hidden');
+            criarBotoes(containerTurmas, opcoesTurmas, notaTurmaSelecionada,
+                valor => { notaTurmaSelecionada = valor; renderizarBancoNotas(); }, 'tabs');
+
+            const notasFiltradas = filtragemNotas.filter(n =>
+                notaTurmaSelecionada === FILTRO_NOTAS_TODOS || normalizar(n.serie) === notaTurmaSelecionada
+            ).sort((a,b) => String(b.data || '').localeCompare(String(a.data || ''), 'pt-BR'));
+            atualizarTabelaNotas(notasFiltradas);
         }
 
         function atualizarTabelaNotas(notasFiltradas) {
@@ -3476,6 +3592,7 @@
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="px-6 py-4 font-semibold text-slate-800">${escapeHtml(row.aluno || '')}</td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${escapeHtml(row.escola || 'Escola não informada')}</td>
                         <td class="px-6 py-4 text-xs text-slate-600">${escapeHtml(row.serie || '')}</td>
                         <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.disciplina || '')}</td>
                         <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.bimestre || '—')}</td>
@@ -3493,7 +3610,7 @@
 
         function atualizarTabelaNotasVazia() {
             const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhuma nota finalizada encontrada para esta escola, ano, bimestre e turma.</td></tr>`;
             document.getElementById('stat-total').textContent = '0';
             document.getElementById('stat-media').textContent = '0.0';
             document.getElementById('stat-maior').textContent = '0.0';
@@ -3536,7 +3653,7 @@
         // PWA: registra o modo instalável e disponibiliza o diálogo nativo do navegador.
         function registrarPWA() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('./sw.js?v=2026-11-13-individual-v21', { scope: './', updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=2026-11-13-individual-v22', { scope: './', updateViaCache: 'none' })
                     .then(async registro => {
                         try { await registro.update(); } catch (_) {}
                         console.info('Service Worker ativo. Escopo:', registro.scope);
