@@ -228,7 +228,7 @@
                 <p class="text-sm text-slate-500 mt-1">Entre com a conta de professor cadastrada no Supabase.</p>
             </div>
             <form id="teacher-login-form" onsubmit="entrarProfessor(event)" class="space-y-3">
-                <div><label class="block text-xs font-bold text-slate-700 mb-1">E-mail</label><input id="teacher-email" type="email" autocomplete="username" value="samuelmsousa2@gmail.com" required class="w-full border rounded-xl p-3 text-sm" placeholder="professor@escola.com"></div>
+                <div><label class="block text-xs font-bold text-slate-700 mb-1">E-mail</label><input id="teacher-email" type="email" autocomplete="username" value="" required class="w-full border rounded-xl p-3 text-sm" placeholder="professor@escola.com"></div>
                 <div><label class="block text-xs font-bold text-slate-700 mb-1">Senha</label><input id="teacher-password" type="password" autocomplete="current-password" required class="w-full border rounded-xl p-3 text-sm" placeholder="Sua senha"></div>
                 <button id="teacher-login-button" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl p-3 text-sm">Entrar no sistema</button>
             </form>
@@ -247,16 +247,16 @@
             </div>
             <p id="teacher-auth-status" class="text-xs text-center text-slate-500" role="status">Configure e conecte o Supabase para acessar o painel.</p>
             <details id="teacher-signup-details" class="border border-slate-200 rounded-xl p-3">
-                <summary class="cursor-pointer text-xs font-bold text-indigo-700">Sou colega e preciso criar meu acesso</summary>
+                <summary class="cursor-pointer text-xs font-bold text-indigo-700">Criar meu ambiente individual</summary>
                 <form id="teacher-signup-form" onsubmit="cadastrarContaProfessor(event)" class="space-y-2 mt-3">
                     <input id="teacher-signup-name" type="text" required maxlength="120" placeholder="Nome completo" class="w-full border rounded-lg p-2.5 text-sm">
                     <input id="teacher-signup-email" type="email" required autocomplete="email" placeholder="E-mail profissional" class="w-full border rounded-lg p-2.5 text-sm">
                     <input id="teacher-signup-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Crie sua senha (mínimo 8 caracteres)" class="w-full border rounded-lg p-2.5 text-sm">
-                    <button class="w-full bg-slate-800 text-white font-bold rounded-lg p-2.5 text-xs" type="submit">Criar conta e solicitar aprovação</button>
+                    <button class="w-full bg-slate-800 text-white font-bold rounded-lg p-2.5 text-xs" type="submit">Criar meu ambiente individual</button>
                 </form>
-                <p class="text-[10px] text-slate-500 mt-2">Cada colega usa seu próprio e-mail e senha. O administrador aprova o pedido antes do primeiro acesso ao painel.</p>
+                <p class="text-[10px] text-slate-500 mt-2">Cada professor cria seu próprio ambiente individual com e-mail e senha. Não é necessário compartilhar turmas ou aguardar aprovação.</p>
             </details>
-            <p id="teacher-auth-extra" class="text-[11px] leading-relaxed text-slate-400">O acesso dos alunos continua sendo feito pelo link individual da avaliação. As contas de professores são individuais e não compartilham senhas.</p>
+            <p id="teacher-auth-extra" class="text-[11px] leading-relaxed text-slate-400">Cada professor tem seus próprios alunos, questões, avaliações, resultados e configurações. Os alunos acessam somente pelo link individual da avaliação.</p>
         </div>
     </section>
 
@@ -276,7 +276,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight">SISTEMA DE AVALIAÇÃO DIGITAL</h1>
-                    <p class="text-xs text-indigo-200">Ambiente colaborativo • Espaços individuais • Avaliação Digital</p>
+                    <p class="text-xs text-indigo-200">Ambientes individuais • Avaliação Digital</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 text-xs mt-2 sm:mt-0">
@@ -284,7 +284,7 @@
                     <span>Alunos: </span><span id="badge-total-alunos" class="font-semibold text-emerald-300">0</span> • 
                     <span>Questões: </span><span id="badge-total-questoes" class="font-semibold text-yellow-300">0</span>
                 </div>
-                <span id="sync-status" class="bg-white/10 px-2 py-1.5 rounded-lg text-[11px] text-emerald-200" title="Estado de sincronização">Nuvem conectada</span>
+                <span id="sync-status" class="hidden" aria-hidden="true">Nuvem conectada</span>
                 <button id="btn-instalar-app" onclick="instalarAplicativo()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1 shadow transition">
                     <i data-lucide="smartphone" class="w-3.5 h-3.5"></i><span>Instalar app</span>
                 </button>
@@ -313,19 +313,15 @@
                 </button>
                 <button onclick="setTab('tab-generate')" id="btn-tab-generate" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
-                    <span>4. Provas & Links por Turma</span>
+                    <span>4. Provas & Links por Escola</span>
                 </button>
                 <button onclick="setTab('tab-database')" id="btn-tab-database" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
                     <span>5. Notas em Tempo Real</span>
                 </button>
-                <button onclick="setTab('tab-sharing')" id="btn-tab-sharing" class="tab-btn flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
-                    <i data-lucide="share-2" class="w-4 h-4 text-cyan-300"></i>
-                    <span>6. Meus Compartilhamentos</span>
-                </button>
                 <button onclick="setTab('tab-team')" id="btn-tab-team" class="tab-btn hidden flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-slate-300 hover:bg-white/5">
                     <i data-lucide="users-round" class="w-4 h-4 text-amber-300"></i>
-                    <span>7. Administração da Equipe</span>
+                    <span>6. Administração de Contas</span>
                 </button>
             </div>
         </nav>
@@ -478,7 +474,7 @@
 
                         <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex flex-wrap gap-2 justify-between items-center text-xs">
                             <div class="flex flex-wrap gap-2 items-center"><span class="font-bold text-indigo-900" id="label-turma-ativa">2º Ano Médio - Turma A</span><span id="label-num-alunos-turma" class="bg-indigo-600 text-white font-semibold px-2.5 py-0.5 rounded-full text-[11px]">0 alunos</span></div>
-                            <button type="button" id="btn-compartilhar-turma" onclick="compartilharTurmaAtiva()" class="px-3 py-1.5 rounded-lg bg-indigo-700 text-white font-bold text-[11px] hover:bg-indigo-800">Compartilhar turma</button>
+                            
                         </div>
 
                         <p class="text-xs text-slate-500">Nome dos alunos (um por linha):</p>
@@ -673,10 +669,14 @@
                         </span>
                         <div id="container-botoes-anos" class="flex flex-wrap gap-2 pt-1"></div>
                     </div>
+                    <div id="painel-selecao-escolas" class="hidden border-t border-slate-700 pt-3 space-y-2">
+                        <span class="text-xs uppercase font-bold tracking-wider text-cyan-300">2. Selecione a escola:</span>
+                        <div id="container-botoes-escolas" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
                     <div id="painel-selecao-turmas" class="hidden border-t border-slate-700 pt-3 space-y-2">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <span id="titulo-selecao-turmas" class="text-xs uppercase font-bold tracking-wider text-cyan-300">2. Selecione a série e a turma:</span>
-                            <button type="button" onclick="voltarSelecaoAnoProvas()" class="text-[11px] font-bold text-slate-200 underline hover:text-white">Voltar aos anos</button>
+                            <span id="titulo-selecao-turmas" class="text-xs uppercase font-bold tracking-wider text-cyan-300">3. Selecione a série e a turma:</span>
+                            <button type="button" onclick="voltarSelecaoEscolaProvas()" class="text-[11px] font-bold text-slate-200 underline hover:text-white">Voltar às escolas</button>
                         </div>
                         <div id="container-botoes-turmas" class="flex flex-wrap gap-2 pt-1"></div>
                     </div>
@@ -688,7 +688,7 @@
                             <h4 id="titulo-provas-digitais" class="font-bold text-slate-900 text-sm">Avaliações digitais</h4>
                             <p class="text-xs text-slate-500">Selecione o aluno para copiar o link individual da avaliação.</p>
                         </div>
-                        <button type="button" onclick="voltarSelecaoTurmaProvas()" class="text-xs font-bold text-indigo-700 hover:underline">Voltar às séries e turmas</button>
+                        <button type="button" onclick="voltarSelecaoEscolaProvas()" class="text-xs font-bold text-indigo-700 hover:underline">Voltar às escolas</button>
                     </div>
                 </div>
                 <div id="grid-provas" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -763,7 +763,6 @@
                                     <th class="px-6 py-3.5">Acertos</th>
                                     <th class="px-6 py-3.5">Nota Final</th>
                                     <th class="px-6 py-3.5">Origem / Hora</th>
-                                    <th class="px-6 py-3.5">Compartilhar</th>
                                 </tr>
                             </thead>
                             <tbody id="tabela-notas-body" class="divide-y divide-slate-100"></tbody>
@@ -773,18 +772,18 @@
             </div>
         </section>
 
-        <!-- TAB 6: EQUIPE E COMPARTILHAMENTO INTELIGENTE -->
+        <!-- TAB 6: ADMINISTRAÇÃO DE CONTAS -->
         <section id="tab-team" class="tab-content hidden">
             <div class="space-y-5">
                 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div><h2 class="text-lg font-bold text-slate-900">Equipe de professores</h2><p class="text-xs text-slate-500">Aprove solicitações, gerencie papéis e mantenha contas individuais.</p></div>
+                        <div><h2 class="text-lg font-bold text-slate-900">Equipe de professores</h2><p class="text-xs text-slate-500">Gerencie contas individuais e permissões administrativas.</p></div>
                         <button type="button" onclick="carregarEquipeAdmin()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">Atualizar equipe</button>
                     </div>
                     <div id="admin-conta-resumo" class="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-sm text-indigo-900">Samuel Martins de Sousa — Administrador e Professor</div>
                 </div>
                 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-                    <h3 class="font-bold text-slate-900">Solicitações pendentes</h3>
+                    <h3 class="font-bold text-slate-900">Solicitações legadas</h3>
                     <div id="admin-solicitacoes-lista" class="grid grid-cols-1 md:grid-cols-2 gap-3"><p class="text-xs text-slate-500">Carregando solicitações…</p></div>
                 </div>
                 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
@@ -792,49 +791,12 @@
                     <div id="admin-professores-lista" class="grid grid-cols-1 md:grid-cols-2 gap-3"><p class="text-xs text-slate-500">Carregando equipe…</p></div>
                 </div>
                 <div class="bg-slate-900 rounded-2xl p-5 text-white space-y-2">
-                    <h3 class="font-bold">Como funciona o compartilhamento</h3>
-                    <p class="text-xs text-slate-300">Cada professor possui suas próprias turmas, questões, avaliações e notas. O proprietário pode compartilhar uma questão, uma turma, uma avaliação ou um resultado com um colega específico, escolhendo acesso de visualização ou edição quando permitido.</p>
-                    <p class="text-xs text-slate-300">Os dados não ficam públicos para toda a equipe. Somente os professores selecionados recebem acesso ao item compartilhado.</p>
+                    <h3 class="font-bold">Ambientes individuais</h3>
+                    <p class="text-xs text-slate-300">Cada conta possui seu próprio espaço de trabalho. Turmas, questões, avaliações, notas e configurações são mantidas separadas por professor.</p>
+                    <p class="text-xs text-slate-300">O cadastro de uma nova conta não depende de compartilhamento de recursos ou aprovação manual.</p>
                 </div>
             </div>
         </section>
-
-        <!-- TAB 7: COMPARTILHAMENTOS DO PROFESSOR -->
-        <section id="tab-sharing" class="tab-content hidden">
-            <div class="space-y-5">
-                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900">Meus compartilhamentos</h2>
-                            <p class="text-xs text-slate-500">Consulte o que você compartilhou e os recursos que seus colegas compartilharam com você.</p>
-                        </div>
-                        <button type="button" onclick="carregarCompartilhamentos()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">Atualizar lista</button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
-                        <h3 class="font-bold text-slate-900">Compartilhados por mim</h3>
-                        <div id="lista-compartilhamentos-enviados" class="space-y-2"><p class="text-xs text-slate-500">Carregando…</p></div>
-                    </div>
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
-                        <h3 class="font-bold text-slate-900">Compartilhados comigo</h3>
-                        <div id="lista-compartilhamentos-recebidos" class="space-y-2"><p class="text-xs text-slate-500">Carregando…</p></div>
-                    </div>
-                </div>
-                <p class="text-[11px] text-slate-500">Você pode revogar um compartilhamento enviado ou deixar de receber um recurso. A revogação não apaga o recurso original nem os dados do proprietário.</p>
-            </div>
-        </section>
-
-        <!-- MODAL DE COMPARTILHAMENTO -->
-        <div id="modal-compartilhar-recurso" class="hidden fixed inset-0 bg-slate-950/80 z-[90] p-4 flex items-center justify-center no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-compartilhar-recurso">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
-                <div><h3 id="titulo-compartilhar-recurso" class="text-lg font-bold text-slate-900">Compartilhar recurso</h3><p id="descricao-compartilhar-recurso" class="text-xs text-slate-500">Escolha o colega que receberá acesso.</p></div>
-                <label class="block text-xs font-bold text-slate-700">Professor destinatário<select id="share-professor-destino" class="mt-1 w-full border rounded-lg p-2.5 text-sm"></select></label>
-                <label class="block text-xs font-bold text-slate-700">Permissão<select id="share-permissao" class="mt-1 w-full border rounded-lg p-2.5 text-sm"><option value="false">Somente visualizar</option><option value="true">Visualizar e editar</option></select></label>
-                <p id="share-status" class="text-xs text-slate-500"></p>
-                <div class="flex justify-end gap-2"><button type="button" onclick="fecharModalCompartilhar()" class="px-4 py-2 border rounded-lg text-sm">Cancelar</button><button type="button" onclick="confirmarCompartilhamento()" id="btn-confirmar-compartilhamento" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold">Compartilhar</button></div>
-            </div>
-        </div>
 
         <!-- MODAL: CRIAR AVALIAÇÃO ADAPTADA PARA PCD -->
         <div id="modal-avaliacao-pcd" class="hidden fixed inset-0 bg-slate-950/80 z-[95] p-3 sm:p-6 overflow-y-auto no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-avaliacao-pcd">
@@ -904,6 +866,7 @@
 
     <script>
         let anoFiltroProvasSelecionado = null;
+        let escolaFiltroProvasSelecionada = null;
         let turmaFiltroSelecionada = null;
         let temaMenuSelecionado = 'todos';
         let notaAnoSelecionado = null;
@@ -1163,12 +1126,6 @@
         let eventoInstalacaoPWA = null;
         let dadosProfessorRemotosDisponiveis = false;
         let adminLogado = false;
-        let turmasCompartilhadasKeys = new Set();
-        let turmasCompartilhadasEditaveis = new Set();
-        let turmasCompartilhadasOwners = new Map();
-        let timerSyncTurmaCompartilhada = null;
-        let questoesCompartilhadasIds = new Set();
-        let recursoCompartilharAtual = null;
         const CONFIG_CAMPOS_IDS = ['cfg-escola','cfg-ano-letivo','cfg-bimestre','cfg-titulo','cfg-disciplina','cfg-professor','cfg-data-inicio','cfg-data-fim','cfg-qtd-questoes'];
 
         function setTab(tabId) {
@@ -1188,8 +1145,7 @@
                 else renderizarBotoesFiltroTurmas();
             }
             if (tabId === 'tab-database') renderizarBancoNotas();
-            if (tabId === 'tab-sharing') carregarCompartilhamentos();
-            if (tabId === 'tab-team') {
+                        if (tabId === 'tab-team') {
                 if (!adminLogado) { alert('Somente o administrador pode gerenciar a equipe.'); setTab('tab-header'); return; }
                 carregarEquipeAdmin();
             }
@@ -1210,7 +1166,7 @@
             }
             document.getElementById('cfg-supabase-url').value = localStorage.getItem('sys_supabase_url') || SUPABASE_URL_PADRAO;
             document.getElementById('cfg-supabase-key').value = localStorage.getItem('sys_supabase_key') || SUPABASE_PUBLISHABLE_KEY_PADRAO;
-            document.getElementById('teacher-email').value = 'samuelmsousa2@gmail.com';
+            document.getElementById('teacher-email').value = '';
 
             try { cadastroTurmas = JSON.parse(localStorage.getItem('sys_cadastro_turmas') || 'null') || cadastroTurmas; } catch (_) {}
             try { bancoQuestoes = JSON.parse(localStorage.getItem('sys_banco_questoes') || 'null') || bancoQuestoes; } catch (_) {}
@@ -1258,6 +1214,7 @@
             if (!el) return;
             el.textContent = texto;
             el.className = `px-2 py-1.5 rounded-lg text-[11px] ${estado === 'erro' ? 'bg-rose-600/30 text-rose-100' : estado === 'pendente' ? 'bg-amber-500/20 text-amber-100' : 'bg-white/10 text-emerald-200'}`;
+            el.classList.add('hidden'); // Status interno; não exibe avisos no topo da tela.
         }
 
         function mostrarGateProfessor(mensagem = '') {
@@ -1274,17 +1231,46 @@
             if (mensagem) status.textContent = mensagem;
         }
 
+        function limparAmbienteLocalParaNovaConta(session) {
+            ['sys_cadastro_turmas','sys_provas_geradas','sys_avalia_notas','sys_configuracoes_professor','sys_banco_questoes','sys_dados_professor_sync_pendente','sys_aba_ativa'].forEach(chave => localStorage.removeItem(chave));
+            cadastroTurmas = {};
+            provasGeradas = [];
+            provasLixeira = [];
+            bancoNotas = [];
+            bancoQuestoes = bancoQuestoes.filter(q => [1,2,3,4,5,6,7,8,9].includes(Number(q.id)));
+            const nome = String(session?.user?.user_metadata?.nome_completo || '').trim();
+            const email = String(session?.user?.email || 'professor').trim();
+            const nomeProfessor = nome ? `Prof. ${nome}` : `Prof. ${email.split('@')[0]}`;
+            const padroes = {
+                'cfg-escola': 'Minha escola',
+                'cfg-ano-letivo': String(new Date().getFullYear()),
+                'cfg-bimestre': '1º Bimestre',
+                'cfg-titulo': 'Avaliação',
+                'cfg-disciplina': '',
+                'cfg-professor': nomeProfessor,
+                'cfg-data-inicio': '',
+                'cfg-data-fim': '',
+                'cfg-qtd-questoes': '10'
+            };
+            Object.entries(padroes).forEach(([id, valor]) => {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = valor;
+            });
+        }
+
         async function mostrarPainelProfessor(session) {
             if (studentMode || modoRecuperacaoSenha || !session?.user || !supabaseClient) return false;
             const uid = session.user.id;
             const emailSessao = String(session.user.email || '').toLowerCase();
             const statusEl = document.getElementById('teacher-auth-status');
             const uidAnterior = localStorage.getItem('sys_professor_ultimo_uid');
+            if (!uidAnterior && emailSessao !== 'samuelmsousa2@gmail.com') {
+                // Uma conta nova começa vazia; seus dados virão exclusivamente do próprio UID.
+                limparAmbienteLocalParaNovaConta(session);
+            }
             if (uidAnterior && uidAnterior !== uid) {
-                // Evita que dados locais de um professor apareçam no espaço de outro usuário no mesmo aparelho.
-                ['sys_cadastro_turmas','sys_provas_geradas','sys_avalia_notas','sys_configuracoes_professor','sys_dados_professor_sync_pendente'].forEach(chave => localStorage.removeItem(chave));
-                bancoNotas = []; provasGeradas = []; provasLixeira = []; cadastroTurmas = {};
-                try { bancoQuestoes = bancoQuestoes.filter(q => [1,2,3,4,5,6,7,8,9].includes(Number(q.id))); } catch (_) {}
+                // Evita que dados e configurações locais de uma conta apareçam na conta seguinte.
+                limparAmbienteLocalParaNovaConta(session);
             }
             if (professorLogado && professorUidAtual === uid) {
                 document.getElementById('teacher-auth-gate').classList.add('hidden');
@@ -1295,72 +1281,24 @@
             if (painelProfessorEmCarregamento) return painelProfessorEmCarregamento;
 
             painelProfessorEmCarregamento = (async () => {
-                let autorizado = false;
                 let admin = false;
-                let erroPerfil = null;
 
-                // Caminho primário: ler o próprio perfil. A política RLS permite ao usuário ler apenas seu perfil.
-                try {
-                    const perfilResult = await supabaseClient
-                        .from('perfis_professores')
-                        .select('user_id,nome_completo,email,is_admin,is_professor,ativo,status')
-                        .eq('user_id', uid)
-                        .maybeSingle();
-                    if (!perfilResult.error && perfilResult.data) {
-                        autorizado = perfilResult.data.ativo === true &&
-                            (perfilResult.data.is_professor === true || perfilResult.data.is_admin === true);
-                        admin = perfilResult.data.ativo === true && perfilResult.data.is_admin === true;
-                    } else if (perfilResult.error) {
-                        erroPerfil = perfilResult.error;
-                    }
-                } catch (e) { erroPerfil = e; }
-
-                // Compatibilidade com instalações legadas que só possuem professores_permitidos e RPCs.
-                if (!autorizado) {
-                    try {
-                        const legado = await supabaseClient.rpc('usuario_e_professor');
-                        if (!legado.error && (legado.data === true || legado.data === 'true')) autorizado = true;
-                        else if (legado.error) erroPerfil = legado.error;
-                    } catch (e) { erroPerfil = e; }
+                // Qualquer conta autenticada cria/ativa seu próprio perfil de professor.
+                // A função SQL nunca concede papel administrativo; apenas o acesso individual.
+                const ativacao = await supabaseClient.rpc('ativar_acesso_individual_professor');
+                if (ativacao.error) {
+                    throw new Error('Não foi possível criar seu ambiente individual. Execute o arquivo migracao_ambiente_individual.sql no Supabase. Detalhe: ' + ativacao.error.message);
                 }
-                // A conta de administrador também é, por definição, um acesso autorizado ao painel.
-                if (!autorizado) {
-                    try {
-                        const adminLegado = await supabaseClient.rpc('usuario_e_admin');
-                        if (!adminLegado.error && (adminLegado.data === true || adminLegado.data === 'true')) {
-                            autorizado = true;
-                            admin = true;
-                        } else if (adminLegado.error) erroPerfil = adminLegado.error;
-                    } catch (e) { erroPerfil = e; }
+                const perfilResult = await supabaseClient
+                    .from('perfis_professores')
+                    .select('user_id,is_admin,is_professor,ativo')
+                    .eq('user_id', uid)
+                    .maybeSingle();
+                if (perfilResult.error) throw perfilResult.error;
+                if (!perfilResult.data || perfilResult.data.ativo !== true || perfilResult.data.is_professor !== true) {
+                    throw new Error('O Supabase não confirmou a criação do ambiente individual. Execute a migração SQL fornecida e entre novamente.');
                 }
-
-                if (!autorizado) {
-                    // Se não existe perfil ativo, solicita aprovação sem perder a sessão Auth.
-                    try {
-                        const pedido = await supabaseClient.rpc('solicitar_acesso_professor', {
-                            p_nome: session.user.user_metadata?.nome_completo || (emailSessao === 'samuelmsousa2@gmail.com' ? 'Samuel Martins de Sousa' : '')
-                        });
-                        if (pedido.error && !erroPerfil) erroPerfil = pedido.error;
-                    } catch (e) { if (!erroPerfil) erroPerfil = e; }
-
-                    if (emailSessao === 'samuelmsousa2@gmail.com') {
-                        const msg = 'Sua senha foi aceita, mas o perfil de Samuel não foi localizado/ativado na tabela perfis_professores. Execute a migração híbrida V17 ou a consulta de correção de perfil incluída no pacote.';
-                        mostrarGateProfessor(msg);
-                    } else {
-                        mostrarGateProfessor('Sua senha foi aceita, mas esta conta ainda não está aprovada como professor. Peça ao administrador para aprovar seu cadastro na aba Equipe & Compartilhamento.');
-                    }
-                    if (erroPerfil) console.error('Falha ao validar perfil do professor:', erroPerfil);
-                    return false;
-                }
-
-                // Se a leitura direta do perfil funcionou, usa esse papel. Caso contrário, consulta a RPC legada.
-                if (!admin) {
-                    try {
-                        const adminCheck = await supabaseClient.rpc('usuario_e_admin');
-                        if (!adminCheck.error) admin = adminCheck.data === true || adminCheck.data === 'true';
-                        else if (!erroPerfil) erroPerfil = adminCheck.error;
-                    } catch (e) { if (!erroPerfil) erroPerfil = e; }
-                }
+                admin = perfilResult.data.is_admin === true;
 
                 adminLogado = admin;
                 professorLogado = true;
@@ -1383,7 +1321,7 @@
                     renderizarBancoNotas();
                     atualizarBadges();
                     const abaSalva = localStorage.getItem('sys_aba_ativa');
-                    const abasPermitidas = ['tab-header','tab-questions','tab-bank','tab-generate','tab-database','tab-sharing','tab-team'];
+                    const abasPermitidas = ['tab-header','tab-questions','tab-bank','tab-generate','tab-database','tab-team'];
                     setTab(abasPermitidas.includes(abaSalva) ? abaSalva : 'tab-header');
                     atualizarStatusSync(navigator.onLine ? 'Sincronizado' : 'Offline', navigator.onLine ? 'ok' : 'pendente');
                     return true;
@@ -1503,7 +1441,7 @@
                     }
                 } else {
                     const emailInput = document.getElementById('teacher-email');
-                    if (emailInput) emailInput.value = 'samuelmsousa2@gmail.com';
+                    if (emailInput) emailInput.value = '';
                     if (status) status.textContent = 'Senha alterada com sucesso. A sessão de recuperação terminou; entre agora com sua nova senha.';
                     document.getElementById('teacher-password')?.focus();
                 }
@@ -1566,28 +1504,33 @@
                 const { data, error } = await supabaseClient.auth.signUp({ email, password: senha, options: { data: { nome_completo: nome } } });
                 if (error) throw error;
                 if (data.session) {
-                    const pedido = await supabaseClient.rpc('solicitar_acesso_professor', { p_nome: nome });
-                    if (pedido.error) throw pedido.error;
-                    await supabaseClient.auth.signOut();
-                    status.textContent = 'Conta criada e solicitação enviada. Aguarde a aprovação do administrador.';
+                    status.textContent = 'Conta criada. Preparando seu ambiente individual…';
+                    const abriu = await mostrarPainelProfessor(data.session);
+                    if (!abriu) throw new Error(status.textContent || 'Não foi possível abrir o ambiente. Confira a migração SQL.');
                 } else {
-                    status.textContent = 'Conta criada. Confirme o e-mail recebido; depois entre no sistema para registrar sua solicitação de acesso.';
+                    status.textContent = 'Conta criada. Confirme o e-mail recebido e depois entre com seu e-mail e senha. Seu ambiente será ativado automaticamente.';
                 }
                 document.getElementById('teacher-signup-form').reset();
             } catch (error) {
                 status.textContent = 'Não foi possível criar a conta: ' + (error.message || error);
             } finally {
-                if (botao) { botao.disabled = false; botao.textContent = 'Criar conta e solicitar aprovação'; }
+                if (botao) { botao.disabled = false; botao.textContent = 'Criar meu ambiente individual'; }
             }
         }
 
         async function sairProfessor() {
             if (timerPollingNuvem) { clearInterval(timerPollingNuvem); timerPollingNuvem = null; }
             if (timerSyncProfessor) { clearTimeout(timerSyncProfessor); timerSyncProfessor = null; }
+            // Tenta concluir gravações pendentes antes de encerrar a sessão.
+            if (professorLogado && localStorage.getItem('sys_dados_professor_sync_pendente') === '1') {
+                try { await sincronizarDadosProfessorNuvem(); }
+                catch (error) { console.warn('Há alterações locais pendentes; elas permanecerão neste navegador.', error); }
+            }
             if (realtimeChannel && supabaseClient) { await supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
             if (supabaseClient) await supabaseClient.auth.signOut();
+            // Mantém o UID e o cache local para que o mesmo professor possa retornar sem perda.
+            // Ao entrar outra conta, mostrarPainelProfessor limpa o cache por detectar a troca de UID.
             localStorage.removeItem('sys_aba_ativa');
-            localStorage.removeItem('sys_professor_ultimo_uid');
             mostrarGateProfessor('Sessão encerrada. Entre novamente para acessar o painel.');
         }
 
@@ -1678,7 +1621,7 @@
                 } else if (authData.session && !studentMode) {
                     await mostrarPainelProfessor(authData.session);
                 } else if (!studentMode) {
-                    mostrarGateProfessor('Conectado ao Supabase. Entre com seu e-mail e senha de professor.');
+                    mostrarGateProfessor('Conectado ao Supabase. Entre ou crie seu ambiente individual.');
                 }
             } catch (error) {
                 console.error('Erro Supabase:', error);
@@ -1692,33 +1635,19 @@
         }
 
         async function sincronizarBancoQuestoesComSupabase(linhasRemotas) {
-            const chaveMigracao = 'sys_banco_questoes_migrado_abmhfmlttjmwksqhnzwr';
-            const questoesLocais = Array.isArray(bancoQuestoes) ? bancoQuestoes.slice() : [];
+            // A lista remota já foi filtrada por owner_id. O cache local da versão
+            // anterior também podia conter questões recebidas por compartilhamento;
+            // por isso, somente as nove questões originais são recuperadas do cache.
+            // Questões personalizadas válidas são carregadas exclusivamente da nuvem
+            // quando pertencem ao UID autenticado.
             const idsPadrao = new Set(['1','2','3','4','5','6','7','8','9']);
-            let mapaRemoto = new Map((linhasRemotas || []).map(l => [String(l.id), l]));
-            questoesCompartilhadasIds = new Set((linhasRemotas || []).filter(l => l.owner_id && l.owner_id !== professorUidAtual).map(l => String(l.id)));
-
-            // Migra uma única vez questões personalizadas que existiam apenas no navegador.
-            // Imagens antigas em Base64 são enviadas ao Storage e substituídas por URLs.
-            if (localStorage.getItem(chaveMigracao) !== '1') {
-                for (const q of questoesLocais.filter(q => !idsPadrao.has(String(q.id)))) {
-                    const existente = mapaRemoto.get(String(q.id));
-                    if (existente) continue; // preserva inclusive exclusões registradas na nuvem
-                    const preparada = await prepararQuestaoParaNuvem(q);
-                    const { error } = await supabaseClient.from('banco_questoes').upsert({
-                        id: String(preparada.id), questao: preparada, excluida: false,
-                        criado_por: professorUidAtual, owner_id: professorUidAtual
-                    }, { onConflict: 'id' });
-                    if (error) throw error;
-                }
-                localStorage.setItem(chaveMigracao, '1');
-                const atualizadas = await supabaseClient.from('banco_questoes').select('id, questao, excluida, owner_id');
-                if (atualizadas.error) throw atualizadas.error;
-                mapaRemoto = new Map((atualizadas.data || []).map(l => [String(l.id), l]));
-            }
-
-            const padrao = questoesLocais.filter(q => idsPadrao.has(String(q.id)) && !(mapaRemoto.get(String(q.id)) || {}).excluida);
-            const remotas = [...mapaRemoto.values()].filter(l => !l.excluida && l.questao).map(l => l.questao);
+            const questoesPadraoLocais = (Array.isArray(bancoQuestoes) ? bancoQuestoes : [])
+                .filter(q => idsPadrao.has(String(q.id)));
+            const mapaRemoto = new Map((linhasRemotas || []).map(l => [String(l.id), l]));
+            const padrao = questoesPadraoLocais.filter(q => !(mapaRemoto.get(String(q.id)) || {}).excluida);
+            const remotas = [...mapaRemoto.values()]
+                .filter(l => !l.excluida && l.questao)
+                .map(l => l.questao);
             const mescladas = new Map();
             [...padrao, ...remotas].forEach(q => mescladas.set(String(q.id), q));
             bancoQuestoes = [...mescladas.values()];
@@ -1775,7 +1704,7 @@
 
         async function sincronizarDadosProfessorNuvem() {
             if (!supabaseClient || !professorLogado || !professorUidAtual) return;
-            const turmasProprias = Object.fromEntries(Object.entries(cadastroTurmas).filter(([chave]) => !turmasCompartilhadasKeys.has(chave)));
+            const turmasProprias = { ...(cadastroTurmas || {}) };
             const registro = {
                 user_id: professorUidAtual,
                 cadastro_turmas: turmasProprias,
@@ -1809,9 +1738,9 @@
             carregandoDadosRemotos = true;
             try {
                 const [respostas, provas, questoes] = await Promise.all([
-                    supabaseClient.from('respostas_avaliacoes').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('provas_alunos').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('banco_questoes').select('id, questao, excluida, owner_id').order('updated_at', { ascending: false })
+                    supabaseClient.from('respostas_avaliacoes').select('*').eq('owner_id', professorUidAtual).order('created_at', { ascending: false }),
+                    supabaseClient.from('provas_alunos').select('*').eq('owner_id', professorUidAtual).order('created_at', { ascending: false }),
+                    supabaseClient.from('banco_questoes').select('id, questao, excluida, owner_id').eq('owner_id', professorUidAtual).order('updated_at', { ascending: false })
                 ]);
                 if (respostas.error) throw respostas.error;
                 if (provas.error) throw provas.error;
@@ -1821,41 +1750,37 @@
                 const perfil = await supabaseClient.from('dados_professor').select('*').eq('user_id', professorUidAtual).maybeSingle();
                 if (perfil.error) throw perfil.error;
                 const perfilExistiaNaNuvem = Boolean(perfil.data);
-                const possuiGravacaoLocalPendente = localStorage.getItem('sys_dados_professor_sync_pendente') === '1';
-                if (possuiGravacaoLocalPendente) {
-                    // Não sobrescreve um cadastro feito offline com uma versão remota mais antiga.
-                    await sincronizarDadosProfessorNuvem();
-                } else if (perfil.data) {
+                if (perfil.data) {
+                    // A nuvem é a fonte de verdade; não reaproveita cache antigo que
+                    // poderia conter turmas importadas por compartilhamento.
                     dadosProfessorRemotosDisponiveis = true;
                     aplicarDadosProfessorNuvem(perfil.data);
-                } else {
-                    // Primeira entrada neste projeto: envia os cadastros locais para a conta na nuvem.
-                    await sincronizarDadosProfessorNuvem();
                 }
 
-                turmasCompartilhadasKeys = new Set();
-                turmasCompartilhadasEditaveis = new Set();
-                turmasCompartilhadasOwners = new Map();
-                const [turmasNuvem, sharesNuvem] = await Promise.all([
-                    supabaseClient.from('turmas_professor').select('*').order('updated_at', { ascending: false }),
-                    supabaseClient.from('compartilhamentos_professor').select('owner_id,destinatario_id,tipo,chave,pode_editar')
-                ]);
+                const turmasNuvem = await supabaseClient.from('turmas_professor').select('*')
+                    .eq('owner_id', professorUidAtual).order('updated_at', { ascending: false });
                 if (turmasNuvem.error) throw turmasNuvem.error;
-                if (sharesNuvem.error) throw sharesNuvem.error;
-                const sharesTurma = new Map((sharesNuvem.data || []).filter(sh => sh.destinatario_id === professorUidAtual && sh.tipo === 'turma').map(sh => [String(sh.chave), sh]));
+                const turmasPropriasNuvem = {};
                 (turmasNuvem.data || []).forEach(t => {
-                    const chaveBase = t.turma_key || `${t.serie}_${t.turma}`;
-                    const chave = chaveBase;
-                    if (t.owner_id !== professorUidAtual) {
-                        cadastroTurmas[chave] = Array.isArray(t.alunos) ? t.alunos : [];
-                        turmasCompartilhadasKeys.add(chave);
-                        turmasCompartilhadasOwners.set(chave, { owner_id: t.owner_id, turma_key: chaveBase });
-                        const share = sharesTurma.get(String(chaveBase));
-                        if (share?.pode_editar) turmasCompartilhadasEditaveis.add(chave);
-                    } else if (!Array.isArray(cadastroTurmas[chave])) {
-                        cadastroTurmas[chave] = Array.isArray(t.alunos) ? t.alunos : [];
-                    }
+                    const chave = t.turma_key || `${t.serie}_${t.turma}`;
+                    turmasPropriasNuvem[chave] = Array.isArray(t.alunos) ? t.alunos : [];
                 });
+                if (turmasNuvem.data?.length) {
+                    cadastroTurmas = turmasPropriasNuvem;
+                } else if (!perfil.data?.cadastro_turmas || typeof perfil.data.cadastro_turmas !== 'object') {
+                    cadastroTurmas = {};
+                }
+
+                // Ignora a fila genérica deixada pela versão de compartilhamento: ela
+                // pode conter itens recebidos de terceiros. Mantém apenas o estado
+                // confirmado no perfil e nas linhas com owner_id deste professor.
+                localStorage.removeItem('sys_dados_professor_sync_pendente');
+                if (!perfil.data) {
+                    localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+                    await sincronizarDadosProfessorNuvem();
+                } else {
+                    localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+                }
                 alternarTurmaAluno();
 
                 bancoNotas = (respostas.data || []).map(n => ({
@@ -1898,7 +1823,7 @@
                 } else {
                     try {
                         provasGeradas = JSON.parse(localStorage.getItem('sys_provas_geradas') || '[]')
-                            .filter(p => p.studentToken || /^[a-f0-9]{64}$/i.test(p.studentId || ''));
+                            .filter(p => (p.studentToken || /^[a-f0-9]{64}$/i.test(p.studentId || '')) && String(p.ownerId || '') === String(professorUidAtual));
                         if (provasGeradas.length) await persistirProvasNoSupabase();
                     } catch (_) { provasGeradas = []; }
                 }
@@ -1940,6 +1865,7 @@
                         return;
                     }
                     const n = payload.new || {};
+                    if (String(n.owner_id || '') !== String(professorUidAtual || '')) return;
                     const registro = {
                         id: n.id, studentToken: n.student_token || '', aluno: n.aluno_nome,
                         anoLetivo: String(n.ano_letivo || ''), serie: n.serie || '', bimestre: n.bimestre || '',
@@ -1959,7 +1885,6 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'provas_alunos' }, () => agendarAtualizacaoRemota())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'banco_questoes' }, () => agendarAtualizacaoRemota())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas_professor' }, () => agendarAtualizacaoRemota())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'compartilhamentos_professor' }, () => agendarAtualizacaoRemota())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'dados_professor' }, payload => {
                     if (localStorage.getItem('sys_dados_professor_sync_pendente') === '1') return;
                     if (payload.new && payload.new.user_id === professorUidAtual) aplicarDadosProfessorNuvem(payload.new);
@@ -1968,58 +1893,6 @@
                     if (status === 'SUBSCRIBED') atualizarStatusSync('Sincronização ativa', 'ok');
                     else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') atualizarStatusSync('Reconectando nuvem…', 'pendente');
                 });
-        }
-
-        async function carregarCompartilhamentos() {
-            const enviados = document.getElementById('lista-compartilhamentos-enviados');
-            const recebidos = document.getElementById('lista-compartilhamentos-recebidos');
-            if (!professorLogado || !supabaseClient) {
-                if (enviados) enviados.innerHTML = '<p class="text-xs text-slate-500">Entre como professor para consultar.</p>';
-                if (recebidos) recebidos.innerHTML = '<p class="text-xs text-slate-500">Entre como professor para consultar.</p>';
-                return;
-            }
-            if (enviados) enviados.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
-            if (recebidos) recebidos.innerHTML = '<p class="text-xs text-slate-500">Carregando…</p>';
-            try {
-                const { data, error } = await supabaseClient.rpc('listar_compartilhamentos_proprios');
-                if (error) throw error;
-                const itens = Array.isArray(data?.itens) ? data.itens : [];
-                const montar = (item, enviado) => {
-                    const permissao = item.pode_editar ? 'Visualizar e editar' : 'Somente visualizar';
-                    const direcao = enviado ? `Com ${item.nome_colega || item.email_colega || 'colega'}` : `De ${item.nome_colega || item.email_colega || 'colega'}`;
-                    const quando = item.criado_em ? new Date(item.criado_em).toLocaleString('pt-BR') : '';
-                    const tipoLabel = ({ questao: 'Questão', turma: 'Turma', avaliacao: 'Avaliação', resultado: 'Resultado' })[item.tipo] || item.tipo;
-                    return `<article class="border rounded-xl p-3 space-y-2">
-                        <div class="flex justify-between items-start gap-2"><div><strong class="text-sm text-slate-900">${escapeHtml(item.recurso || tipoLabel)}</strong><p class="text-[11px] text-slate-500">${tipoLabel} • ${direcao}</p></div><span class="text-[10px] rounded-full px-2 py-1 ${item.pode_editar ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-700'}">${permissao}</span></div>
-                        <p class="text-[10px] text-slate-400">Desde ${escapeHtml(quando)}</p>
-                        <button type="button" onclick="revogarCompartilhamento('${escapeHtml(item.id)}')" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 text-xs font-bold">${enviado ? 'Revogar acesso' : 'Deixar de receber'}</button>
-                    </article>`;
-                };
-                const saida = itens.filter(i => i.sou_proprietario);
-                const entrada = itens.filter(i => !i.sou_proprietario);
-                if (enviados) enviados.innerHTML = saida.length ? saida.map(i => montar(i, true)).join('') : '<p class="text-xs text-slate-500">Você ainda não compartilhou recursos.</p>';
-                if (recebidos) recebidos.innerHTML = entrada.length ? entrada.map(i => montar(i, false)).join('') : '<p class="text-xs text-slate-500">Nenhum colega compartilhou recursos com você.</p>';
-            } catch (error) {
-                const mensagem = `<p class="text-xs text-rose-700">Não foi possível carregar os compartilhamentos: ${escapeHtml(error.message || error)}. Execute a migração V17 atualizada.</p>`;
-                if (enviados) enviados.innerHTML = mensagem;
-                if (recebidos) recebidos.innerHTML = mensagem;
-            }
-            if (window.lucide) lucide.createIcons();
-        }
-
-        async function revogarCompartilhamento(id) {
-            if (!professorLogado || !supabaseClient) return;
-            if (!confirm('Deseja realmente revogar este compartilhamento? O recurso original não será apagado.')) return;
-            try {
-                const { data, error } = await supabaseClient.rpc('revogar_compartilhamento', { p_id: id });
-                if (error) throw error;
-                if (data?.erro) throw new Error(data.erro);
-                await carregarCompartilhamentos();
-                await carregarDadosProfessor();
-                alert('Compartilhamento revogado. O recurso continua no espaço do proprietário.');
-            } catch (error) {
-                alert('Não foi possível revogar o compartilhamento: ' + (error.message || error) + '. Execute a migração V17 atualizada.');
-            }
         }
 
         async function carregarEquipeAdmin() {
@@ -2074,82 +1947,15 @@
             await carregarEquipeAdmin();
         }
 
-        async function abrirModalCompartilhar(tipo, chave, titulo) {
-            if (!professorLogado || !supabaseClient) return alert('Entre no sistema para compartilhar recursos.');
-            recursoCompartilharAtual = { tipo, chave: String(chave), titulo: titulo || tipo };
-            const modal = document.getElementById('modal-compartilhar-recurso');
-            const select = document.getElementById('share-professor-destino');
-            const status = document.getElementById('share-status');
-            document.getElementById('titulo-compartilhar-recurso').textContent = `Compartilhar ${titulo || 'recurso'}`;
-            document.getElementById('descricao-compartilhar-recurso').textContent = 'Escolha um colega autorizado. O recurso não ficará público para os demais professores.';
-            status.textContent = 'Buscando professores autorizados…';
-            select.innerHTML = '';
-            modal.classList.remove('hidden');
-            try {
-                const { data, error } = await supabaseClient.rpc('listar_colegas_compartilhamento');
-                if (error) throw error;
-                const colegas = data || [];
-                if (!colegas.length) {
-                    status.textContent = 'Ainda não há outros professores aprovados. Peça ao colega para criar uma conta e solicite aprovação na tela de login.';
-                    document.getElementById('btn-confirmar-compartilhamento').disabled = true;
-                    return;
-                }
-                select.innerHTML = colegas.map(c => `<option value="${escapeHtml(c.user_id)}">${escapeHtml(c.nome_completo)} — ${escapeHtml(c.email)}</option>`).join('');
-                status.textContent = `${colegas.length} colega(s) disponível(is) para compartilhar.`;
-                document.getElementById('btn-confirmar-compartilhamento').disabled = false;
-            } catch (error) {
-                status.textContent = 'Não foi possível carregar a equipe: ' + (error.message || error);
-                document.getElementById('btn-confirmar-compartilhamento').disabled = true;
-            }
-        }
-        function fecharModalCompartilhar() {
-            document.getElementById('modal-compartilhar-recurso')?.classList.add('hidden');
-            recursoCompartilharAtual = null;
-        }
-        async function confirmarCompartilhamento() {
-            if (!recursoCompartilharAtual || !supabaseClient || !professorLogado) return;
-            const botao = document.getElementById('btn-confirmar-compartilhamento');
-            const destino = document.getElementById('share-professor-destino').value;
-            const editar = document.getElementById('share-permissao').value === 'true';
-            if (!destino) return alert('Selecione um professor.');
-            botao.disabled = true; botao.textContent = 'Compartilhando…';
-            try {
-                if (recursoCompartilharAtual.tipo === 'turma') await sincronizarDadosProfessorNuvem();
-                const { data, error } = await supabaseClient.rpc('compartilhar_recurso', {
-                    p_tipo: recursoCompartilharAtual.tipo,
-                    p_chave: recursoCompartilharAtual.chave,
-                    p_destino: destino,
-                    p_pode_editar: editar
-                });
-                if (error) throw error;
-                if (data?.erro) throw new Error(data.erro);
-                fecharModalCompartilhar();
-                alert('Compartilhamento realizado. O colega verá o recurso na próxima sincronização.');
-            } catch (error) {
-                alert('Não foi possível compartilhar: ' + (error.message || error));
-            } finally { botao.disabled = false; botao.textContent = 'Compartilhar'; }
-        }
-        async function compartilharTurmaAtiva() {
-            const serie = document.getElementById('sel-serie-aluno').value;
-            const turma = document.getElementById('sel-turma-aluno').value;
-            const chave = `${serie}_${turma}`;
-            if (turmasCompartilhadasKeys.has(chave)) return alert('Esta turma foi compartilhada por outro professor. Somente o proprietário pode compartilhar novamente.');
-            await abrirModalCompartilhar('turma', chave, `${serie} — ${turma}`);
-        }
-
         function alternarTurmaAluno() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
 
-            const compartilhada = turmasCompartilhadasKeys.has(chave);
-            document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}${compartilhada ? ' • compartilhada' : ''}`;
+            document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
             const alunos = cadastroTurmas[chave] || [];
             document.getElementById('lista-alunos-input').value = alunos.join('\n');
-            const permiteEditarTurmaCompartilhada = compartilhada && turmasCompartilhadasEditaveis.has(chave);
-            document.getElementById('lista-alunos-input').disabled = compartilhada && !permiteEditarTurmaCompartilhada;
-            const botaoShare = document.getElementById('btn-compartilhar-turma');
-            if (botaoShare) { botaoShare.disabled = compartilhada; botaoShare.title = compartilhada ? 'Somente o professor proprietário pode compartilhar esta turma.' : 'Compartilhar esta turma com um colega'; botaoShare.classList.toggle('opacity-50',compartilhada); }
+            document.getElementById('lista-alunos-input').disabled = false;
             document.getElementById('label-num-alunos-turma').textContent = `${alunos.length} alunos`;
             atualizarBadges();
         }
@@ -2158,31 +1964,6 @@
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-            if (turmasCompartilhadasKeys.has(chave)) {
-                if (!turmasCompartilhadasEditaveis.has(chave)) {
-                    alert('Esta turma foi compartilhada em modo de leitura. Solicite ao proprietário que permita edição.');
-                    alternarTurmaAluno();
-                    return;
-                }
-                const meta = turmasCompartilhadasOwners.get(chave);
-                const alunosEditados = document.getElementById('lista-alunos-input').value.split('\n').map(a => a.trim()).filter(Boolean);
-                cadastroTurmas[chave] = alunosEditados;
-                document.getElementById('label-num-alunos-turma').textContent = `${alunosEditados.length} alunos`;
-                atualizarBadges();
-                if (timerSyncTurmaCompartilhada) clearTimeout(timerSyncTurmaCompartilhada);
-                timerSyncTurmaCompartilhada = setTimeout(async () => {
-                    try {
-                        const atualizacao = await supabaseClient.from('turmas_professor').update({ alunos: alunosEditados, updated_at: new Date().toISOString() }).eq('owner_id', meta.owner_id).eq('turma_key', meta.turma_key);
-                        if (atualizacao.error) throw atualizacao.error;
-                        atualizarStatusSync('Turma compartilhada sincronizada', 'ok');
-                    } catch (error) {
-                        atualizarStatusSync('Falha ao atualizar turma compartilhada', 'erro');
-                        alert('Não foi possível atualizar a turma compartilhada: ' + (error.message || error));
-                    }
-                }, 650);
-                return;
-            }
-
             const text = document.getElementById('lista-alunos-input').value;
             const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
             
@@ -2251,7 +2032,7 @@
             try {
                 const tema = document.getElementById('q-tema').value.trim() || 'Geral';
                 const assunto = document.getElementById('q-assunto').value.trim() || 'Geral';
-                const id = Date.now();
+                const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                 const questao = {
                     id,
                     tema,
@@ -2356,8 +2137,7 @@
                                 <span class="text-xs text-slate-500">${q.assunto}</span>
                             </div>
                             <div class="flex items-center gap-3">
-                                ${questoesCompartilhadasIds.has(String(q.id)) ? '<span class="text-[10px] rounded bg-cyan-50 text-cyan-800 px-2 py-1">Compartilhada</span>' : (![1,2,3,4,5,6,7,8,9].includes(Number(q.id)) ? `<button onclick="abrirModalCompartilhar('questao','${escapeHtml(String(q.id))}','questão')" class="text-indigo-700 hover:text-indigo-900 text-xs font-bold">Compartilhar</button>` : '<span class="text-[10px] text-slate-400">Questão-base</span>')}
-                                ${questoesCompartilhadasIds.has(String(q.id)) ? '' : `<button onclick="excluirQuestao(${q.id})" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>`}
+                                ${![1,2,3,4,5,6,7,8,9].includes(Number(q.id)) ? `<button onclick="excluirQuestao('${escapeHtml(String(q.id))}')" class="text-slate-400 hover:text-red-600 text-xs">Excluir</button>` : '<span class="text-[10px] text-slate-400">Questão-base</span>'}
                             </div>
                         </div>
 
@@ -2384,19 +2164,17 @@
 
         async function excluirQuestao(id) {
             if (!supabaseClient || !professorLogado) return alert('Entre na área do professor para excluir questões.');
-            if (!confirm('Deseja realmente excluir esta questão do banco compartilhado?')) return;
+            if (!confirm('Deseja realmente excluir esta questão do seu banco de questões?')) return;
             const questao = bancoQuestoes.find(q => String(q.id) === String(id));
             if (!questao) return;
-            if (questoesCompartilhadasIds.has(String(id))) return alert('Esta questão pertence a outro professor. Você pode utilizá-la enquanto o compartilhamento estiver ativo, mas somente o proprietário pode excluí-la.');
             try {
                 const { data: usuarioData, error: usuarioErro } = await supabaseClient.auth.getUser();
                 if (usuarioErro) throw usuarioErro;
                 if (!usuarioData.user) throw new Error('A sessão do professor expirou.');
                 // Exclusão lógica permite impedir que questões iniciais reapareçam após atualizar a página.
-                const { error } = await supabaseClient.from('banco_questoes').upsert({
-                    id: String(questao.id), questao, excluida: true,
-                    criado_por: usuarioData.user.id, owner_id: usuarioData.user.id, updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
+                const { error } = await supabaseClient.from('banco_questoes').update({
+                    questao, excluida: true, updated_at: new Date().toISOString()
+                }).eq('id', String(questao.id)).eq('owner_id', usuarioData.user.id);
                 if (error) throw error;
                 await removerImagensDaQuestaoNoStorage(questao);
                 bancoQuestoes = bancoQuestoes.filter(q => String(q.id) !== String(id));
@@ -2604,32 +2382,42 @@
             exibindoLixeiraProvas = false;
             document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
             anoFiltroProvasSelecionado = null;
+            escolaFiltroProvasSelecionada = null;
+            turmaFiltroSelecionada = null;
+            renderizarBotoesFiltroTurmas();
+        }
+
+        function voltarSelecaoEscolaProvas() {
+            exibindoLixeiraProvas = false;
+            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
+            escolaFiltroProvasSelecionada = null;
             turmaFiltroSelecionada = null;
             renderizarBotoesFiltroTurmas();
         }
 
         function voltarSelecaoTurmaProvas() {
-            exibindoLixeiraProvas = false;
-            document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
-            turmaFiltroSelecionada = null;
-            renderizarBotoesFiltroTurmas();
+            voltarSelecaoEscolaProvas();
         }
 
         function renderizarBotoesFiltroTurmas() {
             const anosContainer = document.getElementById('container-botoes-anos');
+            const escolasContainer = document.getElementById('container-botoes-escolas');
+            const painelEscolas = document.getElementById('painel-selecao-escolas');
             const turmasContainer = document.getElementById('container-botoes-turmas');
             const painelTurmas = document.getElementById('painel-selecao-turmas');
             const painelProvas = document.getElementById('painel-provas-digitais');
             const grid = document.getElementById('grid-provas');
             const areaImpressao = document.getElementById('area-impressao-provas');
-            if (!anosContainer || !turmasContainer || !painelTurmas || !painelProvas || !grid) return;
+            if (!anosContainer || !escolasContainer || !painelEscolas || !turmasContainer || !painelTurmas || !painelProvas || !grid) return;
 
             const anoDaProva = p => String(p.anoLetivo || document.getElementById('cfg-ano-letivo')?.value || 'Ano não informado');
+            const escolaDaProva = p => String(p.escola || 'Escola não informada').trim() || 'Escola não informada';
             const anos = [...new Set(provasGeradas.map(anoDaProva))]
                 .sort((a, b) => Number(b) - Number(a) || b.localeCompare(a, 'pt-BR', { numeric: true }));
 
             if (!anos.includes(String(anoFiltroProvasSelecionado))) {
                 anoFiltroProvasSelecionado = null;
+                escolaFiltroProvasSelecionada = null;
                 turmaFiltroSelecionada = null;
             }
 
@@ -2643,13 +2431,16 @@
                 btn.setAttribute('aria-pressed', String(String(anoFiltroProvasSelecionado) === ano));
                 btn.onclick = () => {
                     anoFiltroProvasSelecionado = ano;
+                    escolaFiltroProvasSelecionada = null;
                     turmaFiltroSelecionada = null;
                     renderizarBotoesFiltroTurmas();
                 };
                 anosContainer.appendChild(btn);
             });
 
+            escolasContainer.innerHTML = '';
             turmasContainer.innerHTML = '';
+            painelEscolas.classList.toggle('hidden', !anoFiltroProvasSelecionado);
             if (!anoFiltroProvasSelecionado) {
                 painelTurmas.classList.add('hidden');
                 painelProvas.classList.add('hidden');
@@ -2665,30 +2456,67 @@
                 return;
             }
 
+            const provasDoAno = provasGeradas.filter(p => anoDaProva(p) === String(anoFiltroProvasSelecionado));
+            const escolas = [...new Set(provasDoAno.map(escolaDaProva))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            if (!escolas.includes(String(escolaFiltroProvasSelecionada))) {
+                escolaFiltroProvasSelecionada = null;
+                turmaFiltroSelecionada = null;
+            }
+            escolas.forEach(escola => {
+                const qtd = provasDoAno.filter(p => escolaDaProva(p) === escola).length;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const ativo = escolaFiltroProvasSelecionada === escola;
+                btn.className = `px-4 py-2 rounded-lg text-xs font-bold transition border ${ativo ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow' : 'bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700'}`;
+                btn.textContent = `${escola} (${qtd} avaliações)`;
+                btn.setAttribute('aria-pressed', String(ativo));
+                btn.onclick = () => {
+                    escolaFiltroProvasSelecionada = escola;
+                    turmaFiltroSelecionada = null;
+                    renderizarBotoesFiltroTurmas();
+                };
+                escolasContainer.appendChild(btn);
+            });
+
+            if (!escolaFiltroProvasSelecionada) {
+                painelTurmas.classList.add('hidden');
+                painelProvas.classList.add('hidden');
+                grid.classList.add('hidden');
+                grid.innerHTML = '';
+                if (areaImpressao) areaImpressao.innerHTML = '';
+                if (!escolas.length) {
+                    const vazio = document.createElement('p');
+                    vazio.className = 'text-xs text-slate-300';
+                    vazio.textContent = 'Não há escolas com avaliações publicadas neste ano.';
+                    escolasContainer.appendChild(vazio);
+                }
+                return;
+            }
+
             painelTurmas.classList.remove('hidden');
             const tituloTurmas = document.getElementById('titulo-selecao-turmas');
-            if (tituloTurmas) tituloTurmas.textContent = `2. Selecione a série e a turma do ano ${anoFiltroProvasSelecionado}:`;
+            if (tituloTurmas) tituloTurmas.textContent = `3. Selecione a série e a turma da escola ${escolaFiltroProvasSelecionada}:`;
 
-            const provasDoAno = provasGeradas.filter(p => anoDaProva(p) === String(anoFiltroProvasSelecionado));
+            const provasDaEscola = provasDoAno.filter(p => escolaDaProva(p) === escolaFiltroProvasSelecionada);
             const gruposMap = new Map();
-            provasDoAno.forEach(p => {
+            provasDaEscola.forEach(p => {
                 const serie = String(p.alunoSerie || 'Série não informada');
                 const turma = String(p.alunoTurma || 'Turma não informada');
                 const chave = `${serie}|||${turma}`;
                 if (!gruposMap.has(chave)) gruposMap.set(chave, { chave, serie, turma, quantidade: 0 });
                 gruposMap.get(chave).quantidade++;
             });
+
             const grupos = [...gruposMap.values()].sort((a, b) =>
                 a.serie.localeCompare(b.serie, 'pt-BR', { numeric: true }) ||
                 a.turma.localeCompare(b.turma, 'pt-BR', { numeric: true })
             );
-
             if (!grupos.some(g => g.chave === turmaFiltroSelecionada)) turmaFiltroSelecionada = null;
             grupos.forEach(grupo => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 const ativo = turmaFiltroSelecionada === grupo.chave;
-                btn.className = `px-4 py-2 rounded-lg text-xs font-bold transition border ${ativo ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow' : 'bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700'}`;
+                btn.className = `px-4 py-2 rounded-lg text-xs font-bold transition border ${ativo ? 'bg-violet-400 text-slate-950 border-violet-300 shadow' : 'bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700'}`;
                 btn.textContent = `${grupo.serie} — ${grupo.turma} (${grupo.quantidade} alunos)`;
                 btn.setAttribute('aria-pressed', String(ativo));
                 btn.onclick = () => {
@@ -2710,7 +2538,7 @@
             painelProvas.classList.remove('hidden');
             const tituloProvas = document.getElementById('titulo-provas-digitais');
             if (tituloProvas && grupoSelecionado) {
-                tituloProvas.textContent = `3. Avaliações digitais — ${grupoSelecionado.serie} / ${grupoSelecionado.turma} • ${anoFiltroProvasSelecionado}`;
+                tituloProvas.textContent = `4. Avaliações digitais — ${escolaFiltroProvasSelecionada} • ${grupoSelecionado.serie} / ${grupoSelecionado.turma} • ${anoFiltroProvasSelecionado}`;
             }
             grid.classList.remove('hidden');
             renderizarGridProvas();
@@ -2730,14 +2558,16 @@
             const titulo = document.getElementById('cfg-titulo').value;
             const disciplina = document.getElementById('cfg-disciplina').value;
             const professor = document.getElementById('cfg-professor').value;
-            if (!anoFiltroProvasSelecionado || !turmaFiltroSelecionada) {
+            if (!anoFiltroProvasSelecionado || !escolaFiltroProvasSelecionada || !turmaFiltroSelecionada) {
                 grid.classList.add('hidden');
                 areaImpressao.innerHTML = '';
                 return;
             }
             const provasExibidas = provasGeradas.filter(p =>
                 String(p.anoLetivo || document.getElementById('cfg-ano-letivo')?.value || 'Ano não informado') === String(anoFiltroProvasSelecionado) &&
-                `${p.alunoSerie || 'Série não informada'}|||${p.alunoTurma || 'Turma não informada'}` === turmaFiltroSelecionada
+                String(p.escola || 'Escola não informada').trim() === String(escolaFiltroProvasSelecionada) &&
+                `${p.alunoSerie || 'Série não informada'}|||${p.alunoTurma || 'Turma não informada'}` === turmaFiltroSelecionada &&
+                String(p.ownerId || '') === String(professorUidAtual)
             );
             grid.classList.remove('hidden');
             if (!provasExibidas.length) {
@@ -2751,8 +2581,7 @@
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${encodeURIComponent(token)}`;
                 const bimestre = prova.bimestre || document.getElementById('cfg-bimestre').value || '—';
                 const resultadoAluno = bancoNotas.find(n => String(n.studentToken || '') === String(token));
-                const recursoEhProprio = !prova.ownerId || prova.ownerId === professorUidAtual;
-                const resultadoEhProprio = !resultadoAluno?.ownerId || resultadoAluno?.ownerId === professorUidAtual;
+                const recursoEhProprio = String(prova.ownerId || '') === String(professorUidAtual || '');
                 const temPrimeiraTentativa = Boolean(prova.awaitingSecondChance && prova.lastDetails && prova.lastDetails.length);
                 const botaoRespostaAluno = (resultadoAluno || temPrimeiraTentativa)
                     ? `<button onclick="abrirRespostasAluno('${safeToken}')" class="w-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold py-2 rounded-xl border border-emerald-200"><i data-lucide="clipboard-check" class="w-3 h-3 inline mr-1"></i>${resultadoAluno ? 'Prova respondida pelo aluno' : 'Ver respostas da primeira tentativa'}${resultadoAluno?.feedbackPublicado ? ' • feedback publicado' : ''}</button>`
@@ -2768,8 +2597,6 @@
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
                             <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link da avaliação</button>
                             ${botaoRespostaAluno}
-                            ${recursoEhProprio ? `<button onclick="abrirModalCompartilhar('avaliacao','${safeToken}','avaliação de ${escapeHtml(prova.alunoName || 'aluno')}')" class="w-full bg-violet-50 text-violet-800 hover:bg-violet-100 text-xs font-semibold py-2 rounded-xl border border-violet-200">Compartilhar avaliação</button>` : '<p class="text-center text-[11px] text-cyan-700">Avaliação compartilhada com você</p>'}
-                            ${resultadoAluno && resultadoEhProprio ? `<button onclick="abrirModalCompartilhar('resultado','${safeToken}','resultado de ${escapeHtml(prova.alunoName || 'aluno')}')" class="w-full bg-cyan-50 text-cyan-800 hover:bg-cyan-100 text-xs font-semibold py-2 rounded-xl border border-cyan-200">Compartilhar resultado</button>` : ''}
                             ${recursoEhProprio ? `<button onclick="moverProvaParaLixeira('${safeToken}')" class="w-full bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold py-2 rounded-xl border border-amber-200"><i data-lucide="trash-2" class="w-3 h-3 inline mr-1"></i>Enviar avaliação para lixeira</button>` : ''}
                         </div>
                     </div>`;
@@ -2838,14 +2665,14 @@
             modal.classList.remove('hidden');
             container.innerHTML = '<p class="text-sm text-slate-500 py-8 text-center">Carregando respostas do aluno...</p>';
             try {
-                const prova = provasGeradas.find(p => String(p.studentToken || p.studentId) === String(token)) || null;
+                const prova = provasGeradas.find(p => String(p.studentToken || p.studentId) === String(token) && String(p.ownerId || '') === String(professorUidAtual)) || null;
                 const { data: registro, error } = await supabaseClient.from('respostas_avaliacoes')
-                    .select('*').eq('student_token', token).maybeSingle();
+                    .select('*').eq('student_token', token).eq('owner_id', professorUidAtual).maybeSingle();
                 if (error) throw error;
                 if (!registro) {
                     const { data: pendente, error: erroPendente } = await supabaseClient.from('provas_alunos')
                         .select('last_answers,last_details,last_note,last_hits,total_questoes,aguardando_nova_chance,tentativa')
-                        .eq('student_token', token).maybeSingle();
+                        .eq('student_token', token).eq('owner_id', professorUidAtual).maybeSingle();
                     if (erroPendente) throw erroPendente;
                     if (pendente && Array.isArray(pendente.last_details) && pendente.last_details.length) {
                         respostaAlunoAtual = { token, prova, registro: {
@@ -2861,19 +2688,7 @@
                     container.innerHTML = '<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><strong>Esta avaliação ainda não foi concluída.</strong><p class="mt-1">Quando o aluno enviar as respostas e finalizar a avaliação, a correção aparecerá aqui.</p></div>';
                     return;
                 }
-                let podeEditarFeedback = String(registro.owner_id || '') === String(professorUidAtual || '');
-                if (!podeEditarFeedback && registro.owner_id) {
-                    const { data: compartilhamentoFeedback, error: erroCompartilhamento } = await supabaseClient
-                        .from('compartilhamentos_professor')
-                        .select('pode_editar')
-                        .eq('owner_id', registro.owner_id)
-                        .eq('destinatario_id', professorUidAtual)
-                        .eq('tipo', 'resultado')
-                        .eq('chave', String(token))
-                        .maybeSingle();
-                    if (erroCompartilhamento) throw erroCompartilhamento;
-                    podeEditarFeedback = Boolean(compartilhamentoFeedback?.pode_editar);
-                }
+                const podeEditarFeedback = String(registro.owner_id || '') === String(professorUidAtual || '');
                 respostaAlunoAtual = { token, prova, registro, permiteFeedback: podeEditarFeedback, pendente: false };
                 renderizarRevisaoRespostaAluno();
             } catch (error) {
@@ -2938,7 +2753,7 @@
                 feedback_enviado_em: publicar ? new Date().toISOString() : null
             };
             const { data, error } = await supabaseClient.from('respostas_avaliacoes')
-                .update(atualizacao).eq('student_token', token).select('*').maybeSingle();
+                .update(atualizacao).eq('student_token', token).eq('owner_id', professorUidAtual).select('*').maybeSingle();
             if (error) return alert('Não foi possível salvar o feedback: ' + error.message + '. Execute a migração SQL atualizada.');
             respostaAlunoAtual.registro = data || { ...registro, ...atualizacao };
             const idx = bancoNotas.findIndex(n => String(n.studentToken || '') === String(token));
@@ -2989,6 +2804,7 @@
         function abrirLixeiraProvas() {
             exibindoLixeiraProvas = true;
             document.getElementById('painel-selecao-turmas')?.classList.add('hidden');
+            document.getElementById('container-botoes-escolas')?.classList.add('opacity-50');
             document.getElementById('painel-provas-digitais')?.classList.add('hidden');
             document.getElementById('grid-provas')?.classList.add('hidden');
             document.getElementById('painel-lixeira-provas')?.classList.remove('hidden');
@@ -2998,6 +2814,7 @@
         function fecharLixeiraProvas() {
             exibindoLixeiraProvas = false;
             document.getElementById('painel-lixeira-provas')?.classList.add('hidden');
+            document.getElementById('container-botoes-escolas')?.classList.remove('opacity-50');
             document.getElementById('painel-selecao-turmas')?.classList.remove('hidden');
             renderizarBotoesFiltroTurmas();
         }
@@ -3034,7 +2851,7 @@
             if (!confirm(`Enviar a avaliação de ${prova.alunoName} para a lixeira? Ela poderá ser restaurada durante 15 dias.`)) return;
             const excluidaEm = new Date();
             const expiraEm = new Date(excluidaEm.getTime() + 15 * 24 * 60 * 60 * 1000);
-            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: excluidaEm.toISOString(), expira_em: expiraEm.toISOString() }).eq('student_token', token).is('excluida_em', null);
+            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: excluidaEm.toISOString(), expira_em: expiraEm.toISOString() }).eq('student_token', token).eq('owner_id', professorUidAtual).is('excluida_em', null);
             if (error) return alert('Não foi possível mover a avaliação: ' + error.message);
             prova.excluidaEm = excluidaEm.toISOString(); prova.expiraEm = expiraEm.toISOString();
             provasGeradas = provasGeradas.filter(p => (p.studentToken || p.studentId) !== token);
@@ -3048,7 +2865,7 @@
 
         async function restaurarProvaDaLixeira(token) {
             if (!professorLogado || !supabaseClient) return;
-            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: null, expira_em: null }).eq('student_token', token);
+            const { error } = await supabaseClient.from('provas_alunos').update({ excluida_em: null, expira_em: null }).eq('student_token', token).eq('owner_id', professorUidAtual);
             if (error) return alert('Não foi possível restaurar a avaliação: ' + error.message);
             const prova = provasLixeira.find(p => (p.studentToken || p.studentId) === token);
             if (prova) { prova.excluidaEm = null; prova.expiraEm = null; provasGeradas.push(prova); }
@@ -3061,7 +2878,7 @@
         async function excluirProvaDefinitivamente(token) {
             if (!professorLogado || !supabaseClient) return;
             if (!confirm('Excluir definitivamente esta avaliação? Esta ação não poderá ser desfeita.')) return;
-            const { error } = await supabaseClient.from('provas_alunos').delete().eq('student_token', token);
+            const { error } = await supabaseClient.from('provas_alunos').delete().eq('student_token', token).eq('owner_id', professorUidAtual);
             if (error) return alert('Não foi possível excluir: ' + error.message);
             provasLixeira = provasLixeira.filter(p => (p.studentToken || p.studentId) !== token);
             renderizarLixeiraProvas(); atualizarStatusSync('Avaliação excluída', 'ok');
@@ -3070,7 +2887,7 @@
         async function expurgarLixeiraExpirada() {
             if (!supabaseClient || !professorLogado) return;
             const agora = new Date().toISOString();
-            const { error } = await supabaseClient.from('provas_alunos').delete().not('excluida_em', 'is', null).lte('expira_em', agora);
+            const { error } = await supabaseClient.from('provas_alunos').delete().eq('owner_id', professorUidAtual).not('excluida_em', 'is', null).lte('expira_em', agora);
             if (error) console.warn('A limpeza agendada da lixeira será executada pelo Supabase Cron:', error.message);
             provasLixeira = provasLixeira.filter(p => !p.expiraEm || new Date(p.expiraEm).getTime() > Date.now());
             renderizarLixeiraProvas();
@@ -3664,7 +3481,6 @@
                         <td class="px-6 py-4 font-mono text-xs">${escapeHtml(row.acertos || '')}</td>
                         <td class="px-6 py-4 font-bold text-sm ${row.nota >= 6 ? 'text-emerald-600' : 'text-red-600'}">${row.nota.toFixed(1)}</td>
                         <td class="px-6 py-4 text-[11px] text-slate-500">${escapeHtml(row.origem || '')} • ${escapeHtml(row.data || '')}</td>
-                        <td class="px-6 py-4">${row.studentToken && (!row.ownerId || row.ownerId === professorUidAtual) ? `<button onclick="abrirModalCompartilhar('resultado','${escapeHtml(row.studentToken)}','resultado de ${escapeHtml(row.aluno || 'aluno')}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-50 text-cyan-800 text-[11px] font-bold">Compartilhar</button>` : '<span class="text-xs text-slate-400">—</span>'}</td>
                     </tr>
                 `;
             });
@@ -3676,7 +3492,7 @@
 
         function atualizarTabelaNotasVazia() {
             const tbody = document.getElementById('tabela-notas-body');
-            tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td></tr>`;
             document.getElementById('stat-total').textContent = '0';
             document.getElementById('stat-media').textContent = '0.0';
             document.getElementById('stat-maior').textContent = '0.0';
@@ -3719,7 +3535,7 @@
         // PWA: registra o modo instalável e disponibiliza o diálogo nativo do navegador.
         function registrarPWA() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('./sw.js?v=2026-11-13-authfix', { scope: './', updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=2026-11-13-individual-v20', { scope: './', updateViaCache: 'none' })
                     .then(async registro => {
                         try { await registro.update(); } catch (_) {}
                         console.info('Service Worker ativo. Escopo:', registro.scope);
