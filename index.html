@@ -1679,7 +1679,19 @@
                 if (serieEl && turmaEl) alternarTurmaAluno();
             }
             if (registro.configuracoes && typeof registro.configuracoes === 'object') {
-                Object.entries(registro.configuracoes).forEach(([id, valor]) => { const el = document.getElementById(id); if (el && valor !== undefined && valor !== null) el.value = valor; });
+                Object.entries(registro.configuracoes).forEach(([id, valor]) => {
+                    const el = document.getElementById(id);
+                    if (!el || valor === undefined || valor === null) return;
+
+                    // Não substituir o valor de um campo enquanto o professor digita.
+                    // O Supabase Realtime e a busca periódica podem devolver a própria
+                    // configuração salva e, ao redefinir .value, reposicionam o cursor
+                    // ou apagam o último caractere digitado.
+                    if (document.activeElement === el) return;
+
+                    const valorAtualizado = String(valor);
+                    if (el.value !== valorAtualizado) el.value = valorAtualizado;
+                });
                 localStorage.setItem('sys_configuracoes_professor', JSON.stringify(registro.configuracoes));
             }
             atualizarBadges();
