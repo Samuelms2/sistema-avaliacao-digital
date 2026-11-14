@@ -30,7 +30,7 @@
             margin: 8mm;
         }
 
-        /* Impressão: Times New Roman 11, questões em duas colunas e gabarito manual abaixo. */
+        /* Impressão: Times New Roman 11, duas colunas e uma prova por aluno, sem folha de gabarito. */
         @media print {
             html, body {
                 background: #fff !important;
@@ -49,13 +49,22 @@
                 min-height: 0 !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                page-break-after: always;
-                break-after: page;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+            /* A última prova não deve criar uma folha em branco no fim da impressão. */
+            .page-break:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
             }
             .prova-impressa-container {
                 display: block !important;
                 box-sizing: border-box !important;
                 min-height: 0 !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
                 padding: 0 !important;
                 border: 0 !important;
                 background: #fff !important;
@@ -77,6 +86,7 @@
                 column-count: 2 !important;
                 column-gap: 8mm !important;
                 column-fill: balance !important;
+                column-rule: 0 !important;
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
             }
@@ -88,7 +98,8 @@
                 font-family: "Times New Roman", Times, serif !important;
                 font-size: 11pt !important;
                 page-break-inside: avoid !important;
-                break-inside: avoid !important;
+                break-inside: avoid-column !important;
+                -webkit-column-break-inside: avoid !important;
             }
             .questao-impressa p, .alternativa-impressa {
                 font-family: "Times New Roman", Times, serif !important;
@@ -97,64 +108,9 @@
             }
             .questao-impressa p { margin-bottom: 1mm !important; }
             .alternativa-impressa { margin: 0.5mm 0 !important; }
-            .questao-impressa img { max-width: 100% !important; max-height: 35mm !important; }
-            .folha-gabarito {
-                display: block !important;
-                width: 100% !important;
-                margin: 4mm 0 0 0 !important;
-                padding: 0 !important;
-                border: 0 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                clear: both !important;
-            }
-            .gabarito-sheet-heading {
-                position: absolute !important;
-                top: 1.4mm !important;
-                left: 9mm !important;
-                right: 32mm !important;
-                height: 9mm !important;
-                overflow: hidden !important;
-                font-size: 8.5pt !important;
-                line-height: 1.12 !important;
-            }
-            .folha-respostas-manual { position: relative; border: 1px solid #111; padding: 4mm; margin-top: 3mm; page-break-inside: avoid; }
-        .gabarito-marcacao-table {
-                position: absolute !important;
-                top: 16mm !important;
-                left: 44mm !important;
-                width: 72mm !important;
-                border-collapse: collapse !important;
-                table-layout: fixed !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                color: #000 !important;
-                background: #fff !important;
-                font-family: "Times New Roman", Times, serif !important;
-                font-size: 11pt !important;
-            }
-            .gabarito-marcacao-table th, .gabarito-marcacao-table td {
-                height: 6.5mm !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                border: 0.35pt solid #000 !important;
-                text-align: center !important;
-                vertical-align: middle !important;
-                font-family: "Times New Roman", Times, serif !important;
-                font-size: 11pt !important;
-                line-height: 1 !important;
-            }
-            .gabarito-marcacao-table thead th { height: 5.5mm !important; font-weight: bold !important; }
-            .gabarito-bolha {
-                display: inline-block !important;
-                box-sizing: border-box !important;
-                width: 4.4mm !important;
-                height: 4.4mm !important;
-                border: 0.45pt solid #000 !important;
-                border-radius: 50% !important;
-                background: #fff !important;
-            }
-            .gabarito-numero { font-weight: bold !important; }
+            .questao-impressa img { max-width: 100% !important; max-height: 35mm !important; page-break-inside: avoid !important; }
+            .prova-cabecalho { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .alternativa-impressa { break-inside: avoid !important; }
             img { max-width: 100% !important; }
         }
 
@@ -178,23 +134,6 @@
             font-size: 11pt;
             break-inside: avoid;
         }
-        .folha-gabarito { margin-top: 4mm; }
-        .gabarito-sheet-heading {
-            position: absolute; top: 1.4mm; left: 9mm; right: 32mm;
-            height: 9mm; overflow: hidden; font-size: 8.5pt; line-height: 1.12;
-        }
-        .gabarito-marcacao-table {
-            position: absolute; top: 16mm; left: 44mm; width: 72mm;
-            border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;
-            color: #000; background: #fff; font-family: "Times New Roman", Times, serif; font-size: 11pt;
-        }
-        .gabarito-marcacao-table th, .gabarito-marcacao-table td {
-            height: 6.5mm; padding: 0; margin: 0; border: .35pt solid #000;
-            text-align: center; vertical-align: middle; font-size: 11pt; line-height: 1;
-        }
-        .gabarito-marcacao-table thead th { height: 5.5mm; font-weight: bold; }
-        .gabarito-bolha { display: inline-block; box-sizing: border-box; width: 4.4mm; height: 4.4mm; border: .45pt solid #000; border-radius: 50%; background: #fff; }
-        .gabarito-numero { font-weight: bold; }
         .student-mode { background: #f8fafc; min-height: 100vh; }
         .student-question { border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 14px; background: #fff; }
         .student-option { display: flex; align-items: flex-start; gap: 9px; padding: 8px; border-radius: 8px; cursor: pointer; }
@@ -2701,10 +2640,6 @@
                         </div>
                     </article>`).join('');
 
-                const linhasGabarito = prova.questoes.map(q =>
-                    `<tr><td class="gabarito-numero">${q.numero}</td>${['A','B','C','D','E'].map(letra => `<td><span class="gabarito-bolha" aria-label="Questão ${q.numero}, alternativa ${letra}"></span></td>`).join('')}</tr>`
-                ).join('');
-
                 areaImpressao.innerHTML += `
                     <div class="page-break">
                         <div class="prova-impressa-container">
@@ -2723,20 +2658,6 @@
                                 </div>
                             </div>
                             <div class="questoes-sequenciais">${questoesHtml}</div>
-                            <section class="folha-gabarito">
-                                <div class="folha-respostas-manual">
-                                    <div class="gabarito-sheet-heading">
-                                        <strong>GABARITO DA PROVA</strong><br>
-                                        Aluno: ${escapeHtml(prova.alunoName)} | Código: ${escapeHtml(prova.code || '')}<br>
-                                        Marque uma única alternativa por questão. A correção será realizada pelo professor.
-                                    </div>
-                                    <table class="gabarito-marcacao-table">
-                                        <colgroup><col style="width:10mm;">${Array.from({length:5}, () => '<col style="width:12.4mm;">').join('')}</colgroup>
-                                        <thead><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-                                        <tbody>${linhasGabarito}</tbody>
-                                    </table>
-                                </div>
-                            </section>
                         </div>
                     </div>`;
             });
@@ -2997,14 +2918,13 @@
                 <style>
                     @page { size: 21cm 29.7cm; margin: 1.2cm; }
                     body { font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.2; }
-                    .word-prova { page-break-after:always; padding:0; }
+                    .word-prova { page-break-after:always; break-after:page; padding:0; }
+                    .word-prova:last-child { page-break-after:auto; break-after:auto; }
                     .header-box { border:1.5pt solid black; padding:8px; margin-bottom:8px; }
                     .questoes-word { column-count:2; column-gap:0.8cm; column-fill:balance; }
+                    .questao { orphans:2; widows:2; }
                     .questao { display:inline-block; width:100%; margin:0 0 7px 0; page-break-inside:avoid; break-inside:avoid; }
                     .alternativa { margin:2px 0 2px 12px; font-size:11pt; }
-                    table { width:100%; border-collapse:collapse; font-size:11pt; margin-top:8px; }
-                    th,td { border:1pt solid #000; padding:5px; text-align:center; }
-                    .bolha { display:inline-block; width:22px; height:22px; line-height:22px; border:1pt solid #000; border-radius:50%; }
                 </style></head><body>`;
             provasGeradas.forEach(p => {
                 wordHTML += `<div class="word-prova">
@@ -3018,8 +2938,6 @@
                         ${q.imgEnunciado ? `<p><img src="${q.imgEnunciado}" style="max-height:100px;max-width:100%;" /></p>` : ''}
                         ${q.alternativas.map(a => `<div class="alternativa"><strong>(${a.letter})</strong> ${a.text} ${a.img ? `<img src="${a.img}" style="max-height:55px;max-width:100%;vertical-align:middle;" />` : ''}</div>`).join('')}
                     </div>`).join('')}</div>
-                    <table style="width:72%;margin-left:0;"><thead><tr><th colspan="6" style="font-size:11pt;">GABARITO DA PROVA</th></tr><tr><th>Nº</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-                    <tbody>${p.questoes.map(q => `<tr><td><strong>${q.numero}.</strong></td>${['A','B','C','D','E'].map(l => `<td><span class="bolha">${l}</span></td>`).join('')}</tr>`).join('')}</tbody></table>
                     </div>`;
             });
             wordHTML += '</body></html>';
@@ -3388,37 +3306,40 @@
             const temNota = Number.isFinite(nota);
             const errosNumero = Math.max(0, totalQuestoes - (Number.isFinite(acertosNumero) ? acertosNumero : 0));
             const acertosLabel = acertosTexto.includes('/') ? acertosTexto : `${Number.isFinite(acertosNumero) ? acertosNumero : 0}/${totalQuestoes}`;
-            // Separa os resultados por desempenho: cada questão aparece em apenas um grupo.
-            // Questões não respondidas ficam no grupo de erros, identificadas como "NÃO RESPONDIDA".
-            const detalhesNumerados = detalhes.map((d, indice) => ({ d, indice }));
-            const detalhesAcertos = detalhesNumerados.filter(item => item.d.acertou === true);
-            const detalhesErros = detalhesNumerados.filter(item => item.d.acertou !== true);
 
-            const renderizarCardsResultado = (itens, grupoAcerto) => itens.map(({ d, indice }) => {
-                const acertou = grupoAcerto;
-                const marcada = d.marcada || '';
-                const situacao = acertou ? 'ACERTO' : (marcada ? 'ERRO' : 'NÃO RESPONDIDA');
-                const classesResultado = acertou
-                    ? { borda: 'border-emerald-200 bg-emerald-50', texto: 'text-emerald-700' }
-                    : { borda: 'border-rose-200 bg-rose-50', texto: 'text-rose-700' };
-                return `<article class="rounded-xl border ${classesResultado.borda} p-3 space-y-1">
-                    <div class="flex items-center justify-between gap-2"><strong class="text-sm text-slate-900">Questão ${escapeHtml(d.numero ?? indice + 1)}</strong><strong class="text-xs ${classesResultado.texto}">${situacao}</strong></div>
-                    ${d.enunciado ? `<p class="text-sm text-slate-700">${escapeHtml(d.enunciado)}</p>` : ''}
-                    <p class="text-sm"><strong>Sua resposta:</strong> ${escapeHtml(marcada || 'Em branco')}</p>
-                    <p class="text-sm"><strong>Resposta correta:</strong> ${escapeHtml(d.correta || '—')}</p>
-                </article>`;
-            }).join('');
+            // O aluno visualiza apenas os números das questões em cada grupo.
+            // Enunciados, alternativas marcadas e gabarito não são exibidos no resultado final.
+            const detalhesNumerados = detalhes.map((d, indice) => ({ detalhe: d, numero: d?.numero ?? indice + 1 }));
+            const questoesAcertadas = detalhesNumerados
+                .filter(item => item.detalhe && item.detalhe.acertou === true)
+                .map(item => String(item.numero));
+            const questoesErradas = detalhesNumerados
+                .filter(item => item.detalhe && item.detalhe.acertou !== true)
+                .map(item => String(item.numero));
 
-            const secoesDetalhesHTML = [
-                detalhesAcertos.length ? `<section class="space-y-3"><div class="flex items-center justify-between gap-2"><h2 class="text-lg font-bold text-emerald-800">Questões que você acertou</h2><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">${detalhesAcertos.length} acerto(s)</span></div><div class="space-y-2">${renderizarCardsResultado(detalhesAcertos, true)}</div></section>` : '',
-                detalhesErros.length ? `<section class="space-y-3"><div class="flex items-center justify-between gap-2"><h2 class="text-lg font-bold text-rose-800">Questões que você errou</h2><span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800">${detalhesErros.length} questão(ões)</span></div><p class="text-xs text-slate-500">As questões não respondidas também aparecem aqui, identificadas como "NÃO RESPONDIDA".</p><div class="space-y-2">${renderizarCardsResultado(detalhesErros, false)}</div></section>` : ''
-            ].filter(Boolean).join('');
+            const formatarListaQuestoes = (numeros, vazio) => numeros.length
+                ? numeros.map(n => escapeHtml(n)).join(', ')
+                : vazio;
+
+            const listasQuestoesHTML = detalhes.length ? `
+                <section class="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-label="Resumo das questões">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+                        <h2 class="text-sm font-bold text-emerald-800">Questões que você acertou</h2>
+                        <p class="text-base font-semibold text-emerald-900 leading-relaxed">${formatarListaQuestoes(questoesAcertadas, 'Nenhuma questão')}</p>
+                    </div>
+                    <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-2">
+                        <h2 class="text-sm font-bold text-rose-800">Questões que você errou</h2>
+                        <p class="text-base font-semibold text-rose-900 leading-relaxed">${formatarListaQuestoes(questoesErradas, 'Nenhuma questão')}</p>
+                    </div>
+                </section>` : '';
+
             const resumoHTML = temNota ? `<section class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                <div class="rounded-xl bg-indigo-50 p-3"><strong class="text-2xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-xs text-indigo-800">Nota final</p></div>
-                <div class="rounded-xl bg-emerald-50 p-3"><strong class="text-2xl text-emerald-700">${acertosLabel}</strong><p class="text-xs text-emerald-800">Acertos</p></div>
-                <div class="rounded-xl bg-rose-50 p-3"><strong class="text-2xl text-rose-700">${errosNumero}</strong><p class="text-xs text-rose-800">Erros</p></div>
-                <div class="rounded-xl bg-slate-100 p-3"><strong class="text-2xl text-slate-700">${Number(resumo.tentativas || tentativaAlunoAtual || 1)}</strong><p class="text-xs text-slate-700">Tentativa(s)</p></div>
+                <div class="min-w-0 rounded-xl bg-indigo-50 p-3 flex flex-col justify-center"><strong class="text-2xl text-indigo-700">${nota.toFixed(1)}</strong><p class="text-xs text-indigo-800">Nota final</p></div>
+                <div class="min-w-0 rounded-xl bg-emerald-50 p-3 flex flex-col justify-center"><strong class="text-2xl text-emerald-700">${escapeHtml(acertosLabel)}</strong><p class="text-xs text-emerald-800">Acertos</p></div>
+                <div class="min-w-0 rounded-xl bg-rose-50 p-3 flex flex-col justify-center"><strong class="text-2xl text-rose-700">${errosNumero}</strong><p class="text-xs text-rose-800">Erros</p></div>
+                <div class="min-w-0 rounded-xl bg-slate-100 p-3 flex flex-col justify-center"><strong class="text-2xl text-slate-700">${Number(resumo.tentativas || tentativaAlunoAtual || 1)}</strong><p class="text-xs text-slate-700">Tentativa(s)</p></div>
             </section>` : `<p class="text-sm text-slate-600">Sua avaliação foi registrada. A nota detalhada será exibida quando o resultado estiver disponível.</p>`;
+
             document.body.classList.remove('pcd-fonte-grande','pcd-fonte-muito-grande','pcd-alto-contraste','pcd-espacamento');
             container.innerHTML = `<div class="max-w-3xl mx-auto py-8 space-y-6">
                 <div class="text-center space-y-3 border-b border-slate-200 pb-5">
@@ -3427,11 +3348,10 @@
                     <p class="text-sm text-slate-500">Sua avaliação foi concluída. Confira abaixo seu resultado final.</p>
                 </div>
                 ${resumoHTML}
-                ${detalhes.length ? `<section class="space-y-4"><div><h2 class="text-lg font-bold text-slate-900">Resultado por questão</h2><p class="text-xs text-slate-500 mt-1">Confira separadamente as questões que você acertou e as que errou.</p></div>${secoesDetalhesHTML}</section>` : ''}
+                ${listasQuestoesHTML}
                 <p class="text-center text-xs text-slate-400">Esta avaliação foi finalizada. Você não poderá alterar suas respostas.</p>
             </div>`;
             if (window.lucide) lucide.createIcons();
-            // Mantém a avaliação finalizada, mas permite rolar a tela para consultar todas as questões.
             document.body.style.overflow = 'auto';
             history.pushState({ finalizado: true }, '', window.location.href);
             window.onpopstate = () => history.pushState({ finalizado: true }, '', window.location.href);
