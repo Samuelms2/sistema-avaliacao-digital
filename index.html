@@ -204,6 +204,7 @@
                 <div class="inline-flex p-3 rounded-2xl bg-emerald-100 text-emerald-700 mb-3"><i data-lucide="graduation-cap" class="w-8 h-8"></i></div>
                 <h2 class="text-xl font-bold text-slate-900">Portal do estudante</h2>
                 <p class="text-sm text-slate-500 mt-1">Informe a escola, seu nome completo e o número da chamada cadastrado pelo professor.</p>
+                <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Este navegador ficará vinculado ao primeiro aluno identificado. Não será possível entrar com os dados de outro estudante neste mesmo navegador.</p>
             </div>
             <form id="student-identification-form" onsubmit="entrarAlunoPorChamada(event)" class="space-y-3">
                 <div><label for="student-login-school" class="block text-xs font-bold text-slate-700 mb-1">Escola</label><input id="student-login-school" type="text" required maxlength="180" autocomplete="organization" class="w-full border rounded-xl p-3 text-sm" placeholder="Nome da escola"></div>
@@ -1206,6 +1207,39 @@
             }
         }
 
+        // Identificador persistente deste navegador. A Web não fornece um ID físico
+        // imutável do aparelho; o vínculo usa o armazenamento local deste navegador.
+        const CHAVE_DISPOSITIVO_ALUNO = 'sys_avaliadigital_dispositivo_aluno_v1';
+        const CHAVE_IDENTIDADE_ALUNO = 'sys_avaliadigital_identidade_aluno_v1';
+
+        function obterIdDispositivoAluno() {
+            let id = localStorage.getItem(CHAVE_DISPOSITIVO_ALUNO);
+            if (!id) {
+                if (window.crypto?.randomUUID) id = window.crypto.randomUUID();
+                else {
+                    const bytes = new Uint8Array(16);
+                    if (!window.crypto?.getRandomValues) throw new Error('Este navegador não oferece suporte à identificação segura do dispositivo. Atualize o navegador.');
+                    window.crypto.getRandomValues(bytes);
+                    id = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+                }
+                localStorage.setItem(CHAVE_DISPOSITIVO_ALUNO, id);
+            }
+            return id;
+        }
+
+        function normalizarIdentidadeAluno(escola, nome, numero) {
+            const normalizar = v => String(v || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+            return { escola: normalizar(escola), nome: normalizar(nome), numero: Number(numero) };
+        }
+
+        function identidadeAlunoIgual(a, b) {
+            return Boolean(a && b && a.escola === b.escola && a.nome === b.nome && Number(a.numero) === Number(b.numero));
+        }
+
+        function salvarIdentidadeAlunoNesteNavegador(identidade) {
+            localStorage.setItem(CHAVE_IDENTIDADE_ALUNO, JSON.stringify(identidade));
+        }
+
         function abrirPortalAluno() {
             document.getElementById('teacher-header')?.classList.add('hidden');
             document.getElementById('teacher-main')?.classList.add('hidden');
@@ -1237,25 +1271,40 @@
                 if (status) status.textContent = 'Informe a escola, o nome completo e um número de chamada válido.';
                 return;
             }
+            const identidade = normalizarIdentidadeAluno(escola, nome, numero);
+            try {
+                const identidadeLocal = JSON.parse(localStorage.getItem(CHAVE_IDENTIDADE_ALUNO) || 'null');
+                if (identidadeLocal && !identidadeAlunoIgual(identidadeLocal, identidade)) {
+                    if (status) status.textContent = 'Este navegador já está vinculado a outro estudante. Não é permitido usar o nome e o número de chamada de outro aluno neste dispositivo. Solicite ao professor a liberação do vínculo, se necessário.';
+                    if (lista) { lista.classList.add('hidden'); lista.innerHTML = ''; }
+                    return;
+                }
+            } catch (erro) {
+                if (erro instanceof SyntaxError) localStorage.removeItem(CHAVE_IDENTIDADE_ALUNO);
+                else throw erro;
+            }
             if (botao) { botao.disabled = true; botao.textContent = 'Consultando…'; }
             if (status) status.textContent = 'Localizando suas avaliações…';
             if (lista) { lista.classList.add('hidden'); lista.innerHTML = ''; }
             try {
                 if (!supabaseClient) await iniciarSupabase(SUPABASE_URL_PADRAO, SUPABASE_PUBLISHABLE_KEY_PADRAO);
                 if (!supabaseClient) throw new Error('Não foi possível conectar ao sistema. Tente novamente.');
+                const deviceId = obterIdDispositivoAluno();
                 const { data, error } = await supabaseClient.rpc('buscar_avaliacoes_por_chamada', {
                     p_escola: escola,
                     p_nome: nome,
-                    p_numero_chamada: numero
+                    p_numero_chamada: numero,
+                    p_device_id: deviceId
                 });
                 if (error) throw error;
                 if (data?.erro) throw new Error(data.erro);
                 const avaliacoes = Array.isArray(data) ? data : (Array.isArray(data?.avaliacoes) ? data.avaliacoes : []);
                 if (!avaliacoes.length) {
-                    if (status) status.textContent = 'Nenhuma avaliação foi encontrada. Confira a escola, o nome e o número da chamada com seu professor.';
+                    if (status) status.textContent = 'Nenhuma avaliação foi encontrada. Confira a escola, o nome e o número da chamada com seu professor. O navegador só será vinculado depois que houver uma avaliação válida.';
                     return;
                 }
-                if (status) status.textContent = `Encontramos ${avaliacoes.length} avaliação(ões) para ${nome}. Selecione a avaliação que deseja abrir.`;
+                salvarIdentidadeAlunoNesteNavegador(identidade);
+                if (status) status.textContent = `Navegador vinculado a ${nome}. Encontramos ${avaliacoes.length} avaliação(ões). Selecione a avaliação que deseja abrir.`;
                 if (!lista) return;
                 lista.innerHTML = '';
                 avaliacoes.forEach(avaliacao => {
@@ -1286,7 +1335,7 @@
                 lista.classList.remove('hidden');
             } catch (error) {
                 console.error('Falha na identificação do estudante:', error);
-                if (status) status.textContent = 'Não foi possível localizar suas avaliações: ' + (error.message || 'erro de conexão') + '. Verifique se a migração do portal do aluno foi executada no Supabase.';
+                if (status) status.textContent = 'Não foi possível localizar suas avaliações: ' + (error.message || 'erro de conexão') + '. Confira o cadastro da escola, aluno e número da chamada.';
             } finally {
                 if (botao) { botao.disabled = false; botao.textContent = 'Consultar minhas avaliações'; }
             }
@@ -3167,7 +3216,27 @@
                     if (url && key) await iniciarSupabase(url, key);
                 }
                 if (!supabaseClient) throw new Error('Não foi possível conectar ao servidor da avaliação.');
-                const { data, error } = await supabaseClient.rpc('buscar_prova_aluno', { p_token: token });
+                // Professores autenticados podem pré-visualizar seus links; alunos sem
+                // sessão precisam comprovar o vínculo deste navegador com a identidade.
+                let sessaoProfessor = false;
+                try {
+                    const sessao = await supabaseClient.auth.getSession();
+                    sessaoProfessor = Boolean(sessao.data?.session?.user);
+                } catch (_) {}
+                const deviceId = obterIdDispositivoAluno();
+                if (!sessaoProfessor) {
+                    const validacaoDispositivo = await supabaseClient.rpc('validar_dispositivo_prova', {
+                        p_token: token,
+                        p_device_id: deviceId
+                    });
+                    if (validacaoDispositivo.error) throw validacaoDispositivo.error;
+                    if (validacaoDispositivo.data?.erro) throw new Error(validacaoDispositivo.data.erro);
+                    if (validacaoDispositivo.data?.ok !== true) throw new Error('Entre primeiro pelo Portal do Estudante usando escola, nome e número da chamada.');
+                }
+                const { data, error } = await supabaseClient.rpc('buscar_prova_aluno', {
+                    p_token: token,
+                    p_device_id: deviceId
+                });
                 if (error) throw error;
                 if (!data || data.erro) throw new Error(data?.erro || 'Prova não encontrada no banco de dados. Se a publicação anterior apresentou erro, peça ao professor para gerar e publicar novamente a avaliação após corrigir o Supabase.');
                 provaAlunoAtual = data;
@@ -3200,9 +3269,10 @@
                 const localDraft = lerRascunhoLocal(token);
                 const rascunhoBloqueado = localStorage.getItem(chaveRascunhoBloqueado(token, tentativaAlunoAtual)) === '1';
                 // Após uma exclusão local/remota, não recupere um rascunho antigo que possa ainda estar no servidor.
-                const draft = (saidasPaginaAluno >= 3) ? {} : (rascunhoBloqueado ? { ...(localDraft || {}) } : { ...(data.respostas_rascunho || {}), ...(localDraft || {}) });
-                if (saidasPaginaAluno >= 3) {
+                const draft = (saidasPaginaAluno >= 2) ? {} : (rascunhoBloqueado ? { ...(localDraft || {}) } : { ...(data.respostas_rascunho || {}), ...(localDraft || {}) });
+                if (saidasPaginaAluno >= 2) {
                     localStorage.removeItem(chaveRascunho(token));
+                    localStorage.setItem(chaveRascunhoBloqueado(token, tentativaAlunoAtual), '1');
                     avisoSaidaAlunoPendente = 'apagadas';
                 } else if (saidasPaginaAluno > 0 && !avisoSaidaAlunoPendente) {
                     avisoSaidaAlunoPendente = 'aviso';
@@ -3211,7 +3281,7 @@
                 setTimeout(mostrarAvisoSaidaAlunoPendente, 250);
             } catch (error) {
                 console.error('Erro ao abrir prova do aluno:', error);
-                container.innerHTML = `<div class="text-center py-12 space-y-3"><h1 class="text-xl font-bold text-red-700">Não foi possível abrir a avaliação</h1><p class="text-sm text-slate-600">${escapeHtml(error.message || 'Erro de conexão.')}</p><p class="text-xs text-slate-500">Confira se o professor publicou o link e se o SQL de integração foi executado no Supabase.</p></div>`;
+                container.innerHTML = `<div class="text-center py-12 space-y-3"><h1 class="text-xl font-bold text-red-700">Não foi possível abrir a avaliação</h1><p class="text-sm text-slate-600">${escapeHtml(error.message || 'Erro de conexão.')}</p><p class="text-xs text-slate-500">Se você é estudante, entre primeiro pelo Portal do Estudante com escola, nome e número da chamada.</p><button type="button" onclick="window.location.href=window.location.origin+window.location.pathname" class="mt-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-bold text-sm">Ir ao Portal do Estudante</button></div>`;
             }
         }
 
@@ -3232,10 +3302,10 @@
             const aviso = avisoSaidaAlunoPendente;
             avisoSaidaAlunoPendente = null;
             if (aviso === 'apagadas') {
-                alert('Você saiu da página da avaliação pela terceira vez. Suas respostas foram apagadas. A avaliação foi reiniciada.');
+                alert('Você saiu da avaliação pela segunda vez. Suas escolhas foram apagadas e a avaliação foi reiniciada em branco.');
                 if (provaAlunoAtual && !paginasAlunoCongelada && !provaAlunoAtual.aguardando_nova_chance) renderizarProvaAluno({});
             } else {
-                alert('Suas escolhas serão apagadas');
+                alert('Atenção: esta foi sua primeira saída da avaliação. Se sair novamente, suas escolhas serão apagadas.');
             }
         }
 
@@ -3257,7 +3327,8 @@
                 if (supabaseClient) {
                     const { data, error } = await supabaseClient.rpc('registrar_saida_pagina_aluno', {
                         p_token: studentTokenAtual,
-                        p_contagem_local: proximaContagemLocal
+                        p_contagem_local: proximaContagemLocal,
+                        p_device_id: obterIdDispositivoAluno()
                     });
                     if (error) throw error;
                     resultadoServidor = data;
@@ -3269,17 +3340,19 @@
 
             const contagemServidor = Number(resultadoServidor?.saidas_tentativa || 0);
             saidasPaginaAluno = Math.max(saidasPaginaAluno, contagemServidor);
-            const apagar = resultadoServidor?.respostas_apagadas === true || saidasPaginaAluno >= 3;
+            const apagar = resultadoServidor?.respostas_apagadas === true || saidasPaginaAluno >= 2;
             if (apagar) {
                 localStorage.removeItem(chaveRascunho(studentTokenAtual));
                 localStorage.setItem(chaveRascunhoBloqueado(studentTokenAtual, tentativaAlunoAtual), '1');
-                localStorage.removeItem(chave);
-                saidasPaginaAluno = 0;
+                // Mantém o limite registrado no navegador para que recarregar a página
+                // não devolva ao aluno as escolhas que já foram apagadas.
+                localStorage.setItem(chave, '2');
+                saidasPaginaAluno = 2;
                 respostaAlunoAtual = {};
                 try {
                     // Compatibilidade caso a migração RPC não esteja aplicada: limpa também o rascunho remoto.
                     if (supabaseClient && !resultadoServidor?.respostas_apagadas) {
-                        await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: {} });
+                        await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: {}, p_device_id: obterIdDispositivoAluno() });
                     }
                 } catch (error) { console.warn('Não foi possível limpar rascunho remoto:', error); }
                 if (resultadoServidor?.respostas_apagadas_em) {
@@ -3287,7 +3360,7 @@
                 }
                 avisoSaidaAlunoPendente = 'apagadas';
             } else {
-                const contagemFinal = Math.max(saidasPaginaAluno, proximaContagemLocal);
+                const contagemFinal = Math.min(2, Math.max(saidasPaginaAluno, contagemServidor, proximaContagemLocal));
                 localStorage.setItem(chave, String(contagemFinal));
                 saidasPaginaAluno = contagemFinal;
                 avisoSaidaAlunoPendente = 'aviso';
@@ -3400,7 +3473,7 @@
             if (status) status.textContent = 'Salvando respostas...';
             // Serializa gravações para que uma requisição antiga não sobrescreva uma mais recente.
             filaSalvamentoRascunho = filaSalvamentoRascunho.catch(() => {}).then(async () => {
-                const { error } = await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: snapshot });
+                const { error } = await supabaseClient.rpc('salvar_rascunho_avaliacao', { p_token: studentTokenAtual, p_respostas: snapshot, p_device_id: obterIdDispositivoAluno() });
                 if (error) throw error;
                 localStorage.removeItem(chaveRascunhoBloqueado(studentTokenAtual, tentativaAlunoAtual));
                 if (status && versao === versaoRascunhoAtual) status.textContent = 'Respostas salvas com segurança.';
@@ -3427,7 +3500,7 @@
             button.disabled = true;
             button.textContent = 'Enviando...';
             try {
-                const { data, error } = await supabaseClient.rpc('finalizar_avaliacao_aluno', { p_token: studentTokenAtual, p_respostas: respostas });
+                const { data, error } = await supabaseClient.rpc('finalizar_avaliacao_aluno', { p_token: studentTokenAtual, p_respostas: respostas, p_device_id: obterIdDispositivoAluno() });
                 if (error) throw error;
                 if (!data || data.erro) throw new Error(data?.erro || 'Não foi possível registrar suas respostas.');
                 localStorage.removeItem(chaveRascunho(studentTokenAtual));
@@ -3776,7 +3849,7 @@
         // PWA: registra o modo instalável e disponibiliza o diálogo nativo do navegador.
         function registrarPWA() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('./sw.js?v=2026-11-16-student-portal-v23', { scope: './', updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=2026-11-16-student-device-lock-v25', { scope: './', updateViaCache: 'none' })
                     .then(async registro => {
                         try { await registro.update(); } catch (_) {}
                         console.info('Service Worker ativo. Escopo:', registro.scope);
