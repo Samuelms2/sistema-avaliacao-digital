@@ -159,8 +159,8 @@
 <body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen pb-12">
 
     <!-- ACESSO RESTRITO AO PROFESSOR -->
-    <section id="teacher-auth-gate" class="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-        <div class="teacher-auth-card bg-white rounded-2xl shadow-2xl p-7 space-y-5">
+    <section id="teacher-auth-gate" class="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-slate-950 overflow-y-auto">
+        <div id="teacher-auth-card" class="teacher-auth-card bg-white rounded-2xl shadow-2xl p-7 space-y-5">
             <div class="text-center">
                 <div class="inline-flex p-3 rounded-2xl bg-indigo-100 text-indigo-700 mb-3"><i data-lucide="shield-check" class="w-8 h-8"></i></div>
                 <h1 class="text-xl font-bold text-slate-900">Área exclusiva do professor</h1>
@@ -195,7 +195,25 @@
                 </form>
                 <p class="text-[10px] text-slate-500 mt-2">Cada professor cria seu próprio ambiente individual com e-mail e senha. Não é necessário compartilhar turmas ou aguardar aprovação.</p>
             </details>
-            <p id="teacher-auth-extra" class="text-[11px] leading-relaxed text-slate-400">Cada professor tem seus próprios alunos, questões, avaliações, resultados e configurações. Os alunos acessam somente pelo link individual da avaliação.</p>
+            <p id="teacher-auth-extra" class="text-[11px] leading-relaxed text-slate-400">Cada professor tem seus próprios alunos, questões, avaliações, resultados e configurações.</p>
+        </div>
+
+        <!-- PORTAL INDEPENDENTE DO ALUNO: identifica escola, nome e número da chamada. -->
+        <div id="student-access-card" class="teacher-auth-card bg-white rounded-2xl shadow-2xl p-7 space-y-4">
+            <div class="text-center">
+                <div class="inline-flex p-3 rounded-2xl bg-emerald-100 text-emerald-700 mb-3"><i data-lucide="graduation-cap" class="w-8 h-8"></i></div>
+                <h2 class="text-xl font-bold text-slate-900">Portal do estudante</h2>
+                <p class="text-sm text-slate-500 mt-1">Informe a escola, seu nome completo e o número da chamada cadastrado pelo professor.</p>
+            </div>
+            <form id="student-identification-form" onsubmit="entrarAlunoPorChamada(event)" class="space-y-3">
+                <div><label for="student-login-school" class="block text-xs font-bold text-slate-700 mb-1">Escola</label><input id="student-login-school" type="text" required maxlength="180" autocomplete="organization" class="w-full border rounded-xl p-3 text-sm" placeholder="Nome da escola"></div>
+                <div><label for="student-login-name" class="block text-xs font-bold text-slate-700 mb-1">Nome completo do aluno</label><input id="student-login-name" type="text" required maxlength="160" autocomplete="name" class="w-full border rounded-xl p-3 text-sm" placeholder="Digite seu nome como foi cadastrado"></div>
+                <div><label for="student-login-roll" class="block text-xs font-bold text-slate-700 mb-1">Número da chamada</label><input id="student-login-roll" type="number" required min="1" max="200" step="1" inputmode="numeric" class="w-full border rounded-xl p-3 text-sm" placeholder="Ex.: 12"></div>
+                <button id="student-identification-submit" type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl p-3 text-sm">Consultar minhas avaliações</button>
+            </form>
+            <p id="student-identification-status" class="text-xs text-center text-slate-500" role="status">Acesso vinculado às avaliações publicadas para sua escola e turma.</p>
+            <div id="student-assessments-list" class="hidden space-y-2" aria-live="polite"></div>
+            <button id="student-back-to-teacher" type="button" onclick="voltarPainelProfessor()" class="hidden w-full text-xs font-semibold text-indigo-700 underline">Voltar à área do professor</button>
         </div>
     </section>
 
@@ -231,6 +249,7 @@
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span>Exportar Dados</span>
                 </button>
+                <button onclick="abrirPortalAluno()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition">Portal do aluno</button>
                 <button onclick="sairProfessor()" class="bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-lg font-bold shadow transition">Sair</button>
             </div>
         </div>
@@ -416,8 +435,15 @@
                             
                         </div>
 
-                        <p class="text-xs text-slate-500">Nome dos alunos (um por linha):</p>
-                        <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="8" placeholder="Ana Clara Souza&#10;Bruno Lima" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                        <div>
+                            <p class="text-xs text-slate-500 mb-1">Nome dos alunos (um por linha):</p>
+                            <textarea id="lista-alunos-input" oninput="salvarAlunosTurmaAtiva()" rows="6" placeholder="Ana Clara Souza&#10;Bruno Lima" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                        </div>
+                        <div class="border-t border-slate-100 pt-3 space-y-2">
+                            <div class="flex items-center justify-between gap-2"><label for="lista-chamada-input" class="text-xs font-bold text-slate-700">Número da chamada (na mesma ordem dos nomes):</label><button type="button" onclick="preencherNumeracaoChamada()" class="shrink-0 text-[11px] font-bold text-indigo-700 underline">Preencher 1, 2, 3…</button></div>
+                            <textarea id="lista-chamada-input" oninput="salvarAlunosTurmaAtiva()" rows="6" inputmode="numeric" placeholder="1&#10;2&#10;3" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"></textarea>
+                            <p class="text-[10px] text-slate-500">O número de cada linha pertence ao aluno da mesma linha acima. Preencha antes de gerar as avaliações digitais.</p>
+                        </div>
                     </div>
 
                     <button onclick="setTab('tab-questions')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow text-sm flex items-center justify-center space-x-2 transition">
@@ -1065,6 +1091,8 @@
             "2º Ano Médio_Turma A": ["Ana Clara Souza", "Bruno Lima", "Carlos Eduardo Santos"],
             "3º Ano Médio_Turma A": ["Daniela Ribeiro", "Eduardo Castro"]
         };
+        // Números de chamada alinhados à posição de cada aluno na lista de sua turma.
+        let cadastroNumerosChamada = {};
 
         let provasGeradas = [];
         let provasLixeira = [];
@@ -1124,6 +1152,7 @@
             document.getElementById('teacher-email').value = '';
 
             try { cadastroTurmas = JSON.parse(localStorage.getItem('sys_cadastro_turmas') || 'null') || cadastroTurmas; } catch (_) {}
+            try { cadastroNumerosChamada = JSON.parse(localStorage.getItem('sys_cadastro_numeros_chamada') || '{}') || {}; } catch (_) { cadastroNumerosChamada = {}; }
             try { bancoQuestoes = JSON.parse(localStorage.getItem('sys_banco_questoes') || 'null') || bancoQuestoes; } catch (_) {}
             try { provasGeradas = JSON.parse(localStorage.getItem('sys_provas_geradas') || '[]'); } catch (_) { provasGeradas = []; }
             restaurarConfiguracoesLocais();
@@ -1177,6 +1206,92 @@
             }
         }
 
+        function abrirPortalAluno() {
+            document.getElementById('teacher-header')?.classList.add('hidden');
+            document.getElementById('teacher-main')?.classList.add('hidden');
+            document.getElementById('teacher-auth-gate')?.classList.remove('hidden');
+            document.getElementById('teacher-auth-card')?.classList.toggle('hidden', Boolean(professorLogado));
+            document.getElementById('student-back-to-teacher')?.classList.toggle('hidden', !professorLogado);
+            document.getElementById('student-assessments-list')?.classList.add('hidden');
+            const status = document.getElementById('student-identification-status');
+            if (status) status.textContent = 'Informe a escola, o nome completo e o número da chamada cadastrado pelo professor.';
+        }
+
+        function voltarPainelProfessor() {
+            if (!professorLogado) return;
+            document.getElementById('teacher-auth-gate')?.classList.add('hidden');
+            document.getElementById('teacher-header')?.classList.remove('hidden');
+            document.getElementById('teacher-main')?.classList.remove('hidden');
+            document.getElementById('teacher-auth-card')?.classList.remove('hidden');
+        }
+
+        async function entrarAlunoPorChamada(event) {
+            event.preventDefault();
+            const escola = document.getElementById('student-login-school')?.value.trim() || '';
+            const nome = document.getElementById('student-login-name')?.value.trim() || '';
+            const numero = Number(document.getElementById('student-login-roll')?.value);
+            const status = document.getElementById('student-identification-status');
+            const lista = document.getElementById('student-assessments-list');
+            const botao = document.getElementById('student-identification-submit');
+            if (!escola || !nome || !Number.isInteger(numero) || numero < 1) {
+                if (status) status.textContent = 'Informe a escola, o nome completo e um número de chamada válido.';
+                return;
+            }
+            if (botao) { botao.disabled = true; botao.textContent = 'Consultando…'; }
+            if (status) status.textContent = 'Localizando suas avaliações…';
+            if (lista) { lista.classList.add('hidden'); lista.innerHTML = ''; }
+            try {
+                if (!supabaseClient) await iniciarSupabase(SUPABASE_URL_PADRAO, SUPABASE_PUBLISHABLE_KEY_PADRAO);
+                if (!supabaseClient) throw new Error('Não foi possível conectar ao sistema. Tente novamente.');
+                const { data, error } = await supabaseClient.rpc('buscar_avaliacoes_por_chamada', {
+                    p_escola: escola,
+                    p_nome: nome,
+                    p_numero_chamada: numero
+                });
+                if (error) throw error;
+                if (data?.erro) throw new Error(data.erro);
+                const avaliacoes = Array.isArray(data) ? data : (Array.isArray(data?.avaliacoes) ? data.avaliacoes : []);
+                if (!avaliacoes.length) {
+                    if (status) status.textContent = 'Nenhuma avaliação foi encontrada. Confira a escola, o nome e o número da chamada com seu professor.';
+                    return;
+                }
+                if (status) status.textContent = `Encontramos ${avaliacoes.length} avaliação(ões) para ${nome}. Selecione a avaliação que deseja abrir.`;
+                if (!lista) return;
+                lista.innerHTML = '';
+                avaliacoes.forEach(avaliacao => {
+                    if (!avaliacao.student_token) return;
+                    const card = document.createElement('div');
+                    card.className = 'border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+                    const info = document.createElement('div');
+                    info.className = 'min-w-0';
+                    const titulo = document.createElement('p');
+                    titulo.className = 'font-bold text-sm text-slate-900';
+                    titulo.textContent = avaliacao.titulo || 'Avaliação';
+                    const detalhe = document.createElement('p');
+                    detalhe.className = 'text-xs text-slate-500 mt-1';
+                    detalhe.textContent = [avaliacao.disciplina, avaliacao.bimestre, avaliacao.ano_letivo ? `Ano ${avaliacao.ano_letivo}` : ''].filter(Boolean).join(' • ');
+                    info.append(titulo, detalhe);
+                    const abrir = document.createElement('button');
+                    abrir.type = 'button';
+                    abrir.className = 'shrink-0 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-bold';
+                    abrir.textContent = avaliacao.concluida ? 'Ver resultado' : 'Abrir avaliação';
+                    abrir.addEventListener('click', async () => {
+                        studentMode = true;
+                        document.getElementById('teacher-auth-gate')?.classList.add('hidden');
+                        await entrarModoAluno(String(avaliacao.student_token));
+                    });
+                    card.append(info, abrir);
+                    lista.appendChild(card);
+                });
+                lista.classList.remove('hidden');
+            } catch (error) {
+                console.error('Falha na identificação do estudante:', error);
+                if (status) status.textContent = 'Não foi possível localizar suas avaliações: ' + (error.message || 'erro de conexão') + '. Verifique se a migração do portal do aluno foi executada no Supabase.';
+            } finally {
+                if (botao) { botao.disabled = false; botao.textContent = 'Consultar minhas avaliações'; }
+            }
+        }
+
         function mostrarGateProfessor(mensagem = '') {
             if (studentMode) return;
             professorLogado = false;
@@ -1186,14 +1301,18 @@
             document.getElementById('teacher-header').classList.add('hidden');
             document.getElementById('teacher-main').classList.add('hidden');
             document.getElementById('teacher-auth-gate').classList.remove('hidden');
+            document.getElementById('teacher-auth-card')?.classList.remove('hidden');
+            document.getElementById('student-access-card')?.classList.remove('hidden');
+            document.getElementById('student-back-to-teacher')?.classList.add('hidden');
             document.getElementById('student-shell').classList.add('hidden');
             const status = document.getElementById('teacher-auth-status');
             if (mensagem) status.textContent = mensagem;
         }
 
         function limparAmbienteLocalParaNovaConta(session) {
-            ['sys_cadastro_turmas','sys_provas_geradas','sys_avalia_notas','sys_configuracoes_professor','sys_banco_questoes','sys_dados_professor_sync_pendente','sys_aba_ativa'].forEach(chave => localStorage.removeItem(chave));
+            ['sys_cadastro_turmas','sys_cadastro_numeros_chamada','sys_provas_geradas','sys_avalia_notas','sys_configuracoes_professor','sys_banco_questoes','sys_dados_professor_sync_pendente','sys_aba_ativa'].forEach(chave => localStorage.removeItem(chave));
             cadastroTurmas = {};
+            cadastroNumerosChamada = {};
             provasGeradas = [];
             provasLixeira = [];
             bancoNotas = [];
@@ -1671,7 +1790,7 @@
 
         function aplicarDadosProfessorNuvem(registro) {
             if (!registro) return;
-            if (registro.cadastro_turmas && typeof registro.cadastro_turmas === 'object') {
+            if (registro.cadastro_turmas && typeof registro.cadastro_turmas === 'object' && !cadastroEstaEmEdicao() && localStorage.getItem('sys_dados_professor_sync_pendente') !== '1') {
                 cadastroTurmas = registro.cadastro_turmas;
                 localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
                 const serieEl = document.getElementById('sel-serie-aluno');
@@ -1711,6 +1830,7 @@
         async function sincronizarDadosProfessorNuvem() {
             if (!supabaseClient || !professorLogado || !professorUidAtual) return;
             const turmasProprias = { ...(cadastroTurmas || {}) };
+            const numerosProprios = { ...(cadastroNumerosChamada || {}) };
             const registro = {
                 user_id: professorUidAtual,
                 cadastro_turmas: turmasProprias,
@@ -1724,7 +1844,7 @@
                 const idx = turma_key.lastIndexOf('_');
                 const serie = idx >= 0 ? turma_key.slice(0, idx) : turma_key;
                 const turma = idx >= 0 ? turma_key.slice(idx + 1) : 'Turma A';
-                return { owner_id: professorUidAtual, turma_key, serie, turma, ano_letivo: Number(document.getElementById('cfg-ano-letivo')?.value || new Date().getFullYear()), alunos: Array.isArray(alunos) ? alunos : [], updated_at: new Date().toISOString() };
+                return { owner_id: professorUidAtual, turma_key, serie, turma, ano_letivo: Number(document.getElementById('cfg-ano-letivo')?.value || new Date().getFullYear()), alunos: Array.isArray(alunos) ? alunos : [], numeros_chamada: Array.isArray(numerosProprios[turma_key]) ? numerosProprios[turma_key] : [], updated_at: new Date().toISOString() };
             });
             if (linhasTurmas.length) {
                 const turmasSync = await supabaseClient.from('turmas_professor').upsert(linhasTurmas, { onConflict: 'owner_id,turma_key' });
@@ -1733,6 +1853,7 @@
             ultimaGravacaoDadosNuvem = Date.now();
             localStorage.removeItem('sys_dados_professor_sync_pendente');
             localStorage.setItem('sys_cadastro_turmas', JSON.stringify(turmasProprias));
+            localStorage.setItem('sys_cadastro_numeros_chamada', JSON.stringify(numerosProprios));
             localStorage.setItem('sys_configuracoes_professor', JSON.stringify(registro.configuracoes));
             dadosProfessorRemotosDisponiveis = true;
             atualizarStatusSync('Sincronizado em todos os dispositivos', 'ok');
@@ -1767,26 +1888,30 @@
                     .eq('owner_id', professorUidAtual).order('updated_at', { ascending: false });
                 if (turmasNuvem.error) throw turmasNuvem.error;
                 const turmasPropriasNuvem = {};
+                const numerosPropriosNuvem = {};
                 (turmasNuvem.data || []).forEach(t => {
                     const chave = t.turma_key || `${t.serie}_${t.turma}`;
                     turmasPropriasNuvem[chave] = Array.isArray(t.alunos) ? t.alunos : [];
+                    numerosPropriosNuvem[chave] = Array.isArray(t.numeros_chamada) ? t.numeros_chamada : [];
                 });
-                if (turmasNuvem.data?.length) {
-                    cadastroTurmas = turmasPropriasNuvem;
-                } else if (!perfil.data?.cadastro_turmas || typeof perfil.data.cadastro_turmas !== 'object') {
-                    cadastroTurmas = {};
+                // Não permita que o polling/Realt​ime substitua o texto enquanto o professor digita.
+                if (!cadastroEstaEmEdicao() && localStorage.getItem('sys_dados_professor_sync_pendente') !== '1') {
+                    if (turmasNuvem.data?.length) {
+                        cadastroTurmas = turmasPropriasNuvem;
+                        cadastroNumerosChamada = numerosPropriosNuvem;
+                    } else if (!perfil.data?.cadastro_turmas || typeof perfil.data.cadastro_turmas !== 'object') {
+                        cadastroTurmas = {};
+                        cadastroNumerosChamada = {};
+                    }
                 }
 
-                // Ignora a fila genérica deixada pela versão de compartilhamento: ela
-                // pode conter itens recebidos de terceiros. Mantém apenas o estado
-                // confirmado no perfil e nas linhas com owner_id deste professor.
-                localStorage.removeItem('sys_dados_professor_sync_pendente');
-                if (!perfil.data) {
-                    localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
-                    await sincronizarDadosProfessorNuvem();
-                } else {
-                    localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
-                }
+                // Preserve alterações locais enquanto um dos campos de cadastro está sendo
+                // editado ou existe sincronização pendente; não deixe o polling limpar a fila.
+                const preservarCadastroLocal = cadastroEstaEmEdicao() || localStorage.getItem('sys_dados_professor_sync_pendente') === '1';
+                if (!preservarCadastroLocal) localStorage.removeItem('sys_dados_professor_sync_pendente');
+                localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+                localStorage.setItem('sys_cadastro_numeros_chamada', JSON.stringify(cadastroNumerosChamada));
+                if (!perfil.data && !preservarCadastroLocal) await sincronizarDadosProfessorNuvem();
                 alternarTurmaAluno();
 
                 const provasPorToken = new Map((provas.data || []).map(r => [String(r.student_token || ''), r]));
@@ -1989,31 +2114,62 @@
             await carregarEquipeAdmin();
         }
 
+        function cadastroEstaEmEdicao() {
+            const ativo = document.activeElement;
+            return ativo && (ativo.id === 'lista-alunos-input' || ativo.id === 'lista-chamada-input');
+        }
+
         function alternarTurmaAluno() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-
             document.getElementById('label-turma-ativa').textContent = `${serie} - ${turma}`;
             const alunos = cadastroTurmas[chave] || [];
-            document.getElementById('lista-alunos-input').value = alunos.join('\n');
-            document.getElementById('lista-alunos-input').disabled = false;
+            const numeros = cadastroNumerosChamada[chave] || [];
+            const campoAlunos = document.getElementById('lista-alunos-input');
+            const campoNumeros = document.getElementById('lista-chamada-input');
+            // Atualizações de Realtime/polling nunca reescrevem os campos que estão em edição.
+            if (campoAlunos && document.activeElement !== campoAlunos) campoAlunos.value = alunos.join('\n');
+            if (campoNumeros && document.activeElement !== campoNumeros) campoNumeros.value = numeros.map(n => n ?? '').join('\n');
+            if (campoAlunos) campoAlunos.disabled = false;
+            if (campoNumeros) campoNumeros.disabled = false;
             document.getElementById('label-num-alunos-turma').textContent = `${alunos.length} alunos`;
             atualizarBadges();
+        }
+
+        function lerNumerosChamadaDoCampo() {
+            const campo = document.getElementById('lista-chamada-input');
+            return String(campo?.value || '').split('\n').map(valor => {
+                const limpo = valor.trim();
+                if (!limpo) return null;
+                const n = Number(limpo);
+                return Number.isInteger(n) && n > 0 ? n : null;
+            });
         }
 
         async function salvarAlunosTurmaAtiva() {
             const serie = document.getElementById('sel-serie-aluno').value;
             const turma = document.getElementById('sel-turma-aluno').value;
             const chave = `${serie}_${turma}`;
-            const text = document.getElementById('lista-alunos-input').value;
-            const lista = text.split('\n').map(a => a.trim()).filter(a => a.length > 0);
-            
+            const campoNomes = document.getElementById('lista-alunos-input');
+            const textoNomes = campoNomes?.value || '';
+            const lista = textoNomes.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+            const numeros = lerNumerosChamadaDoCampo();
             cadastroTurmas[chave] = lista;
+            cadastroNumerosChamada[chave] = numeros;
             localStorage.setItem('sys_cadastro_turmas', JSON.stringify(cadastroTurmas));
+            localStorage.setItem('sys_cadastro_numeros_chamada', JSON.stringify(cadastroNumerosChamada));
             document.getElementById('label-num-alunos-turma').textContent = `${lista.length} alunos`;
             atualizarBadges();
             agendarSincronizacaoDadosProfessor();
+        }
+
+        function preencherNumeracaoChamada() {
+            const nomes = (document.getElementById('lista-alunos-input')?.value || '').split('\n').map(n => n.trim()).filter(Boolean);
+            const campo = document.getElementById('lista-chamada-input');
+            if (!campo) return;
+            campo.value = nomes.map((_, indice) => indice + 1).join('\n');
+            salvarAlunosTurmaAtiva();
         }
 
         function atualizarBadges() {
@@ -2255,8 +2411,8 @@
                 const serie = separador >= 0 ? chave.slice(0, separador) : chave;
                 const turma = separador >= 0 ? chave.slice(separador + 1) : '';
                 if (!Array.isArray(alunos) || !alunos.length) return;
-                const itens = alunos.map(nome => {
-                    const index = alunosPCDDisponiveis.push({ serie, turma, nome: String(nome), chaveTurma: chave }) - 1;
+                const itens = alunos.map((nome, indiceTurma) => {
+                    const index = alunosPCDDisponiveis.push({ serie, turma, nome: String(nome), chaveTurma: chave, indiceTurma, numeroChamada: cadastroNumerosChamada[chave]?.[indiceTurma] ?? null }) - 1;
                     return `<label class="pcd-student-check text-xs"><input type="checkbox" class="pcd-aluno-checkbox w-4 h-4" data-pcd-index="${index}"><span><strong>${escapeHtml(nome)}</strong><span class="block text-slate-500 font-normal">${escapeHtml(serie)} • ${escapeHtml(turma)}</span></span></label>`;
                 }).join('');
                 grupos.push(`<div class="space-y-2"><h4 class="text-xs font-bold text-indigo-700">${escapeHtml(serie)} • ${escapeHtml(turma)}</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${itens}</div></div>`);
@@ -2340,10 +2496,33 @@
                     const separador = chave.lastIndexOf('_');
                     const serie = separador >= 0 ? chave.slice(0, separador) : chave;
                     const turma = separador >= 0 ? chave.slice(separador + 1) : '';
-                    return (Array.isArray(alunos) ? alunos : []).map(nome => ({ serie, turma, nome: String(nome), chaveTurma: chave }));
+                    return (Array.isArray(alunos) ? alunos : []).map((nome, indiceTurma) => ({ serie, turma, nome: String(nome), chaveTurma: chave, indiceTurma, numeroChamada: cadastroNumerosChamada[chave]?.[indiceTurma] ?? null }));
                 });
             if (!alunosAlvo.length) return alert('Cadastre ou selecione pelo menos um aluno.');
             if (!questoesBase || !questoesBase.length) return alert('Selecione pelo menos uma questão.');
+
+            const pendenciasChamada = [];
+            const numerosUsadosPorTurma = new Map();
+            for (const aluno of alunosAlvo) {
+                const chave = aluno.chaveTurma || `${aluno.serie || ''}_${aluno.turma || ''}`;
+                const nomesTurma = cadastroTurmas[chave] || [];
+                const nomeAluno = String(aluno.nome || aluno.alunoName || '').trim();
+                const indice = Number.isInteger(aluno.indiceTurma) ? aluno.indiceTurma : nomesTurma.findIndex(n => String(n).trim().toLocaleLowerCase('pt-BR') === nomeAluno.toLocaleLowerCase('pt-BR'));
+                const numero = aluno.numeroChamada ?? cadastroNumerosChamada[chave]?.[indice];
+                if (!Number.isInteger(Number(numero)) || Number(numero) < 1) {
+                    pendenciasChamada.push(nomeAluno || 'Aluno sem nome');
+                    continue;
+                }
+                const conjunto = numerosUsadosPorTurma.get(chave) || new Set();
+                if (conjunto.has(Number(numero))) pendenciasChamada.push(`${nomeAluno} (número ${numero} repetido)`);
+                conjunto.add(Number(numero));
+                numerosUsadosPorTurma.set(chave, conjunto);
+                aluno.numeroChamada = Number(numero);
+                aluno.indiceTurma = indice;
+            }
+            if (pendenciasChamada.length) {
+                return alert('Antes de gerar as avaliações, cadastre um número de chamada válido e exclusivo para cada aluno selecionado. Verifique: ' + pendenciasChamada.join(', '));
+            }
 
             const provaNovaChaves = new Set();
             const provasNovas = [];
@@ -2376,6 +2555,7 @@
                     alunoName: alunoNome,
                     alunoSerie: serie,
                     alunoTurma: turma,
+                    numeroChamada: Number(alunoRegistro.numeroChamada),
                     bimestre,
                     escola: document.getElementById('cfg-escola').value,
                     titulo: document.getElementById('cfg-titulo').value,
@@ -3560,7 +3740,7 @@
         }
 
         function exportarPerguntasEAlunos() {
-            const dados = { cadastroTurmas, bancoQuestoes };
+            const dados = { cadastroTurmas, cadastroNumerosChamada, bancoQuestoes };
             const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dados, null, 2));
             const a = document.createElement('a');
             a.href = jsonStr;
@@ -3596,7 +3776,7 @@
         // PWA: registra o modo instalável e disponibiliza o diálogo nativo do navegador.
         function registrarPWA() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('./sw.js?v=2026-11-13-individual-v22', { scope: './', updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=2026-11-16-student-portal-v23', { scope: './', updateViaCache: 'none' })
                     .then(async registro => {
                         try { await registro.update(); } catch (_) {}
                         console.info('Service Worker ativo. Escopo:', registro.scope);
