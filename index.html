@@ -578,9 +578,10 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Banco de Questões por Temas</h3>
-                        <p class="text-xs text-slate-500">Selecione o tema desejado ou marque questões específicas para montar a avaliação</p>
+                        <p class="text-xs text-slate-500">Selecione questões de quaisquer temas para montar uma única avaliação. <strong id="contador-questoes-selecionadas" class="text-indigo-700">0 questões selecionadas</strong></p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="limparSelecaoQuestoes()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-3 rounded-xl border border-slate-200">Limpar seleção</button>
                         <button onclick="gerarProvasSelecionadas()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl shadow flex items-center space-x-2 transition">
                             <i data-lucide="sparkles" class="w-4 h-4"></i>
                             <span>Gerar Prova com Questões Selecionadas</span>
@@ -847,6 +848,8 @@
         let escolaFiltroProvasSelecionada = null;
         let turmaFiltroSelecionada = null;
         let temaMenuSelecionado = 'todos';
+        // Seleção persistente entre temas: nenhuma questão começa marcada.
+        const questoesSelecionadasIds = new Set();
         const FILTRO_NOTAS_TODOS = '__TODOS__';
         let notaEscolaSelecionada = FILTRO_NOTAS_TODOS;
         let notaAnoSelecionado = null;
@@ -864,6 +867,7 @@
         let realtimeChannel = null;
         let professorLogado = false;
         let studentMode = false;
+        let portalSomenteAluno = false;
         let studentTokenAtual = null;
         let provaAlunoAtual = null;
         let tentativaAlunoAtual = 1;
@@ -1164,6 +1168,7 @@
 
             const parametrosIniciais = new URLSearchParams(window.location.search);
             const tokenDaUrl = parametrosIniciais.get('studentId') || parametrosIniciais.get('token');
+            portalSomenteAluno = parametrosIniciais.get('portal') === 'aluno' && !tokenDaUrl && !parametrosIniciais.get('feedback');
             if (tokenDaUrl || parametrosIniciais.get('feedback')) studentMode = true;
             registrarPWA();
             await carregarCredenciaisSupabase();
@@ -1343,6 +1348,7 @@
 
         function mostrarGateProfessor(mensagem = '') {
             if (studentMode) return;
+            if (portalSomenteAluno) { abrirPortalSomenteAluno(); return; }
             professorLogado = false;
             adminLogado = false;
             professorUidAtual = null;
@@ -1387,7 +1393,7 @@
         }
 
         async function mostrarPainelProfessor(session) {
-            if (studentMode || modoRecuperacaoSenha || !session?.user || !supabaseClient) return false;
+            if (studentMode || portalSomenteAluno || modoRecuperacaoSenha || !session?.user || !supabaseClient) return false;
             const uid = session.user.id;
             const emailSessao = String(session.user.email || '').toLowerCase();
             const statusEl = document.getElementById('teacher-auth-status');
@@ -1761,14 +1767,14 @@
                 });
                 // Registra o listener antes de consultar a sessão para não perder o evento PASSWORD_RECOVERY.
                 const { data } = supabaseClient.auth.onAuthStateChange((event, session) => {
-                    if (studentMode) return;
+                    if (studentMode || portalSomenteAluno) return;
                     if (event === 'PASSWORD_RECOVERY') {
                         window.setTimeout(() => mostrarFormularioNovaSenhaProfessor(), 0);
                         return;
                     }
                     // O callback não deve iniciar chamadas Supabase dentro do próprio callback.
                     window.setTimeout(() => {
-                        if (studentMode) return;
+                        if (studentMode || portalSomenteAluno) return;
                         if (session) mostrarPainelProfessor(session);
                         else if (event === 'SIGNED_OUT') mostrarGateProfessor('Sessão encerrada. Entre novamente para acessar o painel.');
                     }, 0);
@@ -1778,11 +1784,11 @@
                 const { data: authData, error: authError } = await supabaseClient.auth.getSession();
                 if (authError) throw authError;
 
-                if (!studentMode && retornoDeRecuperacaoSenhaNaUrl()) {
+                if (!studentMode && !portalSomenteAluno && retornoDeRecuperacaoSenhaNaUrl()) {
                     mostrarFormularioNovaSenhaProfessor();
-                } else if (authData.session && !studentMode) {
+                } else if (authData.session && !studentMode && !portalSomenteAluno) {
                     await mostrarPainelProfessor(authData.session);
-                } else if (!studentMode) {
+                } else if (!studentMode && !portalSomenteAluno) {
                     mostrarGateProfessor('Conectado ao Supabase. Entre ou crie seu ambiente individual.');
                 }
             } catch (error) {
@@ -2378,7 +2384,7 @@
                     <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-sm relative">
                         <div class="flex justify-between items-center border-b pb-2">
                             <div class="flex items-center space-x-3">
-                                <input type="checkbox" data-q-id="${q.id}" class="chk-questao w-4 h-4 text-indigo-600 rounded" checked>
+                                <input type="checkbox" data-q-id="${q.id}" class="chk-questao w-4 h-4 text-indigo-600 rounded" ${questoesSelecionadasIds.has(String(q.id)) ? 'checked' : ''} aria-label="Selecionar questão ${escapeHtml(String(q.id))}">
                                 <span class="font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">#${idx + 1}</span>
                                 <span class="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">${q.tema}</span>
                                 <span class="text-xs text-slate-500">${q.assunto}</span>
@@ -2406,7 +2412,28 @@
                     </div>
                 `;
             });
+            container.querySelectorAll('.chk-questao').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const id = String(checkbox.dataset.qId || '');
+                    if (!id) return;
+                    if (checkbox.checked) questoesSelecionadasIds.add(id);
+                    else questoesSelecionadasIds.delete(id);
+                    atualizarContadorQuestoesSelecionadas();
+                });
+            });
+            atualizarContadorQuestoesSelecionadas();
             if (window.lucide) lucide.createIcons();
+        }
+
+        function atualizarContadorQuestoesSelecionadas() {
+            const contador = document.getElementById('contador-questoes-selecionadas');
+            if (contador) contador.textContent = `${questoesSelecionadasIds.size} ${questoesSelecionadasIds.size === 1 ? 'questão selecionada' : 'questões selecionadas'}`;
+        }
+
+        function limparSelecaoQuestoes() {
+            questoesSelecionadasIds.clear();
+            document.querySelectorAll('.chk-questao').forEach(checkbox => { checkbox.checked = false; });
+            atualizarContadorQuestoesSelecionadas();
         }
 
         async function excluirQuestao(id) {
@@ -2425,6 +2452,7 @@
                 if (error) throw error;
                 await removerImagensDaQuestaoNoStorage(questao);
                 bancoQuestoes = bancoQuestoes.filter(q => String(q.id) !== String(id));
+                questoesSelecionadasIds.delete(String(id));
                 localStorage.setItem('sys_banco_questoes', JSON.stringify(bancoQuestoes));
                 renderizarMenuTemas();
                 renderizarQuestoesTema();
@@ -2436,18 +2464,13 @@
 
         function gerarProvasSelecionadas() {
             const listaFinal = obterQuestoesSelecionadasParaGeracao();
-            if (listaFinal.length === 0) return alert('Selecione pelo menos uma questão.');
-            gerarProvasComLista(listaFinal);
+            if (listaFinal.length === 0) return alert('Marque manualmente pelo menos uma questão. Você pode combinar questões de temas diferentes.');
+            gerarProvasComLista(listaFinal, { preservarExistentes: true });
         }
 
         function obterQuestoesSelecionadasParaGeracao() {
-            const checkboxes = document.querySelectorAll('.chk-questao:checked');
-            if (checkboxes.length > 0) {
-                const ids = Array.from(checkboxes).map(cb => String(cb.getAttribute('data-q-id')));
-                return bancoQuestoes.filter(q => ids.includes(String(q.id)));
-            }
-            if (temaMenuSelecionado !== 'todos') return bancoQuestoes.filter(q => q.tema === temaMenuSelecionado);
-            return bancoQuestoes;
+            // A seleção é global, não apenas das caixas visíveis no tema atual.
+            return bancoQuestoes.filter(q => questoesSelecionadasIds.has(String(q.id)));
         }
 
         function abrirModalAvaliacaoPCD() {
@@ -2485,7 +2508,7 @@
                 .filter(Boolean);
             if (!selecionados.length) return alert('Selecione pelo menos um aluno para receber a avaliação adaptada.');
             const questoes = obterQuestoesSelecionadasParaGeracao();
-            if (!questoes.length) return alert('Cadastre ou selecione pelo menos uma questão antes de gerar a avaliação.');
+            if (!questoes.length) return alert('Marque manualmente pelo menos uma questão no Banco de Questões. Você pode combinar temas diferentes.');
             const acessibilidade = {
                 ativada: true,
                 tamanhoFonte: document.getElementById('pcd-tamanho-fonte').value,
@@ -2539,15 +2562,39 @@
             const dataFim = document.getElementById('cfg-data-fim').value;
             const bimestre = document.getElementById('cfg-bimestre').value;
             const letras = ['A', 'B', 'C', 'D', 'E'];
-            const alunosAlvo = Array.isArray(opcoes.alunosSelecionados) && opcoes.alunosSelecionados.length
+            const alunosDaTurma = Object.entries(cadastroTurmas || {}).flatMap(([chave, alunos]) => {
+                const separador = chave.lastIndexOf('_');
+                const serie = separador >= 0 ? chave.slice(0, separador) : chave;
+                const turma = separador >= 0 ? chave.slice(separador + 1) : '';
+                return (Array.isArray(alunos) ? alunos : []).map((nome, indiceTurma) => ({ serie, turma, nome: String(nome), chaveTurma: chave, indiceTurma, numeroChamada: cadastroNumerosChamada[chave]?.[indiceTurma] ?? null }));
+            });
+            const escolaAtual = String(document.getElementById('cfg-escola').value || '').trim().toLocaleLowerCase('pt-BR');
+            const anoAtual = String(document.getElementById('cfg-ano-letivo').value || '').trim();
+            const tituloAtual = String(document.getElementById('cfg-titulo').value || '').trim().toLocaleLowerCase('pt-BR');
+            const disciplinaAtual = String(document.getElementById('cfg-disciplina').value || '').trim().toLocaleLowerCase('pt-BR');
+            const bimestreAtual = String(bimestre || '').trim().toLocaleLowerCase('pt-BR');
+            const ehPCD = opcoes.acessibilidade?.ativada === true;
+            const alunosSelecionadosExplicitamente = Array.isArray(opcoes.alunosSelecionados) && opcoes.alunosSelecionados.length > 0;
+            // Ao criar provas comuns depois das adaptadas, mantém as PCD e oferece somente
+            // os colegas que ainda não receberam uma versão adaptada para esta avaliação.
+            const alunosRegularesPendentes = alunosDaTurma.filter(aluno => !provasGeradas.some(p =>
+                p.tipoAvaliacao === 'pcd' &&
+                String(p.ownerId || '') === String(professorUidAtual || '') &&
+                String(p.escola || '').trim().toLocaleLowerCase('pt-BR') === escolaAtual &&
+                String(p.anoLetivo || '') === anoAtual &&
+                String(p.titulo || '').trim().toLocaleLowerCase('pt-BR') === tituloAtual &&
+                String(p.disciplina || '').trim().toLocaleLowerCase('pt-BR') === disciplinaAtual &&
+                String(p.bimestre || '').trim().toLocaleLowerCase('pt-BR') === bimestreAtual &&
+                String(p.alunoName || '').trim().toLocaleLowerCase('pt-BR') === String(aluno.nome || '').trim().toLocaleLowerCase('pt-BR') &&
+                String(p.alunoSerie || '') === String(aluno.serie || '') &&
+                String(p.alunoTurma || '') === String(aluno.turma || '')
+            ));
+            const alunosAlvo = alunosSelecionadosExplicitamente
                 ? opcoes.alunosSelecionados
-                : Object.entries(cadastroTurmas || {}).flatMap(([chave, alunos]) => {
-                    const separador = chave.lastIndexOf('_');
-                    const serie = separador >= 0 ? chave.slice(0, separador) : chave;
-                    const turma = separador >= 0 ? chave.slice(separador + 1) : '';
-                    return (Array.isArray(alunos) ? alunos : []).map((nome, indiceTurma) => ({ serie, turma, nome: String(nome), chaveTurma: chave, indiceTurma, numeroChamada: cadastroNumerosChamada[chave]?.[indiceTurma] ?? null }));
-                });
-            if (!alunosAlvo.length) return alert('Cadastre ou selecione pelo menos um aluno.');
+                : (ehPCD ? alunosDaTurma : alunosRegularesPendentes);
+            if (!alunosAlvo.length) return alert(ehPCD
+                ? 'Cadastre ou selecione pelo menos um aluno para a avaliação adaptada.'
+                : 'Não há alunos pendentes para a avaliação comum. Os estudantes que já receberam a versão PCD foram preservados; confira os demais alunos cadastrados na turma.');
             if (!questoesBase || !questoesBase.length) return alert('Selecione pelo menos uma questão.');
 
             const pendenciasChamada = [];
@@ -2573,6 +2620,10 @@
                 return alert('Antes de gerar as avaliações, cadastre um número de chamada válido e exclusivo para cada aluno selecionado. Verifique: ' + pendenciasChamada.join(', '));
             }
 
+            const chaveUnicaProva = p => [
+                p.escola || '', p.anoLetivo || '', p.alunoName || '', p.alunoSerie || '', p.alunoTurma || '',
+                p.titulo || '', p.disciplina || '', p.bimestre || '', p.tipoAvaliacao || 'regular'
+            ].map(v => String(v).trim().toLocaleLowerCase('pt-BR')).join('|');
             const provaNovaChaves = new Set();
             const provasNovas = [];
             for (const alunoRegistro of alunosAlvo) {
@@ -2618,25 +2669,19 @@
                     questoes: questoesEmbaralhadas
                 };
                 provasNovas.push(prova);
-                provaNovaChaves.add([alunoNome, serie, turma, prova.titulo, prova.disciplina, bimestre].join('|').toLocaleLowerCase());
+                provaNovaChaves.add(chaveUnicaProva(prova));
             }
 
-            if (opcoes.preservarExistentes) {
-                provasGeradas = (Array.isArray(provasGeradas) ? provasGeradas : []).filter(p =>
-                    !provaNovaChaves.has([p.alunoName, p.alunoSerie, p.alunoTurma, p.titulo, p.disciplina, p.bimestre].join('|').toLocaleLowerCase())
-                );
-                provasGeradas.push(...provasNovas);
-            } else {
-                provasGeradas = provasNovas;
-            }
+            // Não apaga outras avaliações da turma: adiciona/substitui apenas o mesmo
+            // aluno, escola, ano, bimestre, disciplina, título e tipo (regular ou PCD).
+            provasGeradas = (Array.isArray(provasGeradas) ? provasGeradas : []).filter(p =>
+                !provaNovaChaves.has(chaveUnicaProva(p))
+            );
+            provasGeradas.push(...provasNovas);
 
             try {
-                if (opcoes.preservarExistentes) {
-                    await persistirListaProvasNoSupabase(provasNovas);
-                    try { localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas)); } catch (_) {}
-                } else {
-                    await persistirProvasNoSupabase();
-                }
+                await persistirListaProvasNoSupabase(provasNovas);
+                try { localStorage.setItem('sys_provas_geradas', JSON.stringify(provasGeradas)); } catch (_) {}
             } catch (error) {
                 alert('As provas foram montadas, mas não foram publicadas. Execute primeiro o arquivo corrigir_supabase_avaliacao.sql no SQL Editor do Supabase. Depois gere/publice novamente as provas para criar links válidos. Detalhe: ' + (error.message || error));
                 return;
@@ -2850,6 +2895,7 @@
                 const token = prova.studentToken || prova.studentId;
                 const safeToken = escapeHtml(token);
                 const linkAluno = `${window.location.origin}${window.location.pathname}?studentId=${encodeURIComponent(token)}`;
+                const linkPortalAluno = `${window.location.origin}${window.location.pathname}?portal=aluno`;
                 const bimestre = prova.bimestre || document.getElementById('cfg-bimestre').value || '—';
                 const resultadoAluno = bancoNotas.find(n => String(n.studentToken || '') === String(token));
                 const recursoEhProprio = String(prova.ownerId || '') === String(professorUidAtual || '');
@@ -2865,8 +2911,8 @@
                             <span class="text-xs font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">${escapeHtml(prova.alunoSerie || '')} • ${escapeHtml(prova.alunoTurma || '')}</span>
                         </div>
                         <div class="pt-2 space-y-2">
-                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-xl">Copiar Link do Aluno</button>
-                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link da avaliação</button>
+                            <button onclick="copiarLinkAluno('${linkPortalAluno}')" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold py-2 rounded-xl">Compartilhar Portal do Estudante</button>
+                            <button onclick="copiarLinkAluno('${linkAluno}')" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold py-2 rounded-xl">Copiar link direto desta avaliação</button>
                             ${botaoRespostaAluno}
                             ${recursoEhProprio ? `<button onclick="moverProvaParaLixeira('${safeToken}')" class="w-full bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold py-2 rounded-xl border border-amber-200"><i data-lucide="trash-2" class="w-3 h-3 inline mr-1"></i>Enviar avaliação para lixeira</button>` : ''}
                         </div>
@@ -3821,6 +3867,23 @@
             a.click();
         }
 
+        function abrirPortalSomenteAluno() {
+            portalSomenteAluno = true;
+            studentMode = false;
+            professorLogado = false;
+            document.getElementById('teacher-header')?.classList.add('hidden');
+            document.getElementById('teacher-main')?.classList.add('hidden');
+            document.getElementById('student-shell')?.classList.add('hidden');
+            document.getElementById('teacher-auth-gate')?.classList.remove('hidden');
+            document.getElementById('teacher-auth-card')?.classList.add('hidden');
+            document.getElementById('student-access-card')?.classList.remove('hidden');
+            document.getElementById('student-back-to-teacher')?.classList.add('hidden');
+            document.body.classList.add('student-portal-only');
+            document.title = 'Portal do Estudante | AvaliaDigital';
+            const status = document.getElementById('student-identification-status');
+            if (status) status.textContent = 'Entre com escola, nome completo e número da chamada para consultar suas avaliações.';
+        }
+
         async function verificarLinkAlunoParam() {
             const urlParams = new URLSearchParams(window.location.search);
             const tokenFeedback = urlParams.get('feedback');
@@ -3833,6 +3896,10 @@
             if (token) {
                 studentMode = true;
                 await entrarModoAluno(token);
+                return;
+            }
+            if (urlParams.get('portal') === 'aluno') {
+                abrirPortalSomenteAluno();
                 return;
             }
             // Sem token de aluno, restaura a sessão existente; não chama a tela de login por cima do painel.
@@ -3849,7 +3916,7 @@
         // PWA: registra o modo instalável e disponibiliza o diálogo nativo do navegador.
         function registrarPWA() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('./sw.js?v=2026-11-16-student-device-lock-v25', { scope: './', updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=2026-11-16-student-device-lock-v26', { scope: './', updateViaCache: 'none' })
                     .then(async registro => {
                         try { await registro.update(); } catch (_) {}
                         console.info('Service Worker ativo. Escopo:', registro.scope);
