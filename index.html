@@ -2394,7 +2394,7 @@
                             </div>
                         </div>
 
-                        <p class="font-semibold text-slate-800 text-sm">${q.enunciado}</p>
+                        <p class="font-semibold text-slate-800 text-sm">${formatarTextoComQuebras(q.enunciado)}</p>
                         ${q.imgEnunciado ? `<div class="my-2"><img src="${q.imgEnunciado}" class="max-h-48 rounded border object-contain mx-auto"></div>` : ''}
 
                         <div class="space-y-1.5 pl-2 text-xs">
@@ -2920,7 +2920,7 @@
 
                 const questoesHtml = prova.questoes.map(q => `
                     <article class="questao-impressa">
-                        <p style="font-weight:bold;font-size:11pt;margin:0 0 1mm 0;">${q.numero}. ${escapeHtml(q.enunciado)}</p>
+                        <p style="font-weight:bold;font-size:11pt;margin:0 0 1mm 0;">${q.numero}. ${formatarTextoComQuebras(q.enunciado)}</p>
                         ${q.imgEnunciado ? `<div style="text-align:center;margin:1mm 0;"><img src="${escapeHtml(q.imgEnunciado)}" alt="Imagem da questão ${q.numero}" style="max-height:32mm;max-width:100%;object-fit:contain;" /></div>` : ''}
                         <div style="margin-left:3mm;font-size:11pt;">
                             ${q.alternativas.map(a => `<div class="alternativa-impressa"><strong>(${escapeHtml(a.letter)})</strong> ${escapeHtml(a.text)} ${a.img ? `<img src="${escapeHtml(a.img)}" alt="Imagem da alternativa ${escapeHtml(a.letter)}" style="max-height:18mm;max-width:100%;display:inline-block;vertical-align:middle;" />` : ''}</div>`).join('')}
@@ -3012,7 +3012,7 @@
                 const acertou = Boolean(d.acertou);
                 return `<article class="rounded-xl border ${acertou ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'} p-3 space-y-2">
                     <div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-sm">Questão ${escapeHtml(d.numero)}</strong><span class="text-xs font-bold ${acertou ? 'text-emerald-700' : 'text-rose-700'}">${acertou ? 'ACERTO' : (d.marcada ? 'ERRO' : 'NÃO RESPONDIDA')}</span></div>
-                    <p class="text-xs text-slate-800">${escapeHtml(d.enunciado || q?.enunciado || '')}</p>
+                    <p class="text-xs text-slate-800">${formatarTextoComQuebras(d.enunciado || q?.enunciado || '')}</p>
                     <div class="grid sm:grid-cols-2 gap-2 text-xs"><p><strong>Resposta do aluno:</strong><br>${marcouTexto}</p><p><strong>Resposta correta:</strong><br>${corretaTexto}</p></div>
                     ${permiteFeedback ? `<label class="block text-xs font-semibold text-slate-700">Comentário do professor sobre esta questão<textarea data-feedback-q="${escapeHtml(d.numero)}" rows="2" class="mt-1 w-full border border-slate-300 rounded-lg p-2 text-xs font-normal" placeholder="Explique o erro ou reforce o acerto...">${escapeHtml(feedbackQuestoes[String(d.numero)] || '')}</textarea></label>` : ''}
                 </article>`;
@@ -3093,7 +3093,7 @@
                     return;
                 }
                 const feedbackQuestoes = data.feedback_questoes || {};
-                const detalhesHTML = (data.detalhes || []).map(d => `<article class="rounded-xl border ${d.acertou ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'} p-3 space-y-2"><div class="flex justify-between gap-2"><strong class="text-sm">Questão ${escapeHtml(d.numero)}</strong><strong class="text-xs ${d.acertou ? 'text-emerald-700' : 'text-rose-700'}">${d.acertou ? 'ACERTO' : (d.marcada ? 'ERRO' : 'EM BRANCO')}</strong></div><p class="text-xs text-slate-700">${escapeHtml(d.enunciado || '')}</p><p class="text-xs"><strong>Sua resposta:</strong> ${escapeHtml(d.marcada || 'Em branco')} &nbsp; <strong>Correta:</strong> ${escapeHtml(d.correta || '—')}</p>${feedbackQuestoes[String(d.numero)] ? `<div class="border-t border-slate-200 pt-2 text-sm"><strong>Comentário do professor:</strong><p class="mt-1">${escapeHtml(feedbackQuestoes[String(d.numero)])}</p></div>` : ''}</article>`).join('');
+                const detalhesHTML = (data.detalhes || []).map(d => `<article class="rounded-xl border ${d.acertou ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'} p-3 space-y-2"><div class="flex justify-between gap-2"><strong class="text-sm">Questão ${escapeHtml(d.numero)}</strong><strong class="text-xs ${d.acertou ? 'text-emerald-700' : 'text-rose-700'}">${d.acertou ? 'ACERTO' : (d.marcada ? 'ERRO' : 'EM BRANCO')}</strong></div><p class="text-xs text-slate-700">${formatarTextoComQuebras(d.enunciado || '')}</p><p class="text-xs"><strong>Sua resposta:</strong> ${escapeHtml(d.marcada || 'Em branco')} &nbsp; <strong>Correta:</strong> ${escapeHtml(d.correta || '—')}</p>${feedbackQuestoes[String(d.numero)] ? `<div class="border-t border-slate-200 pt-2 text-sm"><strong>Comentário do professor:</strong><p class="mt-1">${escapeHtml(feedbackQuestoes[String(d.numero)])}</p></div>` : ''}</article>`).join('');
                 container.innerHTML = `<div class="space-y-5"><div class="text-center border-b pb-4"><p class="text-xs font-bold uppercase text-indigo-600">Devolutiva da avaliação</p><h1 class="text-2xl font-bold text-slate-900 mt-1">Olá, ${escapeHtml(data.aluno_nome || 'estudante')}!</h1><p class="text-sm text-slate-600 mt-1">${escapeHtml(data.disciplina || '')} • ${escapeHtml(data.bimestre || '')}</p><div class="flex justify-center gap-3 mt-4"><div class="rounded-lg bg-emerald-50 px-4 py-2"><strong class="text-xl text-emerald-700">${escapeHtml(data.acertos || '')}</strong><p class="text-[10px]">Acertos</p></div><div class="rounded-lg bg-indigo-50 px-4 py-2"><strong class="text-xl text-indigo-700">${Number(data.nota || 0).toFixed(1)}</strong><p class="text-[10px]">Nota</p></div></div></div>${data.feedback_professor ? `<section class="rounded-xl border border-indigo-200 bg-indigo-50 p-4"><h2 class="font-bold text-sm">Mensagem do professor</h2><p class="text-sm mt-2 whitespace-pre-wrap">${escapeHtml(data.feedback_professor)}</p></section>` : ''}<section class="space-y-2"><h2 class="font-bold text-sm">Correção das questões</h2>${detalhesHTML}</section><p class="text-center text-xs text-slate-400">Devolutiva disponibilizada pelo professor.</p></div>`;
             } catch (error) {
                 container.innerHTML = `<div class="text-center py-12 space-y-2"><h1 class="text-xl font-bold text-rose-700">Não foi possível abrir o feedback</h1><p class="text-sm text-slate-600">${escapeHtml(error.message || error)}</p></div>`;
@@ -3221,7 +3221,7 @@
                         <p style="margin:5px 0;"><strong>ESTUDANTE:</strong> ${p.alunoName} | <strong>TURMA:</strong> ${p.alunoSerie} - ${p.alunoTurma}</p>
                         <p style="margin:5px 0;"><strong>DISCIPLINA:</strong> ${disciplina} | <strong>BIMESTRE:</strong> ${p.bimestre || ''} | <strong>PROFESSOR:</strong> ${professor}</p>
                     </div>
-                    <div class="questoes-word">${p.questoes.map(q => `<div class="questao"><p style="margin:0 0 4px 0;"><strong>${q.numero}. ${q.enunciado}</strong></p>
+                    <div class="questoes-word">${p.questoes.map(q => `<div class="questao"><p style="margin:0 0 4px 0;"><strong>${q.numero}. ${formatarTextoComQuebras(q.enunciado)}</strong></p>
                         ${q.imgEnunciado ? `<p><img src="${q.imgEnunciado}" style="max-height:100px;max-width:100%;" /></p>` : ''}
                         ${q.alternativas.map(a => `<div class="alternativa"><strong>(${a.letter})</strong> ${a.text} ${a.img ? `<img src="${a.img}" style="max-height:55px;max-width:100%;vertical-align:middle;" />` : ''}</div>`).join('')}
                     </div>`).join('')}</div>
@@ -3333,6 +3333,12 @@
 
         function escapeHtml(valor) {
             return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        }
+
+        // Preserva as quebras de linha que o professor digitou no enunciado.
+        // O texto continua escapado para não interpretar conteúdo como HTML.
+        function formatarTextoComQuebras(valor) {
+            return escapeHtml(valor).replace(/\r\n|\r|\n/g, '<br>');
         }
 
         function chaveRascunho(token) { return `sys_avalia_rascunho_${token}`; }
@@ -3487,7 +3493,7 @@
                 </div>
                 <form id="student-exam-form" class="space-y-4" aria-label="Formulário de respostas da avaliação">
                     ${prova.questoes.map(q => `<section class="student-question" aria-labelledby="student-q-title-${Number(q.numero)}">
-                        <div class="flex flex-wrap items-start justify-between gap-2 mb-3"><p id="student-q-title-${Number(q.numero)}" class="font-bold text-sm sm:text-base text-slate-800">${q.numero}. ${escapeHtml(q.enunciado)}</p>${eAdaptada && acessibilidade.leituraVoz ? `<button type="button" onclick="lerQuestaoEmVoz(${Number(q.numero)})" aria-label="Ouvir questão ${Number(q.numero)}" class="shrink-0 px-3 py-2 rounded-lg bg-violet-100 text-violet-900 text-xs font-bold">▶ Ouvir questão</button>` : ''}</div>
+                        <div class="flex flex-wrap items-start justify-between gap-2 mb-3"><p id="student-q-title-${Number(q.numero)}" class="font-bold text-sm sm:text-base text-slate-800">${q.numero}. ${formatarTextoComQuebras(q.enunciado)}</p>${eAdaptada && acessibilidade.leituraVoz ? `<button type="button" onclick="lerQuestaoEmVoz(${Number(q.numero)})" aria-label="Ouvir questão ${Number(q.numero)}" class="shrink-0 px-3 py-2 rounded-lg bg-violet-100 text-violet-900 text-xs font-bold">▶ Ouvir questão</button>` : ''}</div>
                         ${q.imgEnunciado ? `<img src="${escapeHtml(q.imgEnunciado)}" alt="Imagem da questão ${Number(q.numero)}" class="max-h-56 rounded border mx-auto mb-3">` : ''}
                         <div class="space-y-1">${q.alternativas.map(alt => `<label class="student-option text-sm text-slate-700">
                             <input type="radio" name="q_${q.numero}" value="${escapeHtml(alt.letter)}" ${respostas[String(q.numero)] === alt.letter ? 'checked' : ''} required aria-label="Questão ${Number(q.numero)}, alternativa ${escapeHtml(alt.letter)}">
